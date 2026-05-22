@@ -19,34 +19,32 @@ class DataService:
         return data[1:] if len(data) > 1 else []
 
     def get_product_stats_by_date(self, product_id, start_date, end_date):
-        # 1. Lấy dữ liệu
         raw_data = self.get_history()
-        if not raw_data: 
-            return 0.0, 0.0, 0.0
-        
-        # 2. Tạo bảng và làm sạch cột dữ liệu
         df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
         
-        # Ép kiểu dữ liệu chuẩn xác
-        df['date'] = pd.to_datetime(df['date'])
-        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
+        # 1. Ép kiểu và làm sạch
         df['product_id'] = df['product_id'].astype(str).str.strip()
-        
-        # 3. Ép kiểu input đầu vào (Quan trọng: Phải khớp với cột product_id ở trên)
         target_id = str(product_id).strip()
         
-        # 4. Lọc dữ liệu
+        # 2. DEBUG: Xem danh sách các mã hàng có trong hệ thống
+        unique_ids = df['product_id'].unique()
+        st.write(f"Các mã hàng hiện có trong Sheets: {unique_ids}")
+        st.write(f"Mã hàng bạn đang chọn: '{target_id}'")
+        
+        # 3. Lọc
         df_prod = df[df['product_id'] == target_id]
         
-        # --- DEBUG: Nếu không ra dữ liệu, in ra cảnh báo ---
         if df_prod.empty:
-            st.warning(f"Không có giao dịch nào khớp với mã hàng: '{target_id}'")
+            st.error(f"Lỗi: Không tìm thấy mã '{target_id}' trong danh sách. Hãy kiểm tra xem tên cột có bị sai hoặc mã hàng có thừa khoảng trắng không!")
             return 0.0, 0.0, 0.0
+            
+        # Tính toán (nếu tìm thấy dữ liệu)
+        df['date'] = pd.to_datetime(df['date'])
+        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
         
-        # 5. Tính toán
+        # ... (phần tính toán tồn kho giữ nguyên)
         start = pd.to_datetime(start_date)
         end = pd.to_datetime(end_date)
-        
         past_data = df_prod[df_prod['date'] < start]
         ton_dau = (past_data[past_data['type'] == 'IMPORT']['qty'].sum() - 
                    past_data[past_data['type'] == 'EXPORT']['qty'].sum())
