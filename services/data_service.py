@@ -29,23 +29,22 @@ class DataService:
         return []
 
     def get_product_stats_by_date(self, product_id, start_date, end_date):
-        """Tính toán tồn kho với dữ liệu đã được làm sạch"""
         raw_data = self.get_history()
-        if not raw_data: return 0.0, 0.0, 0.0
-        
-        # Chuyển dữ liệu lịch sử thành DataFrame
         df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
         
-        # Làm sạch dữ liệu trong bảng giao dịch
+        # Làm sạch
         df['product_id'] = df['product_id'].astype(str).str.strip()
-        df['date'] = pd.to_datetime(df['date'])
-        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
-        
-        # Ép kiểu biến đầu vào về dạng String để so sánh
         target_id = str(product_id).strip()
         
-        # Lọc dữ liệu khớp với mã hàng
+        # --- BƯỚC DEBUG QUAN TRỌNG ---
         df_prod = df[df['product_id'] == target_id]
+        
+        st.write(f"Đang tìm mã: '{target_id}'")
+        st.write("Số dòng tìm thấy:", len(df_prod))
+        if not df_prod.empty:
+            st.write("Dữ liệu tìm thấy:", df_prod)
+        else:
+            st.warning("Không tìm thấy dòng nào khớp với mã hàng này!")
         
         # Tính toán
         start = pd.to_datetime(start_date)
