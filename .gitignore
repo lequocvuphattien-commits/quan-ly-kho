@@ -1,0 +1,18 @@
+# Bỏ qua file database cá nhân
+inventory.db
+*.sqlite
+*.sqlite3
+
+# Bỏ qua thư mục cache của Python
+__pycache__/
+*.pyc
+
+# Bỏ qua file cấu hình của VS Code
+.vscode/
+.env
+
+# Bỏ qua các file Excel/Báo cáo nếu bạn không muốn đẩy lên
+*.xlsx
+*.csv
+
+.streamlit/ 
