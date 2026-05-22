@@ -82,32 +82,31 @@ class DataService:
         return []
     
     def get_product_stats_by_date(self, product_id, start_date, end_date):
-        """
-        Logic tính tồn đầu, nhập, xuất từ Google Sheets
-        """
-        history = self.get_history() # Lấy danh sách giao dịch [Ngày, Mã, Loại, Số lượng, Ghi chú]
-        import pandas as pd
+        # Lấy dữ liệu thô từ hàm get_history()
+        raw_data = self.get_history()
+        if not raw_data: return 0.0, 0.0, 0.0
         
-        # Chuyển lịch sử thành DataFrame
-        df = pd.DataFrame(history, columns=["date", "product_id", "type", "qty", "note"])
-        if df.empty: return 0.0, 0.0, 0.0
+        # ĐẶT TÊN CỘT CHÍNH XÁC (Dựa theo thứ tự trong Google Sheet của bạn)
+        # Giả sử: Cột 0: Ngày, Cột 1: Mã hàng, Cột 2: Loại, Cột 3: Số lượng
+        df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
         
+        # Chuyển đổi kiểu dữ liệu
         df['date'] = pd.to_datetime(df['date'])
-        df['qty'] = pd.to_numeric(df['qty'])
+        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
+        df['product_id'] = df['product_id'].astype(str).str.strip()
         
-        # Lọc theo mã hàng (product_id)
-        df_prod = df[df['product_id'] == str(product_id)]
+        # Lọc theo mã hàng (so sánh chuỗi đã xóa khoảng trắng)
+        df_prod = df[df['product_id'] == str(product_id).strip()]
         
-        # Lọc theo thời gian
+        # Lọc thời gian
         start = pd.to_datetime(start_date)
         end = pd.to_datetime(end_date)
         
-        # 1. Tồn đầu kỳ: (Tổng nhập - Tổng xuất) của các giao dịch trước thời điểm start
+        # Tính toán
         past = df_prod[df_prod['date'] < start]
         ton_dau = (past[past['type'] == 'IMPORT']['qty'].sum() - 
                    past[past['type'] == 'EXPORT']['qty'].sum())
         
-        # 2. Nhập/Xuất trong kỳ
         period = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
         nhap = period[period['type'] == 'IMPORT']['qty'].sum()
         xuat = period[period['type'] == 'EXPORT']['qty'].sum()
