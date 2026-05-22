@@ -1,14 +1,16 @@
 import streamlit as st
 import pandas as pd
 from services.data_service import DataService
+from views.report_view_streamlit import show_report # Import hàm báo cáo đã tạo
 
 service = DataService(mode="ONLINE")
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho")
 
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Lịch sử giao dịch"])
+# Thêm "Báo cáo tồn kho" vào menu
+menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1 ---
+# --- TAB 1: DANH MỤC ---
 if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng hóa")
     products = service.get_products()
@@ -27,7 +29,7 @@ if menu == "Danh mục hàng hóa":
                 service.add_product(code, name, unit)
                 st.success("Đã thêm!"); st.rerun()
 
-# --- TAB 2 ---
+# --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.header("Nhập/Xuất kho")
     products = service.get_products()
@@ -41,11 +43,15 @@ elif menu == "Nhập/Xuất":
         
         if st.button("Xác nhận giao dịch"):
             service.add_transaction(prod_code, qty, trans_type, note)
-            service.update_stock(prod_code, qty, trans_type) # Dòng này cực kỳ quan trọng
+            service.update_stock(prod_code, qty, trans_type)
             st.success("Đã cập nhật tồn kho!")
             st.rerun()
 
-# --- TAB 3 ---
+# --- TAB 3: BÁO CÁO TỒN KHO (Mới) ---
+elif menu == "Báo cáo tồn kho":
+    show_report()
+
+# --- TAB 4: LỊCH SỬ ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = service.get_history()

@@ -15,4 +15,4 @@ __pycache__/
 *.xlsx
 *.csv
 
-.streamlit/ 
+*.streamlit/ 
