@@ -57,7 +57,7 @@ class DataService:
         # 2. Làm sạch dữ liệu
         df['date'] = pd.to_datetime(df['date'])
         df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
-        df['product_id'] = df['product_id'].astype(str).str.strip()
+        df_prod = df[df['product_id'].astype(str).str.strip() == str(product_id).strip()]
         
         # 3. Lọc theo mã hàng và DEBUG kết quả lọc
         df_prod = df[df['product_id'] == str(product_id).strip()]
