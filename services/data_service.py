@@ -33,6 +33,13 @@ class DataService:
         """Lấy toàn bộ lịch sử giao dịch"""
         data = self.sheet_transactions.get_all_values()
         return data[1:] if len(data) > 1 else []
+    
+    def get_products(self):
+        """Lấy danh sách hàng hóa"""
+        if self.sheet_products:
+            data = self.sheet_products.get_all_values()
+            return data[1:] if len(data) > 1 else []
+        return []
 
     def get_product_stats_by_date(self, product_id, start_date, end_date):
         raw_data = self.get_history()
