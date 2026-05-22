@@ -11,7 +11,6 @@ class DataService:
     def get_history(self):
         """Lấy toàn bộ lịch sử giao dịch"""
         data = self.sheet_transactions.get_all_values()
-        # Bỏ qua dòng tiêu đề (dòng 0), trả về dữ liệu nếu có
         return data[1:] if len(data) > 1 else []
 
     def get_products(self):
@@ -19,52 +18,32 @@ class DataService:
         data = self.sheet_products.get_all_values()
         return data[1:] if len(data) > 1 else []
 
-    import streamlit as st
-import pandas as pd
-from controllers.google_provider import GoogleProvider
-
-class DataService:
-    def __init__(self, mode="ONLINE"):
-        self.provider = GoogleProvider()
-        self.sheet_transactions = self.provider.get_sheet("Transactions")
-        self.sheet_products = self.provider.get_sheet("Products")
-
-    def get_history(self):
-        """Lấy toàn bộ lịch sử giao dịch"""
-        data = self.sheet_transactions.get_all_values()
-        return data[1:] if len(data) > 1 else []
-    
-    def get_products(self):
-        """Lấy danh sách hàng hóa"""
-        if self.sheet_products:
-            data = self.sheet_products.get_all_values()
-            return data[1:] if len(data) > 1 else []
-        return []
-
     def get_product_stats_by_date(self, product_id, start_date, end_date):
+        # 1. Lấy dữ liệu
         raw_data = self.get_history()
         if not raw_data: 
-            st.warning("Không có dữ liệu trong Transactions!")
             return 0.0, 0.0, 0.0
         
-        # 1. Tạo DataFrame và DEBUG dữ liệu thô
+        # 2. Tạo bảng và làm sạch cột dữ liệu
         df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
         
-        st.write("--- DEBUG: DỮ LIỆU ĐỌC TỪ GOOGLE SHEET ---")
-        st.dataframe(df.head()) # Xem 5 dòng đầu
-        st.write("Mã hàng bạn chọn để lọc:", product_id)
-
-        # 2. Làm sạch dữ liệu
+        # Ép kiểu dữ liệu chuẩn xác
         df['date'] = pd.to_datetime(df['date'])
         df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
-        df_prod = df[df['product_id'].astype(str).str.strip() == str(product_id).strip()]
+        df['product_id'] = df['product_id'].astype(str).str.strip()
         
-        # 3. Lọc theo mã hàng và DEBUG kết quả lọc
-        df_prod = df[df['product_id'] == str(product_id).strip()]
-        st.write("--- DEBUG: DỮ LIỆU SAU KHI LỌC MÃ HÀNG ---")
-        st.dataframe(df_prod)
-
-        # 4. Tính toán
+        # 3. Ép kiểu input đầu vào (Quan trọng: Phải khớp với cột product_id ở trên)
+        target_id = str(product_id).strip()
+        
+        # 4. Lọc dữ liệu
+        df_prod = df[df['product_id'] == target_id]
+        
+        # --- DEBUG: Nếu không ra dữ liệu, in ra cảnh báo ---
+        if df_prod.empty:
+            st.warning(f"Không có giao dịch nào khớp với mã hàng: '{target_id}'")
+            return 0.0, 0.0, 0.0
+        
+        # 5. Tính toán
         start = pd.to_datetime(start_date)
         end = pd.to_datetime(end_date)
         
@@ -76,11 +55,4 @@ class DataService:
         nhap = period_data[period_data['type'] == 'IMPORT']['qty'].sum()
         xuat = period_data[period_data['type'] == 'EXPORT']['qty'].sum()
         
-        st.write(f"Tồn đầu: {ton_dau} | Nhập: {nhap} | Xuất: {xuat}")
-        
         return float(ton_dau), float(nhap), float(xuat)
-
-    def add_transaction(self, product_id, qty, trans_type, note):
-        # Logic ghi vào Google Sheets
-        date_str = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([date_str, product_id, trans_type, qty, note])
