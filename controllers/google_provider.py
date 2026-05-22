@@ -14,7 +14,7 @@ class GoogleProvider:
         )
         self.gc = gspread.authorize(self.credentials)
         # Thay đổi tên file Google Sheet của bạn ở đây nếu cần
-        self.sh = self.gc.open("quan-ly_kho") 
+        self.sh = self.gc.open("DataKho") 
 
     def get_sheet(self, sheet_name):
         return self.sh.worksheet(sheet_name)
