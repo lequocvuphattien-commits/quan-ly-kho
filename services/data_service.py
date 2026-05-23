@@ -45,3 +45,35 @@ class DataService:
                 self.sheet_products.update_cell(i + 1, 5, new_stock)
                 return True
         return False
+    
+    def get_product_stats_by_date(self, product_id, start_date, end_date):
+        """Tính tồn đầu kỳ và nhập xuất trong kỳ"""
+        raw_data = self.get_history()
+        if not raw_data: return 0.0, 0.0, 0.0
+        
+        df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
+        # Chuẩn hóa dữ liệu cực kỳ quan trọng
+        df['date'] = pd.to_datetime(df['date'])
+        df['product_id'] = df['product_id'].astype(str).str.strip()
+        df['type'] = df['type'].astype(str).str.strip()
+        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
+        
+        target_id = str(product_id).strip()
+        df_prod = df[df['product_id'] == target_id]
+        
+        if df_prod.empty: return 0.0, 0.0, 0.0
+        
+        start = pd.to_datetime(start_date)
+        end = pd.to_datetime(end_date)
+        
+        # Tồn đầu kỳ = (Tổng nhập trước start) - (Tổng xuất trước start)
+        past_data = df_prod[df_prod['date'] < start]
+        ton_dau = (past_data[past_data['type'] == 'Nhập']['qty'].sum() - 
+                   past_data[past_data['type'] == 'Xuất']['qty'].sum())
+        
+        # Trong kỳ
+        period_data = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
+        nhap = period_data[period_data['type'] == 'Nhập']['qty'].sum()
+        xuat = period_data[period_data['type'] == 'Xuất']['qty'].sum()
+        
+        return float(ton_dau), float(nhap), float(xuat)
