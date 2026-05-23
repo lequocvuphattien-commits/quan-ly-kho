@@ -30,6 +30,7 @@ if menu == "Danh mục hàng hóa":
                 st.success("Đã thêm!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
+@st.cache_data(ttl=30)
 elif menu == "Nhập/Xuất":
     st.header("Nhập/Xuất kho")
     products = service.get_products()
