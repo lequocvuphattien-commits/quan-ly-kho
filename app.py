@@ -27,12 +27,21 @@ t_controller = TransactionController()
 # 3. HÀM CACHE & DỮ LIỆU
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
-    # Lấy danh sách đối tượng
+    # Lấy danh sách đối tượng từ controller
     products = p_controller.get_all_products()
     
-    # Ép kiểu dữ liệu: Chuyển đổi object thành dictionary thuần túy
-    # Nếu sản phẩm là object, ta dùng __dict__
-    return [vars(p) if hasattr(p, '__dict__') else p for p in products]
+    # ÉP KIỂU THÀNH DICT THUẦN TÚY:
+    # Thay vì dùng vars(p), ta dùng dict(p.__dict__) để loại bỏ mappingproxy
+    result = []
+    for p in products:
+        if hasattr(p, '__dict__'):
+            # Chuyển đổi thành dict chuẩn
+            data = dict(p.__dict__)
+            result.append(data)
+        else:
+            result.append(p)
+            
+    return result
 
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_history(_svc):
