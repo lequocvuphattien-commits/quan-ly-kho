@@ -32,45 +32,47 @@ def show_report():
             products = p_controller.get_all_products()
             all_history = t_controller.get_transaction_history()
             
-            if not products:
-                st.warning("Không tìm thấy hàng hóa!")
-                return
-            if not all_history:
-                st.info("Chưa có giao dịch nào.")
+            if not products or not all_history:
+                st.warning("Không có dữ liệu để báo cáo!")
                 return
 
+            # Chuyển danh mục sản phẩm sang DataFrame
+            df_products = pd.DataFrame([vars(p) for p in products] if hasattr(products[0], '__dict__') 
+                                      else [[p.code, p.name, p.unit] for p in products], 
+                                      columns=["code", "name", "unit"])
+            
             df_h = pd.DataFrame(all_history, columns=["date", "product_id", "type", "qty", "note"])
             df_h['date'] = pd.to_datetime(df_h['date'])
             df_h['qty'] = pd.to_numeric(df_h['qty'], errors='coerce').fillna(0)
-            df_h['type'] = df_h['type'].astype(str).str.strip()
+            df_h['type'] = df_h['type'].astype('category')
             
             start, end = pd.to_datetime(start_date), pd.to_datetime(end_date)
             
-            # --- TỐI ƯU HÓA: Tính toán bằng Pivot Table ---
-            # Chia dữ liệu thành 2 nhóm: Trước kỳ và Trong kỳ
+            # --- TỐI ƯU: XỬ LÝ HÀNG LOẠT BẰNG MERGE (Không dùng vòng lặp cho tính toán) ---
             df_past = df_h[df_h['date'] < start]
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
             
-            # Tính toán nhanh bằng Pivot
-            def get_pivot(df):
-                return df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+            def get_stats(df):
+                pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+                # Đảm bảo luôn có cột Nhập/Xuất ngay cả khi dữ liệu trống
+                for col in ['Nhập', 'Xuất']:
+                    if col not in pivot.columns: pivot[col] = 0
+                return pivot
 
-            past_pivot = get_pivot(df_past)
-            period_pivot = get_pivot(df_period)
+            past_stats = get_stats(df_past)
+            period_stats = get_stats(df_period)
             
-            report_data = []
-            for p in products:
-                pid = str(p.code).strip()
-                
-                # Tồn đầu = Nhập đầu - Xuất đầu
-                ton_dau = past_pivot.get(pid, {}).get('Nhập', 0) - past_pivot.get(pid, {}).get('Xuất', 0)
-                # Nhập/Xuất trong kỳ
-                nhap = period_pivot.get(pid, {}).get('Nhập', 0)
-                xuat = period_pivot.get(pid, {}).get('Xuất', 0)
-                
-                report_data.append([p.code, p.name, p.unit, ton_dau, nhap, xuat, ton_dau + nhap - xuat])
+            # Tính toán tồn đầu kỳ
+            past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
             
-            df_report = pd.DataFrame(report_data, columns=["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"])
+            # Merge tất cả vào bảng sản phẩm chính (Siêu nhanh)
+            df_report = df_products.merge(past_stats[['ton_dau']], left_on='code', right_index=True, how='left').fillna(0)
+            df_report = df_report.merge(period_stats[['Nhập', 'Xuất']], left_on='code', right_index=True, how='left').fillna(0)
+            
+            df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
+            
+            # Đổi tên cột cho đẹp
+            df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             st.dataframe(df_report, use_container_width=True, hide_index=True)
             
