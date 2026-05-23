@@ -99,3 +99,17 @@ class DataService:
         products = self.get_products()
         # Dùng .strip().lower() để so sánh không phân biệt hoa thường/khoảng trắng
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
+    
+    # Mở file services/data_service.py và thêm hàm này vào class DataService
+    def add_product(self, code, name, unit):
+        """Thêm hàng hóa mới vào Google Sheet"""
+        # Giả sử bạn dùng thư viện gspread để tương tác với Google Sheets
+        # Dòng này thêm một hàng mới vào sheet 'Products'
+        self.sheet_products.append_row([
+            "",          # ID (để trống nếu sheet tự tăng)
+            code,        # Mã
+            name,        # Tên
+            unit,        # Đơn vị tính
+            0.0          # Tồn kho ban đầu
+        ])
+        return True
