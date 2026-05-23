@@ -27,8 +27,11 @@ t_controller = TransactionController()
 # 3. HÀM CACHE & DỮ LIỆU
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
-    # Chuyển đổi dữ liệu sang dict để tránh lỗi Unserializable
+    # Lấy danh sách đối tượng
     products = p_controller.get_all_products()
+    
+    # Ép kiểu dữ liệu: Chuyển đổi object thành dictionary thuần túy
+    # Nếu sản phẩm là object, ta dùng __dict__
     return [vars(p) if hasattr(p, '__dict__') else p for p in products]
 
 @st.cache_data(ttl=30, show_spinner=False)
