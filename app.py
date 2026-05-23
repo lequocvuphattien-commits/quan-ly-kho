@@ -61,19 +61,52 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất kho")
+    st.header("Nhập/Xuất kho nhiều mặt hàng")
+    
+    # Khởi tạo giỏ hàng trong session_state nếu chưa có
+    if 'cart' not in st.session_state:
+        st.session_state.cart = []
+
     products = get_cached_products(service)
+    
     if products:
         product_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
-        selected = st.selectbox("Chọn hàng", list(product_dict.keys()))
-        prod_code = product_dict[selected]
-        qty = st.number_input("Số lượng", min_value=0.0, step=1.0)
-        trans_type = st.radio("Loại", ["Nhập", "Xuất"])
-        note = st.text_input("Ghi chú")
-        if st.button("Xác nhận giao dịch"):
-            service.add_transaction(prod_code, qty, trans_type, note)
-            service.update_stock(prod_code, qty, trans_type)
-            st.cache_data.clear(); st.success("Đã cập nhật!"); st.rerun()
+        
+        # Form chọn hàng
+        with st.container():
+            col_a, col_b, col_c = st.columns([2, 1, 1])
+            selected = col_a.selectbox("Chọn hàng", list(product_dict.keys()))
+            qty = col_b.number_input("Số lượng", min_value=1.0, step=1.0)
+            trans_type = col_c.radio("Loại", ["Nhập", "Xuất"], horizontal=True)
+            
+            if st.button("➕ Thêm vào lưới chờ"):
+                st.session_state.cart.append({
+                    "Mã hàng": product_dict[selected],
+                    "Loại": trans_type,
+                    "Số lượng": qty
+                })
+                st.rerun()
+
+        # Hiển thị lưới chờ
+        if st.session_state.cart:
+            st.subheader("📋 Lưới chờ giao dịch")
+            df_cart = pd.DataFrame(st.session_state.cart)
+            st.dataframe(df_cart, use_container_width=True)
+            
+            col_btn1, col_btn2 = st.columns(2)
+            if col_btn1.button("✅ Xác nhận tất cả giao dịch"):
+                for item in st.session_state.cart:
+                    service.add_transaction(item["Mã hàng"], item["Số lượng"], item["Loại"], "Giao dịch hàng loạt")
+                    service.update_stock(item["Mã hàng"], item["Số lượng"], item["Loại"])
+                
+                st.session_state.cart = [] # Xóa giỏ
+                st.cache_data.clear()
+                st.success("Đã cập nhật kho thành công!")
+                st.rerun()
+            
+            if col_btn2.button("🗑️ Xóa lưới chờ"):
+                st.session_state.cart = []
+                st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
