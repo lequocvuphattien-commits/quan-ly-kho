@@ -18,10 +18,10 @@ st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho")
 
 # Menu điều hướng
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC ---
-if menu == "Danh mục hàng hóa":
+if menu == "Danh mục":
     st.header("Danh mục hàng")
     products = get_cached_products(service)
     
