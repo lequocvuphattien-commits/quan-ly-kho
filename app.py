@@ -7,7 +7,7 @@ from views.report_view_streamlit import show_report
 
 # 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
-st.title("📦 QL Kho Hàng")
+st.title("📦 QL Kho")
 
 # 2. KHỞI TẠO DỊCH VỤ
 service = DataService(mode="ONLINE")
@@ -61,7 +61,7 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT (TỐI ƯU HÀNG LOẠT) ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất hàng loạt")
+    st.header("Nhập/Xuất")
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     prod_map = get_cached_map(service)
