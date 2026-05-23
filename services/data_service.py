@@ -77,3 +77,9 @@ class DataService:
         xuat = period_data[period_data['type'] == 'Xuất']['qty'].sum()
         
         return float(ton_dau), float(nhap), float(xuat)
+    
+    def check_product_exists(self, product_code):
+        """Kiểm tra mã hàng đã tồn tại trong sheet Products hay chưa"""
+        products = self.get_products()
+        # Dùng .strip().lower() để so sánh không phân biệt hoa thường/khoảng trắng
+        return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
