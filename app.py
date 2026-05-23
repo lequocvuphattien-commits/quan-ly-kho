@@ -4,7 +4,7 @@ from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
 # 1. CẤU HÌNH TRANG
-st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide", initial_sidebar_state="collapsed")    
+st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide", initial_sidebar_state="auto")    
 st.markdown("""
     <style>
     .blue-btn button { background-color: #007BFF !important; color: white !important; border: none !important; width: 100%; }
@@ -25,11 +25,11 @@ def get_cached_map(_svc): return _svc.get_product_map()
 def clear_all(): st.cache_data.clear()
 
 # 4. ĐIỀU HƯỚNG MENU
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC ---
-if menu == "Danh mục hàng hóa":
-    st.header("Danh mục hàng hóa")
+if menu == "Danh mục HH":
+    st.header("Danh mục HH")
     products = get_cached_products(service)
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
