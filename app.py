@@ -7,6 +7,32 @@ from views.report_view_streamlit import show_report
 
 # 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
+st.markdown("""
+    <style>
+    /* Nút Thêm vào lưới - Xanh dương */
+    div.stButton > button:has(div:contains('Thêm vào lưới')) {
+        background-color: #007BFF;
+        color: white;
+        border: none;
+    }
+    div.stButton > button:has(div:contains('Thêm vào lưới')):hover {
+        background-color: #0056b3;
+        color: white;
+    }
+
+    /* Nút Xác nhận tất cả - Xanh lá */
+    div.stButton > button:has(div:contains('Xác nhận tất cả')) {
+        background-color: #28a745;
+        color: white;
+        border: none;
+    }
+    div.stButton > button:has(div:contains('Xác nhận tất cả')):hover {
+        background-color: #218838;
+        color: white;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📦 QL Kho")
 
 # 2. KHỞI TẠO DỊCH VỤ
