@@ -5,14 +5,14 @@ from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
-# Cấu hình trang
+# 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho hàng")
 
-# Khởi tạo dịch vụ
+# 2. KHỞI TẠO DỊCH VỤ
 service = DataService(mode="ONLINE")
 
-# --- BỘ NHỚ ĐỆM (CACHE) ---
+# 3. BỘ NHỚ ĐỆM (CACHE)
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
     return _svc.get_products()
@@ -24,7 +24,7 @@ def get_cached_history(_svc):
 def clear_all_caches():
     st.cache_data.clear()
 
-# --- HÀM XUẤT EXCEL CHUYÊN NGHIỆP ---
+# 4. HÀM XUẤT EXCEL CHUYÊN NGHIỆP
 def export_to_excel(df, sheet_name='Data'):
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -37,10 +37,10 @@ def export_to_excel(df, sheet_name='Data'):
             worksheet.column_dimensions[get_column_letter(col)].width = 15
     return buffer.getvalue()
 
-# Menu điều hướng
+# 5. MENU ĐIỀU HƯỚNG
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1: DANH MỤC HÀNG HÓA ---
+# 6. CÁC TAB CHỨC NĂNG
 if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng hóa")
     products = get_cached_products(service)
@@ -60,7 +60,6 @@ if menu == "Danh mục hàng hóa":
                 service.add_product(c, n, u)
                 clear_all_caches(); st.success("Đã thêm!"); st.rerun()
 
-# --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.header("Nhập/Xuất hàng loạt")
     if 'cart' not in st.session_state: st.session_state.cart = []
@@ -101,11 +100,9 @@ elif menu == "Nhập/Xuất":
             if st.button("🗑️ Hủy"):
                 st.session_state.cart = []; st.rerun()
 
-# --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
     show_report()
 
-# --- TAB 4: LỊCH SỬ GIAO DỊCH ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     hist = get_cached_history(service)
