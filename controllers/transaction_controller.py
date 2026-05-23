@@ -67,3 +67,31 @@ class TransactionController:
         except Exception as e:
             print(f"Lỗi khi tính toán báo cáo: {e}")
             return 0.0, 0.0, 0.0
+        
+    def process_transaction(self, product_id, trans_type, quantity, note):
+        """
+        Xử lý giao dịch: Kiểm tra tồn kho trước khi xuất.
+        """
+        try:
+            # 1. Nếu là XUẤT, kiểm tra tồn kho trước
+            if trans_type == "Xuất":
+                # Lấy tồn kho hiện tại
+                products = self.service.get_products()
+                # Tìm sản phẩm tương ứng
+                prod = next((p for p in products if str(p[1]).strip() == str(product_id).strip()), None)
+                
+                if prod:
+                    current_stock = float(prod[4]) # Cột 4 là tồn
+                    if float(quantity) > current_stock:
+                        return "ERROR_INSUFFICIENT_STOCK"
+                else:
+                    return "ERROR_NOT_FOUND"
+
+            # 2. Nếu đủ điều kiện, ghi vào lịch sử và cập nhật
+            self.service.add_transaction(product_id, quantity, trans_type, note)
+            self.service.update_stock(product_id, quantity, trans_type)
+            st.cache_data.clear()
+            return True
+        except Exception as e:
+            print(f"Lỗi khi xử lý giao dịch: {e}")
+            return False
