@@ -7,8 +7,15 @@ from views.report_view_streamlit import show_report
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide", initial_sidebar_state="auto")    
 st.markdown("""
     <style>
-    .blue-btn button { background-color: #007BFF !important; color: white !important; border: none !important; width: 100%; }
-    .green-btn button { background-color: #28a745 !important; color: white !important; border: none !important; width: 100%; }
+    /* Loại bỏ khoảng trắng phía trên tiêu đề chính */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+    /* Loại bỏ khoảng cách thừa phía trên cùng của trang */
+    #root > div:nth-child(1) > div > div > div > div > section > div {
+        padding-top: 0px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -29,7 +36,7 @@ menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cá
 
 # --- TAB 1: DANH MỤC ---
 if menu == "Danh mục HH":
-    st.header("Danh mục HH")
+    st.header("Danh mục HH",font="aria, 14, bold")
     products = get_cached_products(service)
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
