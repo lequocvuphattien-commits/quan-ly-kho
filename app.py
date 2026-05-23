@@ -81,7 +81,7 @@ elif menu == "Nhập/Xuất":
         st.rerun()
 
     if st.session_state.cart:
-        st.subheader("📋 Lưới chờ giao dịch")
+        st.markdown("📋 Chờ giao dịch")
         df_cart = pd.DataFrame(st.session_state.cart)
         
         # CẤU HÌNH DATA_EDITOR: Chặn sửa Mã, Loại, Đvt
