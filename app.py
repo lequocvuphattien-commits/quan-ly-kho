@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
@@ -34,10 +35,20 @@ if menu == "Danh mục hàng hóa":
         # Hiển thị bảng
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
         
-        # Xuất Excel (.xlsx) chuẩn Unicode (Khắc phục lỗi font & đọc tốt trên ĐT)
+        # Xuất Excel chuyên nghiệp
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df[["Mã", "Tên", "Đvt", "Tồn"]].to_excel(writer, index=False, sheet_name='DanhMuc')
+            worksheet = writer.sheets['DanhMuc']
+            # Cố định tiêu đề
+            worksheet.freeze_panes = 'A2'
+            # Thêm Filter
+            max_row = worksheet.max_row
+            max_col = worksheet.max_column
+            worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+            # Chỉnh độ rộng cột
+            for col in range(1, max_col + 1):
+                worksheet.column_dimensions[get_column_letter(col)].width = 15
         
         st.download_button(
             label="📥 Xuất danh mục ra Excel (.xlsx)",
