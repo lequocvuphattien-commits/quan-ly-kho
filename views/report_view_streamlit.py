@@ -37,29 +37,36 @@ def show_report():
                 st.info("Chưa có giao dịch.")
                 return
 
-            # Chuẩn hóa dữ liệu thô
             df_h = pd.DataFrame(all_history, columns=["date", "product_id", "type", "qty", "note"])
-            df_h['date'] = pd.to_datetime(df_h['date'])
+            
+            if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
+                df_h = df_h.iloc[1:].copy()
+
+            # --- KHẮC PHỤC LỖI NGÀY THÁNG TẠI ĐÂY ---
+            # 1. Chuyển Text '2026-05-23 12:39:11' thành kiểu Datetime của Pandas
+            # 2. Dùng .dt.normalize() để ép tất cả về đúng 00:00:00 (bỏ phần giờ)
+            df_h['date'] = pd.to_datetime(df_h['date'], errors='coerce').dt.normalize()
+            
             df_h['qty'] = pd.to_numeric(df_h['qty'], errors='coerce').fillna(0)
+            df_h['product_id'] = df_h['product_id'].astype(str).str.strip().str.upper()
+            df_h['type'] = df_h['type'].astype(str).str.strip().str.capitalize()
             
-            # CỰC KỲ QUAN TRỌNG: Loại bỏ khoảng trắng thừa để so sánh chính xác
-            df_h['product_id'] = df_h['product_id'].astype(str).str.strip()
-            df_h['type'] = df_h['type'].astype(str).str.strip()
-            
-            # Chuẩn hóa danh sách sản phẩm
             df_products = pd.DataFrame(
                 [[p.code, p.name, p.unit] for p in products], 
                 columns=["code", "name", "unit"]
             )
-            df_products['code'] = df_products['code'].astype(str).str.strip()
+            df_products['code'] = df_products['code'].astype(str).str.strip().str.upper()
             
-            start, end = pd.to_datetime(start_date), pd.to_datetime(end_date)
+            # --- ĐỒNG BỘ KIỂU DỮ LIỆU BỘ LỌC ---
+            # Ép biến start_date và end_date từ Streamlit sang Pandas Timestamp để so sánh không bị lệch
+            start = pd.to_datetime(start_date)
+            end = pd.to_datetime(end_date)
             
+            # Pandas bây giờ có thể so sánh 2 cột này một cách chuẩn xác 100%
             df_past = df_h[df_h['date'] < start]
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
             
             def get_stats(df):
-                # Tạo pivot table, nếu trống thì trả về DataFrame rỗng với cột phù hợp
                 if df.empty:
                     return pd.DataFrame(columns=['Nhập', 'Xuất'])
                 pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
@@ -70,17 +77,15 @@ def show_report():
             past_stats = get_stats(df_past)
             period_stats = get_stats(df_period)
             
-            # Tính toán
             past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
             
-            # Merge dữ liệu
             df_report = df_products.merge(past_stats[['ton_dau']], left_on='code', right_index=True, how='left').fillna(0)
             df_report = df_report.merge(period_stats, left_on='code', right_index=True, how='left').fillna(0)
             
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            st.dataframe(df_report, use_container_width=True, hide_index=True)
+            st.dataframe(df_report, width=None, hide_index=True)
             
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
