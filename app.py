@@ -36,7 +36,7 @@ menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cá
 
 # --- TAB 1: DANH MỤC ---
 if menu == "Danh mục HH":
-    st.header("Danh mục HH",font="aria, 14, bold")
+    st.header("Danh mục HH")
     products = get_cached_products(service)
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
