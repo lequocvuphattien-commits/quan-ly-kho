@@ -9,12 +9,12 @@ st.markdown("""
     <style>
     /* Loại bỏ khoảng trắng phía trên tiêu đề chính */
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 1rem !important;
         padding-bottom: 0rem !important;
     }
     /* Loại bỏ khoảng cách thừa phía trên cùng của trang */
     #root > div:nth-child(1) > div > div > div > div > section > div {
-        padding-top: 0px !important;
+        padding-top: 1px !important;
     }
     </style>
 """, unsafe_allow_html=True)
