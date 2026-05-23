@@ -5,19 +5,14 @@ from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
 
-# Hàm hỗ trợ xuất Excel chuyên nghiệp
-def export_to_excel(df, filename):
+def export_to_excel(df):
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Data')
         worksheet = writer.sheets['Data']
-        # Cố định tiêu đề
         worksheet.freeze_panes = 'A2'
-        # Thêm Filter
-        max_row = worksheet.max_row
-        max_col = worksheet.max_column
+        max_row, max_col = worksheet.max_row, worksheet.max_column
         worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-        # Chỉnh độ rộng cột
         for col in range(1, max_col + 1):
             worksheet.column_dimensions[get_column_letter(col)].width = 15
     return buffer.getvalue()
@@ -29,62 +24,59 @@ def show_report():
     t_controller = TransactionController()
     
     col1, col2 = st.columns(2)
-    start_date = col1.date_input("Từ ngày").strftime("%Y-%m-%d 00:00:00")
-    end_date = col2.date_input("Đến ngày").strftime("%Y-%m-%d 23:59:59")
+    start_date = col1.date_input("Từ ngày")
+    end_date = col2.date_input("Đến ngày")
     
     if st.button("Lọc báo cáo", type="primary"):
-        with st.spinner('Đang tính toán dữ liệu tốc độ cao...'):
+        with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
+            all_history = t_controller.get_transaction_history()
             
             if not products:
-                st.warning("Không tìm thấy hàng hóa trong danh mục!")
+                st.warning("Không tìm thấy hàng hóa!")
                 return
-                
-            all_history_df = t_controller.get_transaction_history()
-            
-            if not all_history_df:
-                st.info("Chưa có giao dịch nào trong lịch sử.")
+            if not all_history:
+                st.info("Chưa có giao dịch nào.")
                 return
 
-            df_hist = pd.DataFrame(all_history_df, columns=["date", "product_id", "type", "qty", "note"])
-            df_hist['date'] = pd.to_datetime(df_hist['date'])
-            df_hist['qty'] = pd.to_numeric(df_hist['qty'], errors='coerce').fillna(0)
-            df_hist['type'] = df_hist['type'].astype(str).str.strip()
+            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "type", "qty", "note"])
+            df_h['date'] = pd.to_datetime(df_h['date'])
+            df_h['qty'] = pd.to_numeric(df_h['qty'], errors='coerce').fillna(0)
+            df_h['type'] = df_h['type'].astype(str).str.strip()
             
-            start = pd.to_datetime(start_date)
-            end = pd.to_datetime(end_date)
+            start, end = pd.to_datetime(start_date), pd.to_datetime(end_date)
+            
+            # --- TỐI ƯU HÓA: Tính toán bằng Pivot Table ---
+            # Chia dữ liệu thành 2 nhóm: Trước kỳ và Trong kỳ
+            df_past = df_h[df_h['date'] < start]
+            df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
+            
+            # Tính toán nhanh bằng Pivot
+            def get_pivot(df):
+                return df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+
+            past_pivot = get_pivot(df_past)
+            period_pivot = get_pivot(df_period)
             
             report_data = []
-            
             for p in products:
-                df_prod = df_hist[df_hist['product_id'] == str(p.code).strip()]
+                pid = str(p.code).strip()
                 
-                past = df_prod[df_prod['date'] < start]
-                ton_dau = past[past['type'] == 'Nhập']['qty'].sum() - past[past['type'] == 'Xuất']['qty'].sum()
+                # Tồn đầu = Nhập đầu - Xuất đầu
+                ton_dau = past_pivot.get(pid, {}).get('Nhập', 0) - past_pivot.get(pid, {}).get('Xuất', 0)
+                # Nhập/Xuất trong kỳ
+                nhap = period_pivot.get(pid, {}).get('Nhập', 0)
+                xuat = period_pivot.get(pid, {}).get('Xuất', 0)
                 
-                period = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
-                nhap = period[period['type'] == 'Nhập']['qty'].sum()
-                xuat = period[period['type'] == 'Xuất']['qty'].sum()
-                cuoi = ton_dau + nhap - xuat
-                
-                report_data.append({
-                    "Mã HH": p.code,
-                    "Tên": p.name,
-                    "Đvt": p.unit,
-                    "Tồn Đầu": float(ton_dau),
-                    "Nhập": float(nhap),
-                    "Xuất": float(xuat),
-                    "Tồn Cuối": float(cuoi)
-                })
+                report_data.append([p.code, p.name, p.unit, ton_dau, nhap, xuat, ton_dau + nhap - xuat])
             
-            # Hiển thị kết quả
-            df_report = pd.DataFrame(report_data)
+            df_report = pd.DataFrame(report_data, columns=["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"])
+            
             st.dataframe(df_report, use_container_width=True, hide_index=True)
             
-            # Nút xuất Excel chuyên nghiệp
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
-                data=export_to_excel(df_report, "BaoCaoTonKho.xlsx"),
+                data=export_to_excel(df_report),
                 file_name="BaoCaoTonKho.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )

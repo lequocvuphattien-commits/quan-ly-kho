@@ -5,10 +5,13 @@ from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
+# Cấu hình trang (Phải đặt đầu tiên)
+st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
+
 # Khởi tạo dịch vụ
 service = DataService(mode="ONLINE")
 
-# --- BỘ NHỚ ĐỆM (CACHE) ---
+# --- BỘ NHỚ ĐỆM (CACHE) TỐI ƯU ---
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
     return _svc.get_products()
@@ -17,27 +20,27 @@ def get_cached_products(_svc):
 def get_cached_history(_svc):
     return _svc.get_history()
 
-# --- HÀM HỖ TRỢ XUẤT EXCEL CHUYÊN NGHIỆP ---
-def export_to_excel(df, filename):
+def clear_all_caches():
+    st.cache_data.clear()
+
+# --- HÀM XUẤT EXCEL CHUYÊN NGHIỆP ---
+def export_to_excel(df, sheet_name='Data'):
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data')
-        worksheet = writer.sheets['Data']
+        df.to_excel(writer, index=False, sheet_name=sheet_name)
+        worksheet = writer.sheets[sheet_name]
         worksheet.freeze_panes = 'A2'
-        max_row = worksheet.max_row
-        max_col = worksheet.max_column
+        max_row, max_col = worksheet.max_row, worksheet.max_column
         worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
         for col in range(1, max_col + 1):
             worksheet.column_dimensions[get_column_letter(col)].width = 15
     return buffer.getvalue()
 
-# Cấu hình trang
-st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
+# --- GIAO DIỆN CHÍNH ---
 st.title("📦 Quản lý kho hàng")
-
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1: DANH MỤC HÀNG HÓA ---
+# --- TAB 1: DANH MỤC ---
 if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng hóa")
     products = get_cached_products(service)
@@ -45,79 +48,55 @@ if menu == "Danh mục hàng hóa":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
-        
-        st.download_button(label="📥 Xuất danh mục (.xlsx)", data=export_to_excel(df[["Mã", "Tên", "Đvt", "Tồn"]], "DanhMuc.xlsx"), 
-                           file_name="DanhMucHangHoa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("📥 Xuất danh mục (.xlsx)", export_to_excel(df), "DanhMuc.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     
     with st.form("add_form", clear_on_submit=True):
         st.subheader("Thêm hàng hóa mới")
-        code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
+        c, n, u = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
         if st.form_submit_button("Thêm hàng hóa"):
-            if not code or not name: st.warning("Nhập đủ Mã và Tên!")
-            elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
+            if not c or not n: st.warning("Nhập đủ Mã và Tên!")
+            elif service.check_product_exists(c.upper()): st.error("Mã đã tồn tại!")
             else:
-                service.add_product(code, name, unit)
-                st.cache_data.clear(); st.success("Đã thêm!"); st.rerun()
+                service.add_product(c, n, u)
+                clear_all_caches(); st.success("Đã thêm!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất kho nhiều mặt hàng")
+    st.header("Nhập/Xuất hàng loạt")
+    if 'cart' not in st.session_state: st.session_state.cart = []
     
-    # Khởi tạo giỏ hàng trong session_state nếu chưa có
-    if 'cart' not in st.session_state:
-        st.session_state.cart = []
-
     products = get_cached_products(service)
-    
     if products:
-        product_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
+        p_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
+        col1, col2, col3 = st.columns([2, 1, 1])
+        sel = col1.selectbox("Chọn hàng", list(p_dict.keys()))
+        qty = col2.number_input("Số lượng", min_value=1.0, step=1.0)
+        typ = col3.radio("Loại", ["Nhập", "Xuất"], horizontal=True)
         
-        # Form chọn hàng
-        with st.container():
-            col_a, col_b, col_c = st.columns([2, 1, 1])
-            selected = col_a.selectbox("Chọn hàng", list(product_dict.keys()))
-            qty = col_b.number_input("Số lượng", min_value=1.0, step=1.0)
-            trans_type = col_c.radio("Loại", ["Nhập", "Xuất"], horizontal=True)
-            
-            if st.button("➕ Thêm vào lưới chờ"):
-                st.session_state.cart.append({
-                    "Mã hàng": product_dict[selected],
-                    "Loại": trans_type,
-                    "Số lượng": qty
-                })
-                st.rerun()
+        if st.button("➕ Thêm vào lưới"):
+            st.session_state.cart.append({"Mã": p_dict[sel], "Loại": typ, "Số lượng": qty})
+            st.rerun()
 
-        # Hiển thị lưới chờ
         if st.session_state.cart:
-            st.subheader("📋 Lưới chờ giao dịch")
-            df_cart = pd.DataFrame(st.session_state.cart)
-            st.dataframe(df_cart, use_container_width=True)
-            
-            col_btn1, col_btn2 = st.columns(2)
-            if col_btn1.button("✅ Xác nhận tất cả giao dịch"):
+            st.write("📋 Lưới chờ:", pd.DataFrame(st.session_state.cart))
+            if st.button("✅ Xác nhận tất cả"):
                 for item in st.session_state.cart:
-                    service.add_transaction(item["Mã hàng"], item["Số lượng"], item["Loại"], "Giao dịch hàng loạt")
-                    service.update_stock(item["Mã hàng"], item["Số lượng"], item["Loại"])
-                
-                st.session_state.cart = [] # Xóa giỏ
-                st.cache_data.clear()
-                st.success("Đã cập nhật kho thành công!")
-                st.rerun()
-            
-            if col_btn2.button("🗑️ Xóa lưới chờ"):
+                    service.add_transaction(item["Mã"], item["Số lượng"], item["Loại"], "Hàng loạt")
+                    service.update_stock(item["Mã"], item["Số lượng"], item["Loại"])
                 st.session_state.cart = []
-                st.rerun()
+                clear_all_caches(); st.success("Hoàn tất!"); st.rerun()
+            if st.button("🗑️ Hủy"):
+                st.session_state.cart = []; st.rerun()
 
-# --- TAB 3: BÁO CÁO TỒN KHO ---
+# --- TAB 3: BÁO CÁO ---
 elif menu == "Báo cáo tồn kho":
     show_report()
 
 # --- TAB 4: LỊCH SỬ ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
-    history = get_cached_history(service)
-    if history:
-        df_hist = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
-        st.dataframe(df_hist, use_container_width=True)
-        st.download_button(label="📥 Xuất lịch sử (.xlsx)", data=export_to_excel(df_hist, "LichSu.xlsx"), 
-                           file_name="LichSuGiaoDich.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    hist = get_cached_history(service)
+    if hist:
+        df_h = pd.DataFrame(hist, columns=["Ngày", "Mã", "Loại", "SL", "Ghi chú"])
+        st.dataframe(df_h, use_container_width=True)
+        st.download_button("📥 Xuất lịch sử (.xlsx)", export_to_excel(df_h), "LichSu.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
