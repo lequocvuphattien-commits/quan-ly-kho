@@ -3,39 +3,50 @@ import pandas as pd
 from services.data_service import DataService
 from controllers.product_controller import ProductController
 from controllers.transaction_controller import TransactionController
-from utils.export import export_to_excel # Đảm bảo bạn có hàm này
+from utils.export import export_to_excel
 
-# Cấu hình trang
+# 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho", layout="wide")
+
+# CSS tối ưu giao diện
+st.markdown("""
+    <style>
+    .block-container { padding-top: 1rem !important; }
+    .blue-btn button { background-color: #007BFF !important; color: white !important; width: 100%; }
+    .green-btn button { background-color: #28a745 !important; color: white !important; width: 100%; }
+    </style>
+""", unsafe_allow_html=True)
 
 # Khởi tạo các Controller
 service = DataService()
 p_controller = ProductController()
 t_controller = TransactionController()
 
-# Hàm hỗ trợ xóa cache
 def clear_all():
     st.cache_data.clear()
 
-# Lấy dữ liệu sản phẩm (có cache)
+# CACHE DỮ LIỆU ĐÃ CHUYỂN ĐỔI SANG DICT
 @st.cache_data(ttl=60)
 def get_cached_products(_service):
-    return p_controller.get_all_products()
+    # Chuyển đổi Object từ Controller sang list of dicts để Streamlit lưu cache được
+    products = p_controller.get_all_products()
+    return [vars(p) if hasattr(p, '__dict__') else p for p in products]
 
-# --- GIAO DIỆN CHÍNH ---
 st.title("📦 Hệ Thống Quản Lý Kho")
-
 menu = st.sidebar.radio("Menu", ["Danh mục HH", "Báo cáo tồn kho", "Giao dịch"])
 
-# --- TAB 1: DANH MỤC HÀNG HÓA ---
+# --- TAB 1: DANH MỤC HH ---
 if menu == "Danh mục HH":
     st.header("Danh mục hàng hóa")
     products = get_cached_products(service)
     
     if products:
-        # Chuyển đổi object thành list dict để hiển thị
-        df = pd.DataFrame([vars(p) for p in products])
-        st.dataframe(df[["code", "name", "unit", "stock"]], use_container_width=True, hide_index=True)
+        df = pd.DataFrame(products)
+        # Chọn các cột hiển thị: code, name, unit, stock
+        cols_to_show = ["code", "name", "unit", "stock"] if "code" in df.columns else df.columns
+        st.dataframe(df[cols_to_show], use_container_width=True, hide_index=True)
+        
+        st.download_button("📥 Xuất Excel", export_to_excel(df), "DanhMuc.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
         st.warning("Danh mục trống!")
 
@@ -64,16 +75,17 @@ elif menu == "Báo cáo tồn kho":
     end_date = col2.date_input("Đến ngày")
     
     if st.button("Lọc báo cáo"):
-        # Logic tính toán tồn đầu, nhập, xuất, tồn cuối
-        # (Sử dụng lại logic mà chúng ta đã thống nhất ở các bước trước)
-        st.info("Đang hiển thị báo cáo...")
-        # Bạn gọi hàm t_controller.get_product_stats_by_date ở đây
+        st.info("Đang xử lý dữ liệu...")
+        # Ở đây bạn gọi hàm xử lý báo cáo từ Controller
+        # t_controller.get_product_stats_by_date(...)
 
 # --- TAB 3: GIAO DỊCH ---
 elif menu == "Giao dịch":
     st.header("Ghi nhận giao dịch")
+    products = get_cached_products(service)
+    prod_list = [p['code'] for p in products]
+    
     with st.form("trans_form"):
-        prod_list = [p.code for p in get_cached_products(service)]
         code = st.selectbox("Chọn mã hàng", prod_list)
         type_ = st.selectbox("Loại", ["Nhập", "Xuất"])
         qty = st.number_input("Số lượng", min_value=1)
@@ -84,6 +96,7 @@ elif menu == "Giao dịch":
             if res == True:
                 st.success("Giao dịch thành công!")
                 clear_all()
+                st.rerun()
             elif res == "ERROR_INSUFFICIENT_STOCK":
                 st.error("Không đủ tồn kho để xuất!")
             else:
