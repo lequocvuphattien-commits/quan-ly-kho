@@ -85,7 +85,7 @@ def show_report():
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            st.dataframe(df_report, width=None, hide_index=True)
+            st.dataframe(df_report, width='stretch', hide_index=True)
             
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",

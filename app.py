@@ -33,7 +33,7 @@ if menu == "Danh mục hàng hóa":
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         
         # Hiển thị bảng
-        st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
+        st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], width='stretch', hide_index=True)
         
         # Xuất Excel chuyên nghiệp
         buffer = io.BytesIO()
@@ -96,4 +96,4 @@ elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
     if history:
-        st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]), use_container_width=True)
+        st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]), width='stretch', hide_index=True)
