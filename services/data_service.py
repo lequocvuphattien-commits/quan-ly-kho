@@ -88,3 +88,43 @@ class DataService:
         products = self.get_products()
         # Ở hàm get_products, cột mã (code) đang nằm ở index 1
         return any(str(p[1]).strip() == str(code).strip() for p in products)
+    
+    def update_stock(self, product_code, qty, trans_type):
+        """Cập nhật số lượng tồn kho trực tiếp vào sheet Products"""
+        # 1. Lấy toàn bộ dữ liệu bảng Products
+        records = self.sheet_products.get_all_values()
+        
+        # 2. Duyệt từng dòng để tìm mã hàng tương ứng
+        # Google Sheets index bắt đầu từ 1. Trong mảng records, dòng 1 (tiêu đề) là index 0.
+        for i, row in enumerate(records):
+            if i == 0: continue # Bỏ qua dòng tiêu đề
+            
+            # Cột Mã (code) nằm ở index 1
+            if len(row) > 1 and str(row[1]).strip() == str(product_code).strip():
+                # Lấy số lượng tồn kho hiện tại (Cột Tồn nằm ở index 4)
+                current_stock = 0.0
+                if len(row) > 4 and str(row[4]).strip() != "":
+                    try:
+                        current_stock = float(row[4])
+                    except (ValueError, TypeError):
+                        current_stock = 0.0
+                
+                # Tính toán tồn kho mới
+                try:
+                    qty_val = float(qty)
+                except (ValueError, TypeError):
+                    qty_val = 0.0
+                    
+                if str(trans_type).upper() == "IMPORT":
+                    new_stock = current_stock + qty_val
+                elif str(trans_type).upper() == "EXPORT":
+                    new_stock = current_stock - qty_val
+                else:
+                    new_stock = current_stock
+                    
+                # 3. Ghi đè số mới lên Google Sheets
+                # (i + 1) là số thứ tự dòng trong Sheets, 5 là cột E (cột Tồn)
+                self.sheet_products.update_cell(i + 1, 5, new_stock)
+                return True
+                
+        return False
