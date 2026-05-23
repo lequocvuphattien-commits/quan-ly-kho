@@ -52,7 +52,7 @@ if menu == "Danh mục HH":
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
         # Nút xuất Excel Danh mục
-        st.download_button("📥 Xuất Excel", export_to_excel(df[["Mã", "Tên", "Đvt", "Tồn"]]), "DanhMuc.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button("📥 Xuất Báo Cáo ra Excel", export_to_excel(df[["Mã", "Tên", "Đvt", "Tồn"]]), "DanhMuc.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
