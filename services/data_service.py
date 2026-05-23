@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import uuid
 from controllers.google_provider import GoogleProvider
 
 class DataService:
@@ -102,14 +103,16 @@ class DataService:
     
     # Mở file services/data_service.py và thêm hàm này vào class DataService
     def add_product(self, code, name, unit):
-        """Thêm hàng hóa mới vào Google Sheet"""
-        # Giả sử bạn dùng thư viện gspread để tương tác với Google Sheets
-        # Dòng này thêm một hàng mới vào sheet 'Products'
+        """Thêm hàng hóa mới vào Google Sheet tự động tạo ID"""
+        # Tạo một ID ngẫu nhiên, cắt lấy 8 ký tự đầu và in hoa để nhìn chuyên nghiệp
+        new_id = str(uuid.uuid4())[:8].upper()
+        
+        # Thêm một dòng mới vào sheet 'Products'
         self.sheet_products.append_row([
-            "",          # ID (để trống nếu sheet tự tăng)
-            code,        # Mã
-            name,        # Tên
+            new_id,      # ID đã được tự động điền (VD: 4F9A1B2C)
+            code,        # Mã HH
+            name,        # Tên HH
             unit,        # Đơn vị tính
-            0.0          # Tồn kho ban đầu
+            0.0          # Tồn kho ban đầu mặc định là 0
         ])
         return True
