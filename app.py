@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
 from services.data_service import DataService
-from views.report_view_streamlit import show_report 
+from views.report_view_streamlit import show_report
 
+# Khởi tạo dịch vụ
 service = DataService(mode="ONLINE")
 
 # --- BỘ NHỚ ĐỆM (CACHE) TỐI ƯU TỐC ĐỘ ---
@@ -14,15 +15,16 @@ def get_cached_products(_svc):
 def get_cached_history(_svc):
     return _svc.get_history()
 
+# Cấu hình trang
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
-st.title("📦 QL Kho")
+st.title("📦 Quản lý kho hàng")
 
 # Menu điều hướng
-menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1: DANH MỤC ---
+# --- TAB 1: DANH MỤC HÀNG HÓA ---
 if menu == "Danh mục hàng hóa":
-    st.header("Danh mục hàng")
+    st.header("Danh mục hàng hóa")
     products = get_cached_products(service)
     
     if products:
@@ -32,19 +34,12 @@ if menu == "Danh mục hàng hóa":
         # Hiển thị bảng
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
         
-        # --- NÚT XUẤT EXCEL ---
-        # Chuyển đổi DataFrame thành định dạng CSV để tải xuống
+        # Nút xuất Excel (CSV)
         csv = df[["Mã", "Tên", "Đvt", "Tồn"]].to_csv(index=False).encode('utf-8')
-        
-        st.download_button(
-            label="📥 Xuất danh mục ra Excel (CSV)",
-            data=csv,
-            file_name="DanhMucHangHoa.csv",
-            mime="text/csv"
-        )
+        st.download_button(label="📥 Xuất danh mục ra Excel (CSV)", data=csv, file_name="DanhMucHangHoa.csv", mime="text/csv")
     
     with st.form("add_form", clear_on_submit=True):
-        st.subheader("Thêm hàng hóa")
+        st.subheader("Thêm hàng hóa mới")
         code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
         if st.form_submit_button("Thêm hàng hóa"):
             if not code or not name: 
@@ -53,9 +48,8 @@ if menu == "Danh mục hàng hóa":
                 st.error("Mã đã tồn tại!")
             else:
                 service.add_product(code, name, unit)
-                get_cached_products.clear()
-                st.success("Đã thêm!")
-                st.rerun()
+                st.cache_data.clear()
+                st.success("Đã thêm thành công!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
@@ -73,12 +67,8 @@ elif menu == "Nhập/Xuất":
         if st.button("Xác nhận giao dịch"):
             service.add_transaction(prod_code, qty, trans_type, note)
             service.update_stock(prod_code, qty, trans_type)
-            
-            # Xóa cache để báo cáo, danh mục và lịch sử cập nhật ngay lập tức
-            st.cache_data.clear() 
-            
-            st.success("Đã cập nhật tồn kho!")
-            st.rerun()
+            st.cache_data.clear()
+            st.success("Đã cập nhật tồn kho!"); st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
