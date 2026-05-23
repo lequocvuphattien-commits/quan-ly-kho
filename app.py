@@ -15,13 +15,13 @@ def get_cached_history(_svc):
     return _svc.get_history()
 
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
-st.title("📦 Quản lý kho")
+st.title("📦 QL Kho")
 
 # Menu điều hướng
-menu = st.sidebar.selectbox("Menu", ["Danh mục", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC ---
-if menu == "Danh mục":
+if menu == "Danh mục HH":
     st.header("Danh mục hàng")
     products = get_cached_products(service)
     
