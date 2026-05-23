@@ -12,9 +12,11 @@ class DataService:
         """Lấy lịch sử giao dịch và chuẩn hóa dữ liệu"""
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            df = pd.DataFrame(data[1:], columns=data[0])
-            # Chuẩn hóa cột quan trọng
-            df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
+            # SỬA LỖI Ở ĐÂY: Ép tên cột tiếng Anh ngay từ đầu, bỏ qua data[0] (tiếng Việt)
+            df = pd.DataFrame(data[1:], columns=["date", "product_id", "type", "qty", "note"])
+            
+            # Chuẩn hóa bằng tên cột tiếng Anh
+            df['product_id'] = df['product_id'].astype(str).str.strip()
             df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
             df['type'] = df['type'].astype(str).str.strip().str.upper()
             return df.values.tolist()
@@ -24,8 +26,9 @@ class DataService:
         """Lấy danh mục sản phẩm"""
         data = self.sheet_products.get_all_values()
         if len(data) > 1:
-            df = pd.DataFrame(data[1:], columns=data[0])
-            df['Mã'] = df['Mã'].astype(str).str.strip()
+            # Ép tên cột tiếng Anh cho an toàn
+            df = pd.DataFrame(data[1:], columns=["id", "code", "name", "unit", "stock"])
+            df['code'] = df['code'].astype(str).str.strip()
             return df.values.tolist()
         return []
 
@@ -35,16 +38,13 @@ class DataService:
         if not raw_data: 
             return 0.0, 0.0, 0.0
         
-        # Tạo DataFrame từ dữ liệu đã chuẩn hóa
+        # Tạo DataFrame từ dữ liệu đã chuẩn hóa (Tên cột đã là tiếng Anh)
         df = pd.DataFrame(raw_data, columns=["date", "product_id", "type", "qty", "note"])
         
-        # Chuyển đổi định dạng
+        # Chuyển đổi định dạng ngày tháng
         df['date'] = pd.to_datetime(df['date'])
-        df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
-        df['product_id'] = df['product_id'].astype(str).str.strip()
-        df['type'] = df['type'].str.upper() # Đảm bảo khớp IMPORT/EXPORT
         
-        # Lọc theo mã hàng
+        # Lọc theo mã hàng (ép kiểu để so sánh an toàn)
         target_id = str(product_id).strip()
         df_prod = df[df['product_id'] == target_id]
         
@@ -70,13 +70,14 @@ class DataService:
     def add_transaction(self, product_id, qty, trans_type, note):
         """Thêm giao dịch mới"""
         date_str = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([date_str, str(product_id), trans_type.upper(), qty, note])
+        self.sheet_transactions.append_row([date_str, str(product_id), str(trans_type).upper(), float(qty), str(note)])
 
     def add_product(self, code, name, unit):
         """Thêm sản phẩm mới"""
-        self.sheet_products.append_row([code, code, name, unit, 0])
+        self.sheet_products.append_row(["", code, name, unit, 0]) # Giữ ID trống để công thức tính hoặc bỏ qua
 
     def check_product_exists(self, code):
         """Kiểm tra mã hàng đã tồn tại chưa"""
         products = self.get_products()
+        # Ở hàm get_products, cột mã (code) đang nằm ở index 1
         return any(str(p[1]).strip() == str(code).strip() for p in products)
