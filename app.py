@@ -9,7 +9,7 @@ st.markdown("""
     <style>
     /* Loại bỏ khoảng trắng phía trên tiêu đề chính */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 2rem !important;
         padding-bottom: 0rem !important;
     }
     /* Loại bỏ khoảng cách thừa phía trên cùng của trang */
