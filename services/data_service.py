@@ -80,8 +80,13 @@ class DataService:
         self.sheet_transactions.append_row([date_str, str(product_id), str(trans_type).upper(), float(qty), str(note)])
 
     def add_product(self, code, name, unit):
-        """Thêm sản phẩm mới"""
-        self.sheet_products.append_row(["", code, name, unit, 0])
+        """Thêm sản phẩm mới và tự động sinh ID tăng dần"""
+        # Lấy danh sách sản phẩm hiện tại để tính toán ID tiếp theo
+        existing_products = self.get_products()
+        next_id = len(existing_products) + 1
+        
+        # Ghi ID tự động vào cột đầu tiên thay vì để trống ""
+        self.sheet_products.append_row([str(next_id), code, name, unit, 0])
 
     def check_product_exists(self, code):
         """Kiểm tra mã hàng đã tồn tại chưa"""
