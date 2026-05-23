@@ -1,26 +1,28 @@
 import streamlit as st
 import pandas as pd
 from services.data_service import DataService
-from views.report_view_streamlit import show_report # Import hàm báo cáo đã tạo
+from views.report_view_streamlit import show_report 
 
 service = DataService(mode="ONLINE")
 
 # --- BỘ NHỚ ĐỆM (CACHE) TỐI ƯU TỐC ĐỘ ---
-# Thêm dấu "_" trước biến _svc để Streamlit bỏ qua việc kiểm tra hash đối tượng
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
     return _svc.get_products()
 
+@st.cache_data(ttl=30, show_spinner=False)
+def get_cached_history(_svc):
+    return _svc.get_history()
+
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho")
 
-# Thêm "Báo cáo tồn kho" vào menu
+# Menu điều hướng
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC ---
 if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng")
-    # Thay service.get_products() bằng hàm lấy từ cache
     products = get_cached_products(service)
     
     if products:
@@ -38,15 +40,13 @@ if menu == "Danh mục hàng hóa":
                 st.error("Mã đã tồn tại!")
             else:
                 service.add_product(code, name, unit)
-                # QUAN TRỌNG: Xóa bộ nhớ đệm ngay lập tức để danh sách cập nhật món hàng mới
-                get_cached_products.clear()
+                st.cache_data.clear() # Xóa toàn bộ cache khi có thay đổi
                 st.success("Đã thêm!")
                 st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.header("Nhập/Xuất kho")
-    # Thay service.get_products() bằng hàm lấy từ cache
     products = get_cached_products(service)
     
     if products:
@@ -61,9 +61,8 @@ elif menu == "Nhập/Xuất":
             service.add_transaction(prod_code, qty, trans_type, note)
             service.update_stock(prod_code, qty, trans_type)
             
-            # QUAN TRỌNG: Xóa bộ nhớ đệm để số lượng Tồn kho mới được cập nhật
-            get_cached_products.clear()
-            st.cache_data.clear() # Đảm bảo xóa luôn các cache khác (như báo cáo)
+            # Xóa cache để báo cáo, danh mục và lịch sử cập nhật ngay lập tức
+            st.cache_data.clear() 
             
             st.success("Đã cập nhật tồn kho!")
             st.rerun()
@@ -75,7 +74,6 @@ elif menu == "Báo cáo tồn kho":
 # --- TAB 4: LỊCH SỬ ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
-    # Lịch sử cũng có thể cache nếu muốn, nhưng hiện tại ta gọi trực tiếp
-    history = service.get_history()
+    history = get_cached_history(service)
     if history:
         st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]), use_container_width=True)
