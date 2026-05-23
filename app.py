@@ -14,7 +14,7 @@ st.markdown("""
     }
     /* Loại bỏ khoảng cách thừa phía trên cùng của trang */
     #root > div:nth-child(1) > div > div > div > div > section > div {
-        padding-top: 12px !important;
+        padding-top: 14px !important;
     }
     </style>
 """, unsafe_allow_html=True)
