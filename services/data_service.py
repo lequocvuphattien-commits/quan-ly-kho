@@ -64,13 +64,13 @@ class DataService:
         
         # Tồn đầu
         past_data = df_prod[df_prod['date'] < start]
-        ton_dau = (past_data[past_data['type'] == 'IMPORT']['qty'].sum() - 
-                   past_data[past_data['type'] == 'EXPORT']['qty'].sum())
+        ton_dau = (past_data[past_data['type'] == 'Nhập']['qty'].sum() - 
+                   past_data[past_data['type'] == 'Xuất']['qty'].sum())
         
         # Nhập / Xuất trong kỳ
         period_data = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
-        nhap = period_data[period_data['type'] == 'IMPORT']['qty'].sum()
-        xuat = period_data[period_data['type'] == 'EXPORT']['qty'].sum()
+        nhap = period_data[period_data['type'] == 'Nhập']['qty'].sum()
+        xuat = period_data[period_data['type'] == 'Xuất']['qty'].sum()
         
         return float(ton_dau), float(nhap), float(xuat)
 
@@ -113,9 +113,9 @@ class DataService:
                 except (ValueError, TypeError):
                     qty_val = 0.0
                     
-                if str(trans_type).upper() == "IMPORT":
+                if str(trans_type).upper() == "Nhập":
                     new_stock = current_stock + qty_val
-                elif str(trans_type).upper() == "EXPORT":
+                elif str(trans_type).upper() == "Xuất":
                     new_stock = current_stock - qty_val
                 else:
                     new_stock = current_stock

@@ -45,12 +45,12 @@ def show_report():
                 
                 # Tính Tồn đầu
                 past = df_prod[df_prod['date'] < start]
-                ton_dau = past[past['type'] == 'IMPORT']['qty'].sum() - past[past['type'] == 'EXPORT']['qty'].sum()
+                ton_dau = past[past['type'] == 'Nhập']['qty'].sum() - past[past['type'] == 'Xuất']['qty'].sum()
                 
                 # Tính Nhập/Xuất trong kỳ
                 period = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
-                nhap = period[period['type'] == 'IMPORT']['qty'].sum()
-                xuat = period[period['type'] == 'EXPORT']['qty'].sum()
+                nhap = period[period['type'] == 'Nhập']['qty'].sum()
+                xuat = period[period['type'] == 'Xuất']['qty'].sum()
                 cuoi = ton_dau + nhap - xuat
                 
                 report_data.append({
