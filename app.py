@@ -61,7 +61,7 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT (TỐI ƯU HÀNG LOẠT) ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất")
+    st.markdown("### Nhâp/Xuất")
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     prod_map = get_cached_map(service)
