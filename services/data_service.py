@@ -76,3 +76,46 @@ class DataService:
 
     def add_transaction(self, product_id, qty, trans_type, note):
         """Thêm giao dịch mới"""
+        date_str = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.sheet_transactions.append_row([date_str, str(product_id), str(trans_type).upper(), float(qty), str(note)])
+
+    def add_product(self, code, name, unit):
+        """Thêm sản phẩm mới"""
+        self.sheet_products.append_row(["", code, name, unit, 0])
+
+    def check_product_exists(self, code):
+        """Kiểm tra mã hàng đã tồn tại chưa"""
+        products = self.get_products()
+        return any(str(p[1]).strip() == str(code).strip() for p in products)
+
+    def update_stock(self, product_code, qty, trans_type):
+        """Cập nhật số lượng tồn kho trực tiếp vào sheet Products"""
+        records = self.sheet_products.get_all_values()
+        
+        for i, row in enumerate(records):
+            if i == 0: continue # Bỏ qua dòng tiêu đề
+            
+            if len(row) > 1 and str(row[1]).strip() == str(product_code).strip():
+                current_stock = 0.0
+                if len(row) > 4 and str(row[4]).strip() != "":
+                    try:
+                        current_stock = float(row[4])
+                    except (ValueError, TypeError):
+                        current_stock = 0.0
+                
+                try:
+                    qty_val = float(qty)
+                except (ValueError, TypeError):
+                    qty_val = 0.0
+                    
+                if str(trans_type).upper() == "IMPORT":
+                    new_stock = current_stock + qty_val
+                elif str(trans_type).upper() == "EXPORT":
+                    new_stock = current_stock - qty_val
+                else:
+                    new_stock = current_stock
+                    
+                self.sheet_products.update_cell(i + 1, 5, new_stock)
+                return True
+                
+        return False
