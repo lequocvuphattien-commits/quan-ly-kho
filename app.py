@@ -6,10 +6,9 @@ from controllers.transaction_controller import TransactionController
 from utils.export import export_to_excel
 from views.report_view_streamlit import show_report
 
-# 1. CẤU HÌNH TRANG VÀ GIAO DIỆN
+# 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho", layout="wide")
 
-# CSS bổ sung để giao diện đẹp hơn
 st.markdown("""
     <style>
     .stApp { background-color: #f9f9f9; }
@@ -24,24 +23,25 @@ service = DataService(mode="ONLINE")
 p_controller = ProductController()
 t_controller = TransactionController()
 
-# 3. HÀM CACHE & DỮ LIỆU
+# 3. HÀM CACHE DỮ LIỆU ĐÃ FIX LỖI SERIEALIZATION
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_products(_svc):
-    # Lấy danh sách đối tượng từ controller
+    # Lấy danh sách đối tượng
     products = p_controller.get_all_products()
     
-    # ÉP KIỂU THÀNH DICT THUẦN TÚY:
-    # Thay vì dùng vars(p), ta dùng dict(p.__dict__) để loại bỏ mappingproxy
-    result = []
+    # CHUYỂN ĐỔI AN TOÀN: Chỉ lấy dữ liệu thô (string/float/int)
+    # Không dùng vars() hay __dict__ để tránh lỗi descriptor
+    clean_data = []
     for p in products:
-        if hasattr(p, '__dict__'):
-            # Chuyển đổi thành dict chuẩn
-            data = dict(p.__dict__)
-            result.append(data)
-        else:
-            result.append(p)
-            
-    return result
+        item = {
+            "ID": getattr(p, 'id', 'N/A'),
+            "Mã": getattr(p, 'code', 'N/A'),
+            "Tên": getattr(p, 'name', 'N/A'),
+            "Đvt": getattr(p, 'unit', 'N/A'),
+            "Tồn": float(getattr(p, 'stock', 0))
+        }
+        clean_data.append(item)
+    return clean_data
 
 @st.cache_data(ttl=30, show_spinner=False)
 def get_cached_history(_svc):
@@ -59,7 +59,7 @@ if menu == "Danh mục hàng hóa":
     products = get_cached_products(service)
     if products:
         df = pd.DataFrame(products)
-        # Sử dụng width='stretch' để thay thế cảnh báo use_container_width
+        # Sử dụng width='stretch' để tránh cảnh báo
         st.dataframe(df, width=None, hide_index=True)
         st.download_button("📥 Xuất danh mục (.xlsx)", export_to_excel(df), "DanhMuc.xlsx")
     
@@ -82,8 +82,9 @@ elif menu == "Nhập/Xuất":
     
     products = get_cached_products(service)
     if products:
-        stock_map = {str(p[1]).strip(): float(p[4]) for p in products}
-        p_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
+        # p['Mã'] là key, p['Tồn'] là value
+        stock_map = {str(p['Mã']).strip(): float(p['Tồn']) for p in products}
+        p_dict = {f"{p['Mã']} - {p['Tên']}": p['Mã'] for p in products}
         
         col1, col2, col3 = st.columns([2, 1, 1])
         sel = col1.selectbox("Chọn hàng", list(p_dict.keys()))
@@ -97,7 +98,7 @@ elif menu == "Nhập/Xuất":
                 cart_df = pd.DataFrame(st.session_state.cart) if st.session_state.cart else pd.DataFrame(columns=["Mã", "Loại", "Số lượng"])
                 out_in_cart = cart_df[(cart_df["Mã"] == prod_code) & (cart_df["Loại"] == "Xuất")]["Số lượng"].sum()
                 if qty + out_in_cart > current_stock:
-                    st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {current_stock})")
+                    st.error(f"❌ Không đủ tồn kho! (Tồn: {current_stock})")
                 else:
                     st.session_state.cart.append({"Mã": prod_code, "Loại": typ, "Số lượng": qty})
                     st.rerun()
@@ -106,14 +107,14 @@ elif menu == "Nhập/Xuất":
                 st.rerun()
 
         if st.session_state.cart:
-            st.write("📋 Danh sách chờ xử lý:")
+            st.write("📋 Danh sách chờ:")
             st.table(pd.DataFrame(st.session_state.cart))
             c1, c2 = st.columns(2)
             if c1.button("✅ Xác nhận tất cả"):
                 for item in st.session_state.cart:
                     t_controller.process_transaction(item["Mã"], item["Loại"], item["Số lượng"], "Hàng loạt")
                 st.session_state.cart = []
-                clear_all_caches(); st.success("Giao dịch thành công!"); st.rerun()
+                clear_all_caches(); st.success("Hoàn tất!"); st.rerun()
             if c2.button("🗑️ Hủy lưới"):
                 st.session_state.cart = []; st.rerun()
 
