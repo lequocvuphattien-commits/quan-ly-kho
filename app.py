@@ -4,9 +4,7 @@ from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
 # 1. CẤU HÌNH TRANG
-st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
-
-# 2. CSS TÙY CHỈNH MÀU NÚT (Dùng Wrapper class)
+st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide", initial_sidebar_state="collapsed")    
 st.markdown("""
     <style>
     .blue-btn button { background-color: #007BFF !important; color: white !important; border: none !important; width: 100%; }
