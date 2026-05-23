@@ -17,6 +17,20 @@ def get_cached_products(_svc):
 def get_cached_history(_svc):
     return _svc.get_history()
 
+# --- HÀM HỖ TRỢ XUẤT EXCEL CHUYÊN NGHIỆP ---
+def export_to_excel(df, filename):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Data')
+        worksheet = writer.sheets['Data']
+        worksheet.freeze_panes = 'A2'
+        max_row = worksheet.max_row
+        max_col = worksheet.max_column
+        worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+        for col in range(1, max_col + 1):
+            worksheet.column_dimensions[get_column_letter(col)].width = 15
+    return buffer.getvalue()
+
 # Cấu hình trang
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho hàng")
@@ -27,35 +41,13 @@ menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "
 if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng hóa")
     products = get_cached_products(service)
-    
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        
-        # Hiển thị bảng
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
         
-        # Xuất Excel chuyên nghiệp
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df[["Mã", "Tên", "Đvt", "Tồn"]].to_excel(writer, index=False, sheet_name='DanhMuc')
-            worksheet = writer.sheets['DanhMuc']
-            # Cố định tiêu đề
-            worksheet.freeze_panes = 'A2'
-            # Thêm Filter
-            max_row = worksheet.max_row
-            max_col = worksheet.max_column
-            worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-            # Chỉnh độ rộng cột
-            for col in range(1, max_col + 1):
-                worksheet.column_dimensions[get_column_letter(col)].width = 15
-        
-        st.download_button(
-            label="📥 Xuất danh mục ra Excel (.xlsx)",
-            data=buffer.getvalue(),
-            file_name="DanhMucHangHoa.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.download_button(label="📥 Xuất danh mục (.xlsx)", data=export_to_excel(df[["Mã", "Tên", "Đvt", "Tồn"]], "DanhMuc.xlsx"), 
+                           file_name="DanhMucHangHoa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     
     with st.form("add_form", clear_on_submit=True):
         st.subheader("Thêm hàng hóa mới")
@@ -65,14 +57,12 @@ if menu == "Danh mục hàng hóa":
             elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
             else:
                 service.add_product(code, name, unit)
-                st.cache_data.clear()
-                st.success("Đã thêm thành công!"); st.rerun()
+                st.cache_data.clear(); st.success("Đã thêm!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.header("Nhập/Xuất kho")
     products = get_cached_products(service)
-    
     if products:
         product_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
         selected = st.selectbox("Chọn hàng", list(product_dict.keys()))
@@ -80,12 +70,10 @@ elif menu == "Nhập/Xuất":
         qty = st.number_input("Số lượng", min_value=0.0, step=1.0)
         trans_type = st.radio("Loại", ["Nhập", "Xuất"])
         note = st.text_input("Ghi chú")
-        
         if st.button("Xác nhận giao dịch"):
             service.add_transaction(prod_code, qty, trans_type, note)
             service.update_stock(prod_code, qty, trans_type)
-            st.cache_data.clear()
-            st.success("Đã cập nhật tồn kho!"); st.rerun()
+            st.cache_data.clear(); st.success("Đã cập nhật!"); st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
@@ -96,4 +84,7 @@ elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
     if history:
-        st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]), use_container_width=True)
+        df_hist = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
+        st.dataframe(df_hist, use_container_width=True)
+        st.download_button(label="📥 Xuất lịch sử (.xlsx)", data=export_to_excel(df_hist, "LichSu.xlsx"), 
+                           file_name="LichSuGiaoDich.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

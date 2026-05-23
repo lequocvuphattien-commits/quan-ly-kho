@@ -1,7 +1,26 @@
 import streamlit as st
 import pandas as pd
+import io
+from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
+
+# Hàm hỗ trợ xuất Excel chuyên nghiệp
+def export_to_excel(df, filename):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Data')
+        worksheet = writer.sheets['Data']
+        # Cố định tiêu đề
+        worksheet.freeze_panes = 'A2'
+        # Thêm Filter
+        max_row = worksheet.max_row
+        max_col = worksheet.max_column
+        worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+        # Chỉnh độ rộng cột
+        for col in range(1, max_col + 1):
+            worksheet.column_dimensions[get_column_letter(col)].width = 15
+    return buffer.getvalue()
 
 def show_report():
     st.subheader("Báo cáo tồn kho")
@@ -30,7 +49,6 @@ def show_report():
             df_hist = pd.DataFrame(all_history_df, columns=["date", "product_id", "type", "qty", "note"])
             df_hist['date'] = pd.to_datetime(df_hist['date'])
             df_hist['qty'] = pd.to_numeric(df_hist['qty'], errors='coerce').fillna(0)
-            # TỐI ƯU: Loại bỏ khoảng trắng thừa ở cột 'type' để so sánh chính xác
             df_hist['type'] = df_hist['type'].astype(str).str.strip()
             
             start = pd.to_datetime(start_date)
@@ -39,14 +57,11 @@ def show_report():
             report_data = []
             
             for p in products:
-                # Ép kiểu Mã hàng về chuỗi và strip để so sánh chính xác
                 df_prod = df_hist[df_hist['product_id'] == str(p.code).strip()]
                 
-                # Tính Tồn đầu (Type phải là "Nhập" hoặc "Xuất" chính xác)
                 past = df_prod[df_prod['date'] < start]
                 ton_dau = past[past['type'] == 'Nhập']['qty'].sum() - past[past['type'] == 'Xuất']['qty'].sum()
                 
-                # Tính Nhập/Xuất trong kỳ
                 period = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
                 nhap = period[period['type'] == 'Nhập']['qty'].sum()
                 xuat = period[period['type'] == 'Xuất']['qty'].sum()
@@ -62,8 +77,14 @@ def show_report():
                     "Tồn Cuối": float(cuoi)
                 })
             
+            # Hiển thị kết quả
             df_report = pd.DataFrame(report_data)
             st.dataframe(df_report, use_container_width=True, hide_index=True)
             
-            csv = df_report.to_csv(index=False).encode('utf-8')
-            st.download_button(label="Tải xuống báo cáo (CSV)", data=csv, file_name="BaoCaoTonKho.csv", mime="text/csv")
+            # Nút xuất Excel chuyên nghiệp
+            st.download_button(
+                label="📥 Xuất báo cáo ra Excel (.xlsx)",
+                data=export_to_excel(df_report, "BaoCaoTonKho.xlsx"),
+                file_name="BaoCaoTonKho.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
