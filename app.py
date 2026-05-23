@@ -21,14 +21,27 @@ st.title("📦 QL Kho")
 menu = st.sidebar.selectbox("Menu", ["Danh mục HH", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC ---
-if menu == "Danh mục HH":
+if menu == "Danh mục hàng hóa":
     st.header("Danh mục hàng")
     products = get_cached_products(service)
     
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
+        
+        # Hiển thị bảng
         st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], use_container_width=True, hide_index=True)
+        
+        # --- NÚT XUẤT EXCEL ---
+        # Chuyển đổi DataFrame thành định dạng CSV để tải xuống
+        csv = df[["Mã", "Tên", "Đvt", "Tồn"]].to_csv(index=False).encode('utf-8')
+        
+        st.download_button(
+            label="📥 Xuất danh mục ra Excel (CSV)",
+            data=csv,
+            file_name="DanhMucHangHoa.csv",
+            mime="text/csv"
+        )
     
     with st.form("add_form", clear_on_submit=True):
         st.subheader("Thêm hàng hóa")
@@ -40,7 +53,7 @@ if menu == "Danh mục HH":
                 st.error("Mã đã tồn tại!")
             else:
                 service.add_product(code, name, unit)
-                st.cache_data.clear() # Xóa toàn bộ cache khi có thay đổi
+                get_cached_products.clear()
                 st.success("Đã thêm!")
                 st.rerun()
 
