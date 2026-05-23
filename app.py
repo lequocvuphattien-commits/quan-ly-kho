@@ -3,6 +3,11 @@ import pandas as pd
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
+st.set_page_config(
+    page_title="QL Kho Hàng", 
+    page_icon="📦", # Bạn có thể đổi thành emoji khác hoặc link ảnh logo
+    layout="wide"
+)
 # 1. CẤU HÌNH TRANG
 st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide", initial_sidebar_state="auto")    
 st.markdown("""
