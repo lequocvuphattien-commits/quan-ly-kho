@@ -61,16 +61,17 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT (TỐI ƯU HÀNG LOẠT) ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất")
+    st.header("Nhập/Xuất hàng loạt")
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     prod_map = get_cached_map(service)
-    # Tự động tìm kiếm khi gõ
     options = {f"{c} - {i['name']} (Tồn: {i['stock']:,.0f} {i['unit']})": c for c, i in prod_map.items()}
     
     col1, col2, col3, col4 = st.columns([2, 1, 1, 2])
-    sel = col1.selectbox("Chọn hàng (gõ để tìm)", list(options.keys()))
-    qty = col2.number_input("Số lượng", min_value=1.0, step=1.0, format="%d")
+    # Tối ưu cho mobile: thêm placeholder
+    sel = col1.selectbox("Chọn hàng", list(options.keys()), placeholder="Gõ tìm kiếm...")
+    # Khắc phục cảnh báo: Ép kiểu int() ngay từ đầu
+    qty = int(col2.number_input("Số lượng", min_value=1, step=1, format="%d"))
     typ = col3.radio("Loại", ["Nhập", "Xuất"], horizontal=True)
     note = col4.text_input("Ghi chú")
     
@@ -80,20 +81,38 @@ elif menu == "Nhập/Xuất":
         st.rerun()
 
     if st.session_state.cart:
-        st.subheader("📋 Lưới chờ (Click để sửa trực tiếp)")
+        st.subheader("📋 Lưới chờ giao dịch")
         df_cart = pd.DataFrame(st.session_state.cart)
-        edited_df = st.data_editor(df_cart, use_container_width=True, hide_index=True,
-                                   column_config={"Số lượng": st.column_config.NumberColumn(format="%d")})
         
-        c1, c2 = st.columns(2)
-        if c1.button("✅ Xác nhận tất cả"):
+        # CẤU HÌNH DATA_EDITOR: Chặn sửa Mã, Loại, Đvt
+        edited_df = st.data_editor(
+            df_cart, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Mã": st.column_config.TextColumn(disabled=True),
+                "Loại": st.column_config.TextColumn(disabled=True),
+                "Đvt": st.column_config.TextColumn(disabled=True),
+                "Số lượng": st.column_config.NumberColumn(format="%d", min_value=1)
+            }
+        )
+        
+        # Kiểm tra cảnh báo xuất quá tồn kho sau khi sửa trên lưới
+        if st.button("✅ Xác nhận tất cả"):
+            can_proceed = True
             for _, row in edited_df.iterrows():
-                service.add_transaction(row["Mã"], row["Số lượng"], row["Loại"], row["Ghi chú"])
-                service.update_stock(row["Mã"], row["Số lượng"], row["Loại"])
-            st.session_state.cart = []
-            clear_all_caches(); st.success("Hoàn tất!"); st.rerun()
-        if c2.button("🗑️ Hủy"):
-            st.session_state.cart = []; st.rerun()
+                if row["Loại"] == "Xuất":
+                    current_stock = prod_map.get(row["Mã"], {}).get('stock', 0)
+                    if row["Số lượng"] > current_stock:
+                        st.error(f"❌ Mã {row['Mã']} chỉ còn {current_stock}, không thể xuất {row['Số lượng']}!")
+                        can_proceed = False
+            
+            if can_proceed:
+                for _, row in edited_df.iterrows():
+                    service.add_transaction(row["Mã"], row["Số lượng"], row["Loại"], row["Ghi chú"])
+                    service.update_stock(row["Mã"], row["Số lượng"], row["Loại"])
+                st.session_state.cart = []
+                clear_all_caches(); st.success("Hoàn tất!"); st.rerun()
 
 # --- TAB 3: BÁO CÁO ---
 elif menu == "Báo cáo tồn kho":
