@@ -12,8 +12,12 @@ class DataService:
         """Lấy lịch sử giao dịch và chuẩn hóa dữ liệu"""
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            # SỬA LỖI Ở ĐÂY: Ép tên cột tiếng Anh ngay từ đầu, bỏ qua data[0] (tiếng Việt)
-            df = pd.DataFrame(data[1:], columns=["date", "product_id", "type", "qty", "note"])
+            # Cắt lấy đúng 5 cột đầu tiên của mỗi dòng, đề phòng sheet có cột rác
+            cleaned_data = [row[:5] for row in data[1:]]
+            # Nếu dòng nào bị thiếu cột (do xóa nhầm), tự động bù khoảng trắng cho đủ 5
+            cleaned_data = [row + [""] * (5 - len(row)) for row in cleaned_data]
+
+            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "type", "qty", "note"])
             
             # Chuẩn hóa bằng tên cột tiếng Anh
             df['product_id'] = df['product_id'].astype(str).str.strip()
@@ -26,8 +30,11 @@ class DataService:
         """Lấy danh mục sản phẩm"""
         data = self.sheet_products.get_all_values()
         if len(data) > 1:
-            # Ép tên cột tiếng Anh cho an toàn
-            df = pd.DataFrame(data[1:], columns=["id", "code", "name", "unit", "stock"])
+            # Cắt lấy đúng 5 cột đầu tiên của mỗi dòng, đề phòng sheet có cột rác
+            cleaned_data = [row[:5] for row in data[1:]]
+            cleaned_data = [row + [""] * (5 - len(row)) for row in cleaned_data]
+
+            df = pd.DataFrame(cleaned_data, columns=["id", "code", "name", "unit", "stock"])
             df['code'] = df['code'].astype(str).str.strip()
             return df.values.tolist()
         return []
