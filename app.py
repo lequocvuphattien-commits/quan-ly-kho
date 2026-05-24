@@ -15,15 +15,7 @@ st.markdown("""
     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;
-    }
-    /* Chỉnh sửa khoảng cách cho gọn gàng */
-    .block-container { padding-top: 1rem !important; }
-    /* Tinh chỉnh giao diện tổng thể */
-    .stApp {    background-color: #f9f9f9; }
-     .stContainer { background-color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-     .stHeader { background-color: #007bff; color: white; padding: 0.5rem; border-radius: 8px 8px 0 0; }
-     .stSubheader { color: #007bff; }               
+        color: white !important;}         
     </style>
 """, unsafe_allow_html=True)
 
@@ -193,15 +185,21 @@ elif menu == "Lịch sử giao dịch":
         # 1. Tạo DataFrame từ dữ liệu
         df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
         
-        # 2. Hiển thị với cấu hình cột (căn lề phải cho Số lượng)
+        # 2. Đảm bảo cột "Số Lượng" là kiểu số để NumberColumn hoạt động
+        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
+        
+        # 3. Hiển thị
         st.dataframe(
             df,
             use_container_width=True,
             hide_index=True,
             column_config={
                 "Số Lượng": st.column_config.NumberColumn(
-                    "Số Lượng",  # Đây là tiêu đề cột
-                    format="%d", # Hiển thị số nguyên
-                )
+                    "Số Lượng",
+                    format="%d",
+                ),
+                # Nếu bạn muốn canh phải cho cả Ghi Chú (thường là không nên), 
+                # thì bạn phải chuyển nó thành NumberColumn hoặc dùng CSS hack.
+                # Chuẩn thiết kế là Ghi chú (văn bản) phải canh trái.
             }
         )
