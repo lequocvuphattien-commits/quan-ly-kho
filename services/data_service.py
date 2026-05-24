@@ -77,3 +77,10 @@ class DataService:
             # ... logic xử lý dữ liệu ...
             return cleaned_data
         return []
+    
+    def check_product_exists(self, product_code):
+        """Kiểm tra mã hàng đã tồn tại trong sheet Products hay chưa"""
+        products = self.get_products()
+        # Dùng .strip().lower() để so sánh không phân biệt hoa thường/khoảng trắng
+        # Giả định cột thứ 2 (index 1) là cột chứa Mã hàng hóa
+        return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
