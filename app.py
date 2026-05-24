@@ -54,7 +54,7 @@ if menu == "Danh mục hàng":
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
 
          # --- THÊM DÒNG NÀY ĐỂ CỘT ĐVT VỪA VỚI DỮ LIỆU ---
-        gb.configure_column("Mã", width=80, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
+        gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
         gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'left'}) # Cột Đvt nhỏ gọn, canh giữa
 
         gb.configure_default_column(
