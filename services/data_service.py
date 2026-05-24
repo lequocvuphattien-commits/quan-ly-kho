@@ -35,7 +35,8 @@ class DataService:
 
     def add_transaction(self, product_id, product_name, qty, trans_type, note):
         """Ghi đầy đủ 6 thông tin vào sheet Transactions"""
-        date_str = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M:%S")
+        # Ép múi giờ về Việt Nam (UTC+7)
+        date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
         # Đảm bảo thứ tự: Date, ID, Tên, Loại, Số lượng, Ghi chú
         self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), note])
 
