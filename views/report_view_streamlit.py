@@ -4,6 +4,7 @@ import io
 from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
+from datetime import date  # Thêm thư viện này để cấu hình ngày mặc định
 
 def export_to_excel(df):
     buffer = io.BytesIO()
@@ -21,8 +22,13 @@ def show_report():
     p_controller = ProductController()
     t_controller = TransactionController()
     
+    # --- THIẾT LẬP NGÀY BẮT ĐẦU CỐ ĐỊNH Ở ĐÂY ---
+    # Bạn có thể đổi (Năm, Tháng, Ngày) theo ý muốn
+    DEFAULT_START_DATE = date(2026, 1, 1)
+    
     col1, col2 = st.columns(2)
-    start_date = col1.date_input("Từ ngày")
+    # Thêm value=DEFAULT_START_DATE vào đây để lấy ngày cố định
+    start_date = col1.date_input("Từ ngày", value=DEFAULT_START_DATE)
     end_date = col2.date_input("Đến ngày")
     
     if st.button("Lọc báo cáo", type="primary"):

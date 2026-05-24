@@ -6,7 +6,7 @@ from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
 # Cấu hình trang (Luôn để đầu tiên)
-st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
+st.set_page_config(page_title="Quản Lý Kho", layout="wide")
 
 # CSS tinh chỉnh màu sắc nút bấm và giao diện
 st.markdown("""
@@ -33,7 +33,7 @@ def get_cached_products(_svc):
 def get_cached_history(_svc):
     return _svc.get_history()
 
-st.title("📦 Quản lý kho hàng")
+st.title("📦 Quản lý kho")
 
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
