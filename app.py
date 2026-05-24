@@ -20,7 +20,6 @@ def get_cached_history(_svc):
 def get_cached_config(_svc):
     return _svc.get_config_options()
 
-
 # Cấu hình trang (Luôn để đầu tiên)
 st.set_page_config(page_title="Quản Lý Kho", layout="wide")
 
@@ -30,13 +29,7 @@ st.markdown("""
     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;} 
-            
-     /* Tiêu đề cột AgGrid màu xanh dương */
-    .blue-header {
-        color: #007bff !important;
-        font-weight: bold !important;
-    }        
+        color: white !important;}         
     </style>
 """, unsafe_allow_html=True)
 
@@ -59,40 +52,13 @@ if menu == "Danh mục hàng":
         # Cấu hình AgGrid với tính năng lọc nâng cao và sắp xếp
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
 
-        # Cột Mã
-        gb.configure_column(
-            "Mã",
-            width=80,
-            suppressSizeToFit=True,
-            cellStyle={'textAlign': 'center'},
-            headerClass='blue-header'
-        )
+         # --- THÊM DÒNG NÀY ĐỂ CỘT ĐVT VỪA VỚI DỮ LIỆU ---
+        gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
+        gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'center'}) # Cột Đvt nhỏ gọn, canh giữa
+        gb.configure_column("Tên", width=200, cellStyle={'textAlign': 'left'}) # Cột Tên rộng hơn, canh trái
+        gb.configure_column("Tồn", width=50, suppressSizeToFit=True, cellStyle={'textAlign': 'right'}) # Cột Tồn nhỏ gọn, canh phải
+        # --- THÊM DÒNG NÀY ĐỂ CỘT TỒN CANH PHẢI HOÀN TOÀN ---
 
-        # Cột Tên
-        gb.configure_column(
-            "Tên",
-            width=250,
-            cellStyle={'textAlign': 'left'},
-            headerClass='blue-header'
-        )
-
-        # Cột Đvt
-        gb.configure_column(
-            "Đvt",
-            width=80,
-            suppressSizeToFit=True,
-            cellStyle={'textAlign': 'left'},
-            headerClass='blue-header'
-        )
-
-        # Cột Tồn
-        gb.configure_column(
-            "Tồn",
-            width=80,
-            suppressSizeToFit=True,
-            cellStyle={'textAlign': 'right'},
-            headerClass='blue-header'
-        )
         gb.configure_default_column(
             sortable=True,
             filter=True,
@@ -276,4 +242,5 @@ elif menu == "Lịch sử giao dịch":
             fit_columns_on_grid_load=True,
             theme='streamlit'
         )
+
 
