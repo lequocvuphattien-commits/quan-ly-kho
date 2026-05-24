@@ -205,12 +205,12 @@ elif menu == "Lịch sử giao dịch":
         # 2. Hiển thị với cấu hình cột (căn lề phải cho Số lượng)
         st.dataframe(
             df,
-            use_container_width=True, # Thay 'width' bằng tham số này
+            use_container_width=True,
             hide_index=True,
             column_config={
                 "Số Lượng": st.column_config.NumberColumn(
-                    "Số Lượng",
-                    format="%.0f",
+                    "Số Lượng",  # Đây là tiêu đề cột
+                    format="%d", # Hiển thị số nguyên
                 )
             }
         )
