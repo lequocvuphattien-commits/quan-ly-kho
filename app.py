@@ -108,21 +108,7 @@ elif menu == "Nhập/Xuất":
     
     # 2. Khai báo danh sách kho ngay sau khi biết trans_type
     kho_nhap_list, kho_xuat_list = service.get_config_options()
-    
-    # 3. Đưa phần Thêm kho vào đây (đã có trans_type)
-    with st.expander(f"➕ Thêm địa điểm mới: {trans_type}"):
-        new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho ...")
-        if st.button("Lưu địa điểm mới"):
-            if new_kho:
-                service.add_config_option(trans_type, new_kho)
-                st.success(f"Đã thêm {new_kho} vào danh mục {trans_type}!")
-                st.cache_data.clear()
-                st.rerun()
-            else:
-                st.warning("Vui lòng nhập tên kho!")
-
-    if 'cart' not in st.session_state: st.session_state.cart = []
-    
+       
     products = get_cached_products(service)
     
     if products:
@@ -161,7 +147,21 @@ elif menu == "Nhập/Xuất":
                             "Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên"], "Đvt": prod_data["Đvt"],
                             "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type
                         })
-                        st.rerun() 
+                        st.rerun()
+                    
+        # 3. Đưa phần Thêm kho vào đây (đã có trans_type)
+        with st.expander(f"➕ Thêm địa điểm mới: {trans_type}"):
+            new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho ...")
+            if st.button("Lưu địa điểm mới"):
+                if new_kho:
+                    service.add_config_option(trans_type, new_kho)
+                    st.success(f"Đã thêm {new_kho} vào danh mục {trans_type}!")
+                    st.cache_data.clear()
+                    st.rerun()
+                else:
+                    st.warning("Vui lòng nhập tên kho!")
+
+        if 'cart' not in st.session_state: st.session_state.cart = []
 
         if st.session_state.cart:
             st.markdown("### 📋 Lưới chờ xử lý")
