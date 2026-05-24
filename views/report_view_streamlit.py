@@ -86,7 +86,7 @@ def show_report():
             gb.configure_default_column(sortable=True, filter=True, floatingFilter=True, resizable=True)
             
             # Cấu hình độ rộng chi tiết
-            gb.configure_column("Mã HH", width=100, suppressSizeToFit=True)
+            #gb.configure_column("Mã HH", width=100, suppressSizeToFit=True)
             gb.configure_column("Tên", width=250, minWidth=200)
             gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
 
