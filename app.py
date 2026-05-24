@@ -133,7 +133,7 @@ if menu == "Danh mục hàng":
                     st.success("Đã thêm thành công!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
-elif menu == "Nhập/Xuất":
+elif menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
     
     # 1. Đặt radio trước để khởi tạo biến trans_type
