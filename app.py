@@ -33,6 +33,10 @@ st.markdown("""
         font-size: 48px !important;
         font-weight: bold !important;
     }
+    /* Căn lề phải cho tiêu đề cột thứ 5 (giả sử Số Lượng là cột thứ 5) */
+    [data-testid="stDataFrame"] th:nth-child(5) {
+        text-align: right !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
