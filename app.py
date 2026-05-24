@@ -120,7 +120,7 @@ if menu == "Danh mục hàng":
 
 # --- TAB 2: NHẬP/XUẤT (PHIÊN BẢN TỐI ƯU GIAO DIỆN & TỐC ĐỘ) ---
 elif menu == "Nhập/Xuất":
-    st.header("🔄 Nhập/Xuất kho")
+    st.subheader("🔄 Nhập/Xuất kho")
     
     if 'cart' not in st.session_state: 
         st.session_state.cart = []
@@ -141,18 +141,25 @@ elif menu == "Nhập/Xuất":
                 placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
             )
             
-            c1, c2, c3 = st.columns([1, 1.5, 1])
+            # Chia làm 4 cột: Cột 4 bỏ trống để ép chữ "Tồn" (cột 3) sát lại gần "Ghi chú" (cột 2)
+            c1, c2, c3, c4 = st.columns([1.2, 1.5, 0.8, 1.5])
             with c1:
+                # Số lượng
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
             with c2:
+                # Ghi chú
                 note = st.text_input("Ghi chú", placeholder="Nhập ghi chú (tùy chọn)...")
             with c3:
+                # Hiển thị Tồn động (đã được ép sát vào ghi chú)
                 if selected:
                     current_stock = float(p_dict[selected]['Tồn'])
                     unit = p_dict[selected]['Đvt']
                     st.markdown(f"<div style='padding-top: 30px; font-size: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
+            with c4:
+                # Cột vô hình chiếm diện tích dư thừa ở bên phải
+                st.empty()
 
             if st.button("➕ Thêm vào lưới"):
                 if not selected or not qty:
