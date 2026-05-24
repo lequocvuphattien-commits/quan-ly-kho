@@ -56,7 +56,7 @@ if menu == "Danh mục hàng":
         gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
         gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'center'}) # Cột Đvt nhỏ gọn, canh giữa
         gb.configure_column("Tên", width=200, cellStyle={'textAlign': 'left'}) # Cột Tên rộng hơn, canh trái
-        
+
         # --- CẬP NHẬT LẠI CỘT TỒN: THÊM ĐỊNH DẠNG DẤU PHẨY ---
         gb.configure_column(
             "Tồn", 
@@ -227,10 +227,11 @@ elif menu == "Lịch sử giao dịch":
         gb = GridOptionsBuilder.from_dataframe(df)
         gb.configure_default_column(sortable=True, filter=True, resizable=True)
         
-        # Ép cột "Số Lượng" canh phải hoàn toàn (Cả tiêu đề và dữ liệu số)
+        # 3. Định dạng cột Số Lượng với dấu phẩy và canh phải
         gb.configure_column(
             "Số Lượng", 
-            type=["numericColumn"], 
+            type=["numericColumn"],
+            valueFormatter="Number(x).toLocaleString('en-US')", # Thêm dòng này để format 3,010
             headerClass='ag-right-aligned-header',
             cellClass='ag-right-aligned-cell'
         )
