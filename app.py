@@ -52,6 +52,10 @@ if menu == "Danh mục hàng":
 
         # Cấu hình AgGrid với tính năng lọc nâng cao và sắp xếp
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
+
+         # --- THÊM DÒNG NÀY ĐỂ CỘT ĐVT VỪA VỚI DỮ LIỆU ---
+        gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'}) # Cột Đvt nhỏ gọn, canh giữa
+
         gb.configure_default_column(
             sortable=True,
             filter=True,
