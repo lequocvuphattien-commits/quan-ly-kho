@@ -180,4 +180,39 @@ elif menu == "Báo cáo tồn kho": show_report()
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
-    if history: st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"]), width='stretch', hide_index=True)
+    
+    if history:
+        # 1. Tạo DataFrame từ dữ liệu giao dịch
+        df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
+        
+        # Ép kiểu số cho cột Số Lượng để đảm bảo dữ liệu chuẩn
+        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
+        
+        # 2. Khởi tạo cấu hình cho bảng AgGrid
+        gb = GridOptionsBuilder.from_dataframe(df)
+        gb.configure_default_column(sortable=True, filter=True, resizable=True)
+        
+        # Ép cột "Số Lượng" canh phải hoàn toàn (Cả tiêu đề và dữ liệu số)
+        gb.configure_column(
+            "Số Lượng", 
+            type=["numericColumn"], 
+            headerClass='ag-right-aligned-header',
+            cellClass='ag-right-aligned-cell'
+        )
+        
+        # Ép cột văn bản "Ghi Chú" canh phải hoàn toàn (Cả tiêu đề và chữ)
+        gb.configure_column(
+            "Ghi Chú", 
+            headerClass='ag-right-aligned-header', 
+            cellStyle={'textAlign': 'right'}
+        )
+        
+        go = gb.build()
+        
+        # 3. Hiển thị bảng bằng AgGrid chuyên nghiệp
+        AgGrid(
+            df,
+            gridOptions=go,
+            fit_columns_on_grid_load=True,
+            theme='streamlit'
+        )
