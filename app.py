@@ -193,7 +193,25 @@ elif menu == "Nhập/Xuất":
                 st.rerun()
 
 elif menu == "Báo cáo tồn kho": show_report()
+
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
-    if history: st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"]), width='stretch', hide_index=True)
+    
+    if history:
+        # 1. Tạo DataFrame từ dữ liệu
+        df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
+        
+        # 2. Hiển thị với cấu hình cột (căn lề phải cho Số lượng)
+        st.dataframe(
+            df,
+            width=None, # Tự động giãn
+            hide_index=True,
+            column_config={
+                "Số Lượng": st.column_config.NumberColumn(
+                    "Số Lượng",
+                    help="Số lượng giao dịch",
+                    format="%.0f", # Định dạng số nguyên
+                )
+            }
+        )
