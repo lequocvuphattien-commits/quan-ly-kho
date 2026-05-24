@@ -48,7 +48,7 @@ service = DataService(mode="ONLINE")
 
 st.title("📦 Quản lý kho")
 
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
@@ -133,7 +133,7 @@ if menu == "Danh mục hàng":
                     st.success("Đã thêm thành công!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
-elif menu == "Nhập/Xuất":
+elif menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
     
     # 1. Đặt radio trước để khởi tạo biến trans_type
