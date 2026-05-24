@@ -84,7 +84,7 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT (PHIÊN BẢN TỐI ƯU GIAO DIỆN & TỐC ĐỘ) ---
 elif menu == "Nhập/Xuất":
-    st.header("🔄 Nhập/Xuất kho hàng loạt")
+    st.header("🔄 Nhập/Xuất kho")
     
     # Khởi tạo giỏ hàng trong bộ nhớ tạm (Session State) để chống load chậm
     if 'cart' not in st.session_state: 
