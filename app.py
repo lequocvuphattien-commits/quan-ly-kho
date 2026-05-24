@@ -227,32 +227,26 @@ elif menu == "Lịch sử giao dịch":
         gb = GridOptionsBuilder.from_dataframe(df)
         gb.configure_default_column(sortable=True, filter=True, resizable=True)
         
-        # --- [THÊM MỚI] ĐỊNH DẠNG ĐỘ RỘNG CÁC CỘT CƠ BẢN ---
-        gb.configure_column("Ngày", width=160, suppressSizeToFit=True) 
-        gb.configure_column("Mã", width=80, suppressSizeToFit=True)
-        gb.configure_column("Tên Hàng Hóa", width=250, minWidth=200) # Cột Tên cho dài ra
-        gb.configure_column("Loại", width=80, suppressSizeToFit=True)
-        
-        # Ép cột "Số Lượng" canh phải hoàn toàn + Định dạng số có dấu phẩy + Giữ độ rộng
+        # 3. Định dạng cột Số Lượng với dấu phẩy và canh phải
         gb.configure_column(
             "Số Lượng", 
-            width=100, suppressSizeToFit=True, # [THÊM MỚI] Giới hạn độ rộng vừa với số
-            type=["numericColumn"], 
-            valueFormatter="Number(x).toLocaleString('en-US')",
+            type=["numericColumn"],
+            valueFormatter="Number(x).toLocaleString('en-US')", # Thêm dòng này để format 3,010
             headerClass='ag-right-aligned-header',
             cellClass='ag-right-aligned-cell'
         )
         
-        # Ép cột văn bản "Ghi Chú" canh phải hoàn toàn + Đảm bảo không bị bóp nhỏ
+        # Ép cột văn bản "Ghi Chú" canh phải hoàn toàn (Cả tiêu đề và chữ)
         gb.configure_column(
             "Ghi Chú", 
-            minWidth=150, # [THÊM MỚI] Chiều rộng tối thiểu để đọc được ghi chú
             headerClass='ag-right-aligned-header', 
             cellStyle={'textAlign': 'right'}
         )
         
+        go = gb.build()
+        
         # 3. Hiển thị bảng bằng AgGrid chuyên nghiệp
-AgGrid(
+        AgGrid(
             df,
             gridOptions=go,
             fit_columns_on_grid_load=True,
