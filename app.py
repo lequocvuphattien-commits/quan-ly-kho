@@ -42,7 +42,7 @@ st.markdown("""
     }
     h3 {
         padding-top: 0rem !important;
-        margin-top: -0.5rem !important; /* Cắt giảm khoảng trống trên chữ Nhập/Xuất kho */
+        margin-top: 0rem !important; /* Cắt giảm khoảng trống trên chữ Nhập/Xuất kho */
     }     
     </style>
 """, unsafe_allow_html=True)
