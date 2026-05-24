@@ -14,6 +14,7 @@ class DataService:
         self.provider = GoogleProvider()
         self.sheet_transactions = self.provider.get_sheet("Transactions")
         self.sheet_products = self.provider.get_sheet("Products")
+        self.sheet_config = self.provider.get_sheet("Config")
 
     def get_history(self):
         """Lấy lịch sử giao dịch với 6 cột mới: date, product_id, product_name, type, qty, note"""
@@ -39,6 +40,49 @@ class DataService:
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
         # Đảm bảo thứ tự: Date, ID, Tên, Loại, Số lượng, Ghi chú
         self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), note])
+
+    def get_config_options(self):
+        """Đọc danh sách Kho Nhập (Cột A) và Kho Xuất (Cột B) từ sheet Config"""
+        try:
+            data = self.sheet_config.get_all_values()
+            if len(data) <= 1:
+                return [], [] # Trả về rỗng nếu sheet chưa có dữ liệu (chỉ có header)
+            
+            kho_nhap = []
+            kho_xuat = []
+            
+            # Duyệt từ dòng thứ 2 trở đi (bỏ qua dòng tiêu đề)
+            for row in data[1:]:
+                # Cột A (index 0) là Kho Nhập
+                if len(row) > 0 and str(row[0]).strip() != "":
+                    kho_nhap.append(str(row[0]).strip())
+                # Cột B (index 1) là Kho Xuất
+                if len(row) > 1 and str(row[1]).strip() != "":
+                    kho_xuat.append(str(row[1]).strip())
+                    
+            return kho_nhap, kho_xuat
+        except Exception as e:
+            print(f"Lỗi đọc config: {e}")
+            return [], []
+
+    def add_config_option(self, option_type, new_value):
+        """Thêm một kho mới vào sheet Config"""
+        try:
+            # Nếu loại là 'Nhập' thì ghi vào Cột 1 (A), 'Xuất' thì ghi Cột 2 (B)
+            col_index = 1 if option_type == "Nhập" else 2
+            
+            # Lấy toàn bộ dữ liệu của cột đó để đếm xem có bao nhiêu dòng rồi
+            col_values = self.sheet_config.col_values(col_index)
+            
+            # Tính ra vị trí dòng trống tiếp theo
+            next_row = len(col_values) + 1
+            
+            # Ghi giá trị mới vào ô trống đó
+            self.sheet_config.update_cell(next_row, col_index, new_value)
+            return True
+        except Exception as e:
+            print(f"Lỗi thêm config: {e}")
+            return False
 
     def get_product_stats_by_date(self, product_id, start_date, end_date):
         """Tính toán dựa trên cấu trúc 6 cột"""
