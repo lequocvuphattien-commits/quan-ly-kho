@@ -5,6 +5,22 @@ from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 
+# Cấu hình trang (Luôn để đầu tiên)
+st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
+
+# CSS tinh chỉnh màu sắc nút bấm và giao diện
+st.markdown("""
+    <style>
+    /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
+    div.stButton > button[kind="primary"] {
+        background-color: #28a745 !important;
+        color: white !important;
+    }
+    /* Chỉnh sửa khoảng cách cho gọn gàng */
+    .block-container { padding-top: 2rem !important; }
+    </style>
+""", unsafe_allow_html=True)
+
 # Khởi tạo dịch vụ
 service = DataService(mode="ONLINE")
 
@@ -17,8 +33,6 @@ def get_cached_products(_svc):
 def get_cached_history(_svc):
     return _svc.get_history()
 
-# Cấu hình trang
-st.set_page_config(page_title="Quản Lý Kho Hàng", layout="wide")
 st.title("📦 Quản lý kho hàng")
 
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
@@ -64,28 +78,116 @@ if menu == "Danh mục hàng hóa":
             if not code or not name: st.warning("Nhập đủ Mã và Tên!")
             elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
             else:
-                service.add_product(code, name, unit)
+                service.add_product(code.upper(), name, unit)
                 st.cache_data.clear()
                 st.success("Đã thêm thành công!"); st.rerun()
 
-# --- TAB 2: NHẬP/XUẤT ---
+# --- TAB 2: NHẬP/XUẤT (PHIÊN BẢN TỐI ƯU GIAO DIỆN & TỐC ĐỘ) ---
 elif menu == "Nhập/Xuất":
-    st.header("Nhập/Xuất kho")
+    st.header("🔄 Nhập/Xuất kho hàng loạt")
+    
+    # Khởi tạo giỏ hàng trong bộ nhớ tạm (Session State) để chống load chậm
+    if 'cart' not in st.session_state: 
+        st.session_state.cart = []
+    
     products = get_cached_products(service)
     
     if products:
-        product_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
-        selected = st.selectbox("Chọn hàng", list(product_dict.keys()))
-        prod_code = product_dict[selected]
-        qty = st.number_input("Số lượng", min_value=0.0, step=1.0)
-        trans_type = st.radio("Loại", ["Nhập", "Xuất"])
-        note = st.text_input("Ghi chú")
+        # Chuẩn hóa dữ liệu thành dictionary để truy xuất siêu nhanh
+        # p[1] là Mã, p[2] là Tên, p[3] là Đvt, p[4] là Tồn
+        p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         
-        if st.button("Xác nhận giao dịch"):
-            service.add_transaction(prod_code, qty, trans_type, note)
-            service.update_stock(prod_code, qty, trans_type)
-            st.cache_data.clear()
-            st.success("Đã cập nhật tồn kho!"); st.rerun()
+        # --- 1. KHUNG NHẬP LIỆU GIAO DỊCH ---
+        with st.container(border=True):
+            # Loại: Nút Button Nhập/Xuất (dạng radio ngang)
+            trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
+            
+            # Chọn hàng: List box hỗ trợ gõ tìm kiếm tự động
+            selected = st.selectbox(
+                "Chọn hàng hóa", 
+                options=list(p_dict.keys()), 
+                index=None, 
+                placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
+            )
+            
+            # Chia làm 3 cột: Số lượng, Ghi chú, Tồn
+            c1, c2, c3 = st.columns([1, 1.5, 1])
+            with c1:
+                # Số lượng: Ô trống mặc định, tự động format có dấu phẩy
+                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
+            with c2:
+                # Ghi chú: Để trống nhập nếu cần
+                note = st.text_input("Ghi chú", placeholder="Nhập ghi chú (tùy chọn)...")
+            with c3:
+                # Hiển thị Tồn động
+                if selected:
+                    current_stock = float(p_dict[selected]['Tồn'])
+                    unit = p_dict[selected]['Đvt']
+                    st.markdown(f"<div style='padding-top: 30px; font-size: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
+
+            # Thêm vào lưới (Lưu vào bộ nhớ RAM nên siêu nhanh)
+            if st.button("➕ Thêm vào lưới"):
+                if not selected or not qty:
+                    st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
+                else:
+                    prod_data = p_dict[selected]
+                    
+                    # Logic kiểm tra tồn nếu là Xuất
+                    if trans_type == "Xuất":
+                        cart_df = pd.DataFrame(st.session_state.cart) if st.session_state.cart else pd.DataFrame()
+                        out_in_cart = cart_df[(cart_df["Mã"] == prod_data["Mã"]) & (cart_df["Loại"] == "Xuất")]["Số lượng"].sum() if not cart_df.empty else 0
+                        
+                        if qty + out_in_cart > float(prod_data["Tồn"]):
+                            st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {float(prod_data['Tồn']):,.0f})")
+                            st.stop()
+
+                    st.session_state.cart.append({
+                        "Mã": prod_data["Mã"],
+                        "Loại": trans_type,
+                        "Đvt": prod_data["Đvt"],
+                        "Số lượng": qty,
+                        "Ghi chú": note if note else ""
+                    })
+                    st.rerun()
+
+        # --- 2. HIỂN THỊ LƯỚI CHỜ (CÓ THỂ SỬA TRỰC TIẾP) ---
+        if st.session_state.cart:
+            st.markdown("### 📋 Lưới chờ xử lý")
+            st.caption("💡 *Mẹo: Click đúp chuột vào ô Số lượng hoặc Ghi chú để sửa trực tiếp trên bảng trước khi Xác nhận.*")
+            
+            # Data Editor thay thế dataframe thông thường
+            edited_df = st.data_editor(
+                pd.DataFrame(st.session_state.cart),
+                column_config={
+                    "Mã": st.column_config.TextColumn("Mã HH", disabled=True),
+                    "Loại": st.column_config.TextColumn("Loại", disabled=True),
+                    "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
+                    "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1.0, format="%.0f"),
+                    "Ghi chú": st.column_config.TextColumn("Ghi chú")
+                },
+                hide_index=True,
+                use_container_width=True,
+                key="cart_editor"
+            )
+            
+            # --- 3. XÁC NHẬN VÀ HỦY ---
+            col_x, col_y = st.columns([1, 5])
+            with col_x:
+                if st.button("✅ Xác nhận tất cả", type="primary"): # type="primary" sẽ kích hoạt CSS màu xanh lá
+                    for _, row in edited_df.iterrows():
+                        service.add_transaction(row["Mã"], row["Số lượng"], row["Loại"], str(row["Ghi chú"]) if pd.notna(row["Ghi chú"]) else "")
+                        service.update_stock(row["Mã"], row["Số lượng"], row["Loại"])
+                    
+                    st.session_state.cart = []
+                    st.cache_data.clear()
+                    st.success("🎉 Đã lưu toàn bộ giao dịch vào hệ thống!")
+                    st.rerun()
+            with col_y:
+                if st.button("🗑️ Hủy lưới"):
+                    st.session_state.cart = []
+                    st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
