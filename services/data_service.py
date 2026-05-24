@@ -1,3 +1,12 @@
+import sys
+import os
+import pandas as pd
+
+# Thêm thư mục gốc của dự án vào hệ thống để Python tìm thấy 'controllers'
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from controllers.google_provider import GoogleProvider
+
 class DataService:
     def __init__(self, mode="ONLINE"):
         self.provider = GoogleProvider()
