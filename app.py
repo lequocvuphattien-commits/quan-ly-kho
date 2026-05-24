@@ -22,15 +22,15 @@ st.markdown("""
     
     /* TĂNG CỠ CHỮ MENU SIDEBAR */
     [data-testid="stSidebar"] {
-        font-size: 20px !important;
+        font-size: 50px !important;
     }
     /* Tăng cỡ chữ cho các mục lựa chọn trong selectbox của menu */
     [data-testid="stSidebar"] div[role="listbox"] {
-        font-size: 18px !important;
+        font-size: 48px !important;
     }
     /* Tăng cỡ chữ cho label của menu */
     [data-testid="stSidebar"] label {
-        font-size: 18px !important;
+        font-size: 48px !important;
         font-weight: bold !important;
     }
     </style>
