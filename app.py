@@ -26,6 +26,11 @@ st.set_page_config(page_title="Quản Lý Kho", layout="wide")
 # CSS tinh chỉnh màu sắc nút bấm và giao diện
 st.markdown("""
     <style>
+    /* 1. KÉO NỘI DUNG LÊN SÁT CẠNH TRÊN MÀN HÌNH */
+    .block-container {
+        padding-top: 1.5rem !important; /* Mặc định là khoảng 4-6rem, giảm xuống 1.5rem */
+        padding-bottom: 1rem !important;
+    }
     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
