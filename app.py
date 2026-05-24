@@ -102,26 +102,30 @@ if menu == "Danh mục hàng":
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.subheader("🔄 Nhập/Xuất kho")
-    with st.expander("➕ Thêm địa điểm mới"):
-        new_kho = st.text_input("Tên địa điểm", placeholder="Ví dụ: Kho đông lạnh...")
+    
+    # 1. Đặt radio trước để khởi tạo biến trans_type
+    trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
+    
+    # 2. Khai báo danh sách kho ngay sau khi biết trans_type
+    kho_nhap_list, kho_xuat_list = service.get_config_options()
+    
+    # 3. Đưa phần Thêm kho vào đây (đã có trans_type)
+    with st.expander(f"➕ Thêm địa điểm mới vào danh mục {trans_type}"):
+        new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho đông lạnh...")
         if st.button("Lưu địa điểm mới"):
             if new_kho:
-                # Gọi hàm ghi xuống sheet Config
                 service.add_config_option(trans_type, new_kho)
                 st.success(f"Đã thêm {new_kho} vào danh mục {trans_type}!")
-                st.cache_data.clear() # Xóa cache để cập nhật danh sách
-                st.rerun() # Tải lại trang để cập nhật selectbox
+                st.cache_data.clear()
+                st.rerun()
             else:
                 st.warning("Vui lòng nhập tên kho!")
-
-    kho_nhap_list, kho_xuat_list = service.get_config_options()
 
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     products = get_cached_products(service)
     
     if products:
-        # Hiển thị tồn ngay trong ô chọn hàng hóa: "Mã - Tên (Tồn: 1.520 cái)"
         p_dict = {
             f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {
                 "Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]
@@ -130,7 +134,6 @@ elif menu == "Nhập/Xuất":
         }
         
         with st.container(border=True):
-            trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
             selected = st.selectbox(
                 "Chọn hàng hóa", 
                 options=list(p_dict.keys()), 
@@ -142,34 +145,21 @@ elif menu == "Nhập/Xuất":
             with c1:
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
             with c2:
-                # SỬA Ở ĐÂY: Quyết định danh sách hiển thị dựa vào Loại giao dịch
                 current_options = kho_nhap_list if trans_type == "Nhập" else kho_xuat_list
-                
-                # Biến note bây giờ sẽ lưu giá trị người dùng chọn từ Selectbox
-                note = st.selectbox(
-                    "Diễn giải / Kho", 
-                    options=current_options, 
-                    index=None, 
-                    placeholder="Chọn địa điểm..."
-                )
+                note = st.selectbox("Diễn giải / Kho", options=current_options, index=None, placeholder="Chọn địa điểm...")
             with c3:
                 st.write("") 
                 if st.button("➕ Thêm vào lưới", key="add_to_cart"):
                     if not selected or not qty or not note:
-                        st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
+                        st.warning("⚠️ Vui lòng chọn hàng hóa, số lượng và địa điểm!")
                     else:
                         prod_data = p_dict[selected]
-                        if trans_type == "Xuất":
-                            if qty > float(prod_data["Tồn"]):
-                                st.error("❌ Không đủ tồn kho!")
-                                st.stop()
+                        if trans_type == "Xuất" and qty > float(prod_data["Tồn"]):
+                            st.error("❌ Không đủ tồn kho!")
+                            st.stop()
                         st.session_state.cart.append({
-                            "Mã HH": prod_data["Mã"],
-                            "Tên HH": prod_data["Tên"],
-                            "Đvt": prod_data["Đvt"],
-                            "Số lượng": float(qty),
-                            "Ghi chú": note,
-                            "Loại": trans_type
+                            "Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên"], "Đvt": prod_data["Đvt"],
+                            "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type
                         })
                         st.rerun() 
 
