@@ -46,30 +46,28 @@ if menu == "Danh mục hàng":
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        
-        #st.caption("💡 *Mẹo: Gõ từ khóa trực tiếp vào các ô trống ngay dưới tiêu đề cột để lọc dữ liệu nhanh.*")
 
-        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ (ĐÃ ẨN NÚT MENU SỐ 1) ---
+        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ (ĐÃ FIX LỖI THƯ VIỆN & ẨN NÚT MENU) ---
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
+        
+        # 1. Cấu hình chung cho TẤT CẢ các cột (Ẩn luôn nút tam giác Filter)
         gb.configure_default_column(
             sortable=True,
             filter=True,
-            floatingFilter=True, 
-            resizable=True
+            floatingFilter=True, # BẬT TÍNH NĂNG FILTER TRỰC TIẾP TRÊN TIÊU ĐỀ
+            resizable=True,
+            filterParams={"suppressFilterButton": True} # Ẩn khung menu lọc phụ cho mọi cột
         )
         
-        # Cấu hình ẩn nút Menu bộ lọc (khung số 1) cho từng cột chữ
-        gb.configure_column("Mã", filterParams={"suppressFilterButton": True})
-        gb.configure_column("Tên", filterParams={"suppressFilterButton": True})
-        gb.configure_column("Đvt", filterParams={"suppressFilterButton": True})
-        
-        # Cấu hình riêng cho cột Tồn kho (Lọc theo số và cũng ẩn luôn nút Menu)
-        gb.configure_column("Tồn", filter="agNumberColumnFilter", filterParams={"suppressFilterButton": True})
-        
+        # 2. Sinh ra đối tượng cấu hình
         go = gb.build()
-        # Cấu hình riêng cho cột tồn kho (lọc theo số)
-        gb.configure_column("Tồn", filter="agNumberColumnFilter")
-        go = gb.build()
+        
+        # 3. CAN THIỆP TRỰC TIẾP (Bypass lỗi TypeError của st_aggrid)
+        # Quét qua cấu hình để đổi cột "Tồn" thành định dạng số
+        if 'columnDefs' in go:
+            for col in go['columnDefs']:
+                if col.get('field') == 'Tồn':
+                    col['filter'] = 'agNumberColumnFilter'
 
         # Hiển thị lưới và lấy dữ liệu trả về sau khi người dùng lọc
         grid_response = AgGrid(
@@ -116,6 +114,7 @@ if menu == "Danh mục hàng":
                     service.add_product(code.upper(), name, unit)
                     st.cache_data.clear()
                     st.success("Đã thêm thành công!"); st.rerun()
+
 
 # --- TAB 2: NHẬP/XUẤT (PHIÊN BẢN TỐI ƯU GIAO DIỆN & TỐC ĐỘ) ---
 elif menu == "Nhập/Xuất":
