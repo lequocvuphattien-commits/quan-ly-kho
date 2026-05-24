@@ -19,6 +19,20 @@ st.markdown("""
     }
     /* Chỉnh sửa khoảng cách cho gọn gàng */
     .block-container { padding-top: 1rem !important; }
+    
+    /* TĂNG CỠ CHỮ MENU SIDEBAR */
+    [data-testid="stSidebar"] {
+        font-size: 20px !important;
+    }
+    /* Tăng cỡ chữ cho các mục lựa chọn trong selectbox của menu */
+    [data-testid="stSidebar"] div[role="listbox"] {
+        font-size: 18px !important;
+    }
+    /* Tăng cỡ chữ cho label của menu */
+    [data-testid="stSidebar"] label {
+        font-size: 18px !important;
+        font-weight: bold !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -38,7 +52,7 @@ st.title("📦 Quản lý kho")
 
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1: DANH MỤC HÀNG HÓA ---
+# --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
