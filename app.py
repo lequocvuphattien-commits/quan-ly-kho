@@ -56,8 +56,17 @@ if menu == "Danh mục hàng":
         gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
         gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'center'}) # Cột Đvt nhỏ gọn, canh giữa
         gb.configure_column("Tên", width=200, cellStyle={'textAlign': 'left'}) # Cột Tên rộng hơn, canh trái
-        gb.configure_column("Tồn", width=50, suppressSizeToFit=True, cellStyle={'textAlign': 'right'}) # Cột Tồn nhỏ gọn, canh phải
-        # --- THÊM DÒNG NÀY ĐỂ CỘT TỒN CANH PHẢI HOÀN TOÀN ---
+        
+        # --- CẬP NHẬT LẠI CỘT TỒN: THÊM ĐỊNH DẠNG DẤU PHẨY ---
+        gb.configure_column(
+            "Tồn", 
+            width=60, 
+            suppressSizeToFit=True, 
+            type=["numericColumn"], # Khai báo là cột số
+            valueFormatter="Number(x).toLocaleString('en-US')", # Format hàng nghìn (3,010)
+            cellStyle={'textAlign': 'right'}
+        )
+        
 
         gb.configure_default_column(
             sortable=True,
