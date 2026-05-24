@@ -78,15 +78,25 @@ elif menu == "Nhập/Xuất":
     
     products = get_cached_products(service)
     if products:
-        # Tạo dictionary chứa TẤT CẢ thông tin để tra cứu nhanh (Mã, Tên, Đvt, Tồn)
-        p_dict = {f"{p['Mã']} - {p['Tên']}": p for p in products}
+        # --- BẮT ĐẦU ĐOẠN FIX LỖI TYPE ERROR ---
+        # Code tự động nhận diện kiểu dữ liệu của 'p' để xử lý an toàn
+        p_dict = {}
+        for p in products:
+            if isinstance(p, dict):
+                # Nếu p đã là dictionary
+                p_dict[f"{p.get('Mã', '')} - {p.get('Tên', '')}"] = p
+            elif hasattr(p, 'code'):
+                # Nếu p là đối tượng (Object) từ ProductController
+                p_dict[f"{p.code} - {p.name}"] = {"Mã": p.code, "Tên": p.name, "Đvt": p.unit, "Tồn": p.stock}
+            else:
+                # Nếu p là list hoặc tuple (ví dụ: [ID, Mã, Tên, Đvt, Tồn])
+                p_dict[f"{p[1]} - {p[2]}"] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]}
+        # --- KẾT THÚC ĐOẠN FIX LỖI ---
         
         # --- KHUNG NHẬP LIỆU GIAO DỊCH ---
         with st.container(border=True):
-            # 1. Loại giao dịch (Nút Button ngang)
             typ = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
             
-            # 2. Chọn hàng (Listbox có hỗ trợ gõ tìm kiếm ký tự đại diện mặc định của Streamlit)
             sel = st.selectbox(
                 "Chọn hàng hóa", 
                 options=list(p_dict.keys()), 
@@ -94,25 +104,19 @@ elif menu == "Nhập/Xuất":
                 placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
             )
             
-            # Chia cột cho Số lượng, Ghi chú và Tồn kho
             c1, c2, c3 = st.columns([1, 1.5, 1])
             with c1:
-                # 3. Số lượng: Để ô trống (value=None), hiển thị format có dấu phẩy
                 qty = st.number_input("Số lượng", min_value=1, value=None, step=1, format="%d", placeholder="Nhập số...")
             with c2:
-                # 4. Ghi chú (để trống mặc định)
                 note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
             with c3:
-                # 5. Tồn kho động
                 if sel:
                     current_stock = float(p_dict[sel]['Tồn'])
                     unit = p_dict[sel]['Đvt']
-                    # Hiển thị số tồn định dạng có dấu phẩy (VD: 2,055)
                     st.markdown(f"<div style='padding-top: 30px; font-size: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
                 else:
                     st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
 
-            # Nút thêm vào lưới
             if st.button("➕ Thêm vào lưới"):
                 if not sel or not qty:
                     st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
@@ -121,15 +125,13 @@ elif menu == "Nhập/Xuất":
                     prod_code = prod_data["Mã"]
                     current_stock = float(prod_data["Tồn"])
 
-                    # Logic kiểm tra tồn kho xuất
                     if typ == "Xuất":
                         cart_df = pd.DataFrame(st.session_state.cart) if st.session_state.cart else pd.DataFrame(columns=["Mã", "Loại", "Số lượng"])
                         out_in_cart = cart_df[(cart_df["Mã"] == prod_code) & (cart_df["Loại"] == "Xuất")]["Số lượng"].sum() if not cart_df.empty else 0
                         if qty + out_in_cart > current_stock:
                             st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {current_stock:,.0f})")
-                            st.stop() # Chặn không cho thêm vào lưới
+                            st.stop()
 
-                    # Thêm vào giỏ hàng
                     st.session_state.cart.append({
                         "Mã": prod_code,
                         "Tên HH": prod_data["Tên"],
@@ -138,14 +140,13 @@ elif menu == "Nhập/Xuất":
                         "Số lượng": qty,
                         "Ghi chú": note if note else ""
                     })
-                    st.rerun() # Rerun cực nhanh vì không bị xóa cache
+                    st.rerun()
 
-        # --- HIỂN THỊ LƯỚI CHỜ (CÓ THỂ CHỈNH SỬA) ---
+        # --- HIỂN THỊ LƯỚI CHỜ ---
         if st.session_state.cart:
             st.markdown("### 📋 Lưới chờ xử lý")
             st.caption("💡 *Mẹo: Click đúp chuột vào ô Số lượng hoặc Ghi chú để sửa trực tiếp trên bảng.*")
             
-            # Sử dụng data_editor để biến bảng thành Excel thu nhỏ
             edited_df = st.data_editor(
                 pd.DataFrame(st.session_state.cart),
                 column_config={
@@ -153,7 +154,6 @@ elif menu == "Nhập/Xuất":
                     "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True),
                     "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
                     "Loại": st.column_config.TextColumn("Loại", disabled=True),
-                    # Cột số lượng cho phép sửa, định dạng phân cách hàng nghìn
                     "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1, format="%d"),
                     "Ghi chú": st.column_config.TextColumn("Ghi chú")
                 },
@@ -161,16 +161,14 @@ elif menu == "Nhập/Xuất":
                 key="cart_editor"
             )
             
-            # --- XÁC NHẬN / HỦY ---
             col_x, col_y = st.columns([1, 4])
             with col_x:
                 if st.button("✅ Xác nhận tất cả", type="primary"):
-                    # Lặp qua dữ liệu đã chỉnh sửa từ bảng (edited_df)
                     for _, row in edited_df.iterrows():
                         t_controller.process_transaction(row["Mã"], row["Loại"], row["Số lượng"], str(row["Ghi chú"]) if pd.notna(row["Ghi chú"]) else "")
                     
-                    st.session_state.cart = [] # Xóa giỏ hàng
-                    clear_all_caches() # Chỉ clear cache khi lưu vào Google Sheet
+                    st.session_state.cart = []
+                    clear_all_caches()
                     st.success("🎉 Giao dịch thành công!")
                     st.rerun()
             with col_y:
