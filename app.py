@@ -19,24 +19,11 @@ st.markdown("""
     }
     /* Chỉnh sửa khoảng cách cho gọn gàng */
     .block-container { padding-top: 1rem !important; }
-    
-    /* TĂNG CỠ CHỮ MENU SIDEBAR */
-    [data-testid="stSidebar"] {
-        font-size: 50px !important;
-    }
-    /* Tăng cỡ chữ cho các mục lựa chọn trong selectbox của menu */
-    [data-testid="stSidebar"] div[role="listbox"] {
-        font-size: 48px !important;
-    }
-    /* Tăng cỡ chữ cho label của menu */
-    [data-testid="stSidebar"] label {
-        font-size: 48px !important;
-        font-weight: bold !important;
-    }
-    /* Căn lề phải cho tiêu đề cột thứ 5 (giả sử Số Lượng là cột thứ 5) */
-    [data-testid="stDataFrame"] th:nth-child(5) {
-        text-align: right !important;
-    }
+    /* Tinh chỉnh giao diện tổng thể */
+    .stApp {    background-color: #f9f9f9; }
+     .stContainer { background-color: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+     .stHeader { background-color: #007bff; color: white; padding: 0.5rem; border-radius: 8px 8px 0 0; }
+     .stSubheader { color: #007bff; }               
     </style>
 """, unsafe_allow_html=True)
 
