@@ -39,28 +39,53 @@ menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "
 
 # --- TAB 1: DANH MỤC HÀNG HÓA ---
 if menu == "Danh mục hàng hóa":
-    st.header("Danh mục hàng hóa")
+    st.header("📋 Danh mục hàng hóa")
     products = get_cached_products(service)
     
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         
-        # Hiển thị bảng
-        st.dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]], width='stretch', hide_index=True)
+        # --- BỘ LỌC TÌM KIẾM (FILTER) ---
+        col_search1, col_search2 = st.columns([2, 1])
+        with col_search1:
+            search_term = st.text_input("🔍 Tìm kiếm", placeholder="Gõ Mã hoặc Tên hàng hóa để lọc...")
+        with col_search2:
+            stock_filter = st.selectbox("📦 Lọc theo Tồn kho", ["Tất cả", "Còn hàng (>0)", "Hết hàng (=0)"])
+
+        # Logic xử lý lọc dữ liệu
+        filtered_df = df.copy()
         
-        # Xuất Excel chuyên nghiệp
+        # 1. Lọc theo từ khóa (Không phân biệt hoa thường)
+        if search_term:
+            search_term = search_term.lower()
+            filtered_df = filtered_df[
+                filtered_df["Mã"].astype(str).str.lower().str.contains(search_term, na=False) |
+                filtered_df["Tên"].astype(str).str.lower().str.contains(search_term, na=False)
+            ]
+            
+        # 2. Lọc theo trạng thái tồn
+        if stock_filter == "Còn hàng (>0)":
+            filtered_df = filtered_df[filtered_df["Tồn"] > 0]
+        elif stock_filter == "Hết hàng (=0)":
+            filtered_df = filtered_df[filtered_df["Tồn"] <= 0]
+
+        # Hiển thị số lượng kết quả tìm thấy
+        st.caption(f"Hiển thị {len(filtered_df)} / {len(df)} mặt hàng")
+
+        # Hiển thị bảng dữ liệu ĐÃ LỌC
+        st.dataframe(filtered_df[["Mã", "Tên", "Đvt", "Tồn"]], width='stretch', hide_index=True)
+        
+        # Chức năng xuất Excel (Xuất đúng dữ liệu đã lọc)
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df[["Mã", "Tên", "Đvt", "Tồn"]].to_excel(writer, index=False, sheet_name='DanhMuc')
+            filtered_df[["Mã", "Tên", "Đvt", "Tồn"]].to_excel(writer, index=False, sheet_name='DanhMuc')
             worksheet = writer.sheets['DanhMuc']
-            # Cố định tiêu đề
             worksheet.freeze_panes = 'A2'
-            # Thêm Filter
             max_row = worksheet.max_row
             max_col = worksheet.max_column
-            worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-            # Chỉnh độ rộng cột
+            if max_row > 1: # Chỉ tạo filter nếu có dữ liệu
+                worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
             for col in range(1, max_col + 1):
                 worksheet.column_dimensions[get_column_letter(col)].width = 15
         
@@ -71,16 +96,16 @@ if menu == "Danh mục hàng hóa":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     
-    with st.form("add_form", clear_on_submit=True):
-        st.subheader("Thêm hàng hóa mới")
-        code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
-        if st.form_submit_button("Thêm hàng hóa"):
-            if not code or not name: st.warning("Nhập đủ Mã và Tên!")
-            elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
-            else:
-                service.add_product(code.upper(), name, unit)
-                st.cache_data.clear()
-                st.success("Đã thêm thành công!"); st.rerun()
+    with st.expander("➕ Thêm hàng hóa mới"):
+        with st.form("add_form", clear_on_submit=True):
+            code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
+            if st.form_submit_button("Lưu hàng hóa"):
+                if not code or not name: st.warning("Nhập đủ Mã và Tên!")
+                elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
+                else:
+                    service.add_product(code.upper(), name, unit)
+                    st.cache_data.clear()
+                    st.success("Đã thêm thành công!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT (PHIÊN BẢN TỐI ƯU GIAO DIỆN & TỐC ĐỘ) ---
 elif menu == "Nhập/Xuất":
