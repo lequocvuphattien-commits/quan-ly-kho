@@ -180,26 +180,4 @@ elif menu == "Báo cáo tồn kho": show_report()
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
-    
-    if history:
-        # 1. Tạo DataFrame từ dữ liệu
-        df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
-        
-        # 2. Đảm bảo cột "Số Lượng" là kiểu số để NumberColumn hoạt động
-        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
-        
-        # 3. Hiển thị
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Số Lượng": st.column_config.NumberColumn(
-                    "Số Lượng",
-                    format="%d",
-                ),
-                # Nếu bạn muốn canh phải cho cả Ghi Chú (thường là không nên), 
-                # thì bạn phải chuyển nó thành NumberColumn hoặc dùng CSS hack.
-                # Chuẩn thiết kế là Ghi chú (văn bản) phải canh trái.
-            }
-        )
+    if history: st.dataframe(pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"]), width='stretch', hide_index=True)
