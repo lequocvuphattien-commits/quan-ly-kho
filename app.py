@@ -30,7 +30,13 @@ st.markdown("""
     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;}         
+        color: white !important;} 
+            
+     /* Tiêu đề cột AgGrid màu xanh dương */
+    .blue-header {
+        color: #007bff !important;
+        font-weight: bold !important;
+    }        
     </style>
 """, unsafe_allow_html=True)
 
