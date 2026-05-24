@@ -7,11 +7,11 @@ from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 # --- BỘ NHỚ ĐỆM (CACHE) ---
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def get_cached_products(_svc):
     return _svc.get_products()
 
-@st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=600, show_spinner=False)
 def get_cached_history(_svc):
     return _svc.get_history()
 
