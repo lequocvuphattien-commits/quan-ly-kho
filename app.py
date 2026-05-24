@@ -49,14 +49,24 @@ if menu == "Danh mục hàng":
         
         #st.caption("💡 *Mẹo: Gõ từ khóa trực tiếp vào các ô trống ngay dưới tiêu đề cột để lọc dữ liệu nhanh.*")
 
-        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ ---
+        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ (ĐÃ ẨN NÚT MENU SỐ 1) ---
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
         gb.configure_default_column(
             sortable=True,
             filter=True,
-            floatingFilter=True, # BẬT TÍNH NĂNG FILTER TRỰC TIẾP TRÊN TIÊU ĐỀ
+            floatingFilter=True, 
             resizable=True
         )
+        
+        # Cấu hình ẩn nút Menu bộ lọc (khung số 1) cho từng cột chữ
+        gb.configure_column("Mã", filterParams={"suppressFilterButton": True})
+        gb.configure_column("Tên", filterParams={"suppressFilterButton": True})
+        gb.configure_column("Đvt", filterParams={"suppressFilterButton": True})
+        
+        # Cấu hình riêng cho cột Tồn kho (Lọc theo số và cũng ẩn luôn nút Menu)
+        gb.configure_column("Tồn", filter="agNumberColumnFilter", filterParams={"suppressFilterButton": True})
+        
+        go = gb.build()
         # Cấu hình riêng cho cột tồn kho (lọc theo số)
         gb.configure_column("Tồn", filter="agNumberColumnFilter")
         go = gb.build()
