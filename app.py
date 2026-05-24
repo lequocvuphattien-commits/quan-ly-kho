@@ -276,24 +276,12 @@ elif menu == "Lịch sử giao dịch":
 
         # Cột Số Lượng
         gb.configure_column(
-            "Số Lượng",
-            type=["numericColumn"],
-            minWidth=120,
-            maxWidth=160,
-
-            # Format 1,000
-            valueFormatter="""
-                Number(value).toLocaleString('en-US')
-            """,
-
-            # Canh phải
-            headerClass='ag-right-aligned-header',
-            cellClass='ag-right-aligned-cell',
-
-            cellStyle={
-                'textAlign': 'right',
-                'fontWeight': 'bold'
-            }
+            "Số Lượng", 
+            width=60, 
+            suppressSizeToFit=True, 
+            type=["numericColumn"], # Khai báo là cột số
+            valueFormatter="Number(x).toLocaleString('en-US')", # Format hàng nghìn (3,010)
+            cellStyle={'textAlign': 'right'}
         )
 
         # Cột Ghi Chú
