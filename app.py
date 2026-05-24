@@ -6,6 +6,15 @@ from services.data_service import DataService
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
+# --- BỘ NHỚ ĐỆM (CACHE) ---
+@st.cache_data(ttl=30, show_spinner=False)
+def get_cached_products(_svc):
+    return _svc.get_products()
+
+@st.cache_data(ttl=30, show_spinner=False)
+def get_cached_history(_svc):
+    return _svc.get_history()
+
 # Cấu hình trang (Luôn để đầu tiên)
 st.set_page_config(page_title="Quản Lý Kho", layout="wide")
 
@@ -21,15 +30,6 @@ st.markdown("""
 
 # Khởi tạo dịch vụ
 service = DataService(mode="ONLINE")
-
-# --- BỘ NHỚ ĐỆM (CACHE) ---
-@st.cache_data(ttl=30, show_spinner=False)
-def get_cached_products(_svc):
-    return _svc.get_products()
-
-@st.cache_data(ttl=30, show_spinner=False)
-def get_cached_history(_svc):
-    return _svc.get_history()
 
 st.title("📦 Quản lý kho")
 
