@@ -47,22 +47,25 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ (ĐÃ FIX LỖI THƯ VIỆN & ẨN NÚT MENU) ---
+        # --- TẠO LƯỚI AG-GRID (GIAO DIỆN TỐI GIẢN CHỈ CÓ Ô NHẬP LIỆU) ---
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
         
-        # 1. Cấu hình chung cho TẤT CẢ các cột (Ẩn luôn nút tam giác Filter)
+        # Cấu hình chung cho TẤT CẢ các cột
         gb.configure_default_column(
             sortable=True,
             filter=True,
-            floatingFilter=True, # BẬT TÍNH NĂNG FILTER TRỰC TIẾP TRÊN TIÊU ĐỀ
+            floatingFilter=True, 
             resizable=True,
-            filterParams={"suppressFilterButton": True} # Ẩn khung menu lọc phụ cho mọi cột
+            suppressMenu=True,  # ẨN HOÀN TOÀN MENU TRÊN TIÊU ĐỀ CỘT
+            filterParams={
+                "suppressFilterButton": True, # ẨN NÚT HÌNH PHỄU TRONG Ô TÌM KIẾM
+            } 
         )
         
-        # 2. Sinh ra đối tượng cấu hình
+        # Sinh ra đối tượng cấu hình
         go = gb.build()
         
-        # 3. CAN THIỆP TRỰC TIẾP (Bypass lỗi TypeError của st_aggrid)
+        # CAN THIỆP TRỰC TIẾP (Bypass lỗi TypeError của st_aggrid)
         # Quét qua cấu hình để đổi cột "Tồn" thành định dạng số
         if 'columnDefs' in go:
             for col in go['columnDefs']:
@@ -79,7 +82,6 @@ if menu == "Danh mục hàng":
         )
         
         # --- ĐỒNG BỘ VỚI NÚT XUẤT EXCEL ---
-        # Lấy dataframe đã được lọc từ lưới AgGrid
         filtered_df = pd.DataFrame(grid_response['data'])
         
         buffer = io.BytesIO()
@@ -120,23 +122,18 @@ if menu == "Danh mục hàng":
 elif menu == "Nhập/Xuất":
     st.header("🔄 Nhập/Xuất kho")
     
-    # Khởi tạo giỏ hàng trong bộ nhớ tạm (Session State) để chống load chậm
     if 'cart' not in st.session_state: 
         st.session_state.cart = []
     
     products = get_cached_products(service)
     
     if products:
-        # Chuẩn hóa dữ liệu thành dictionary để truy xuất siêu nhanh
-        # p[1] là Mã, p[2] là Tên, p[3] là Đvt, p[4] là Tồn
         p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         
         # --- 1. KHUNG NHẬP LIỆU GIAO DỊCH ---
         with st.container(border=True):
-            # Loại: Nút Button Nhập/Xuất (dạng radio ngang)
             trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
             
-            # Chọn hàng: List box hỗ trợ gõ tìm kiếm tự động
             selected = st.selectbox(
                 "Chọn hàng hóa", 
                 options=list(p_dict.keys()), 
@@ -144,16 +141,12 @@ elif menu == "Nhập/Xuất":
                 placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
             )
             
-            # Chia làm 3 cột: Số lượng, Ghi chú, Tồn
             c1, c2, c3 = st.columns([1, 1.5, 1])
             with c1:
-                # Số lượng: Ô trống mặc định, tự động format có dấu phẩy
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
             with c2:
-                # Ghi chú: Để trống nhập nếu cần
                 note = st.text_input("Ghi chú", placeholder="Nhập ghi chú (tùy chọn)...")
             with c3:
-                # Hiển thị Tồn động
                 if selected:
                     current_stock = float(p_dict[selected]['Tồn'])
                     unit = p_dict[selected]['Đvt']
@@ -161,18 +154,14 @@ elif menu == "Nhập/Xuất":
                 else:
                     st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
 
-            # Thêm vào lưới (TỐI ƯU HIỆU SUẤT X10)
             if st.button("➕ Thêm vào lưới"):
                 if not selected or not qty:
                     st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
                 else:
                     prod_data = p_dict[selected]
                     
-                    # Logic kiểm tra tồn bằng PYTHON THUẦN (siêu nhanh, không dùng Pandas)
                     if trans_type == "Xuất":
                         current_stock = float(prod_data["Tồn"])
-                        
-                        # Dùng generator expression của Python để tính tổng cực nhanh
                         out_in_cart = sum(
                             item["Số lượng"] 
                             for item in st.session_state.cart 
@@ -183,7 +172,6 @@ elif menu == "Nhập/Xuất":
                             st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {current_stock:,.0f})")
                             st.stop()
 
-                    # Đưa vào RAM
                     st.session_state.cart.append({
                         "Mã": prod_data["Mã"],
                         "Loại": trans_type,
@@ -191,14 +179,13 @@ elif menu == "Nhập/Xuất":
                         "Số lượng": float(qty),
                         "Ghi chú": note if note else ""
                     })
-                    st.rerun() # Load lại UI lập tức
+                    st.rerun() 
 
-        # --- 2. HIỂN THỊ LƯỚI CHỜ (CÓ THỂ SỬA TRỰC TIẾP) ---
+        # --- 2. HIỂN THỊ LƯỚI CHỜ ---
         if st.session_state.cart:
             st.markdown("### 📋 Lưới chờ xử lý")
             st.caption("💡 *Mẹo: Click đúp chuột vào ô Số lượng hoặc Ghi chú để sửa trực tiếp trên bảng trước khi Xác nhận.*")
             
-            # Data Editor thay thế dataframe thông thường
             edited_df = st.data_editor(
                 pd.DataFrame(st.session_state.cart),
                 column_config={
@@ -216,7 +203,7 @@ elif menu == "Nhập/Xuất":
             # --- 3. XÁC NHẬN VÀ HỦY ---
             col_x, col_y = st.columns([1, 5])
             with col_x:
-                if st.button("✅ Xác nhận tất cả", type="primary"): # type="primary" sẽ kích hoạt CSS màu xanh lá
+                if st.button("✅ Xác nhận tất cả", type="primary"): 
                     for _, row in edited_df.iterrows():
                         service.add_transaction(row["Mã"], row["Số lượng"], row["Loại"], str(row["Ghi chú"]) if pd.notna(row["Ghi chú"]) else "")
                         service.update_stock(row["Mã"], row["Số lượng"], row["Loại"])
