@@ -70,111 +70,22 @@ if menu == "Danh mục hàng hóa":
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
-    st.header("🔄 Nhập/Xuất hàng hóa")
-    
-    # Khởi tạo giỏ hàng trong bộ nhớ tạm (Session State)
-    if 'cart' not in st.session_state: 
-        st.session_state.cart = []
-    
+    st.header("Nhập/Xuất kho")
     products = get_cached_products(service)
+    
     if products:
-        # --- BẮT ĐẦU ĐOẠN FIX LỖI TYPE ERROR ---
-        # Code tự động nhận diện kiểu dữ liệu của 'p' để xử lý an toàn
-        p_dict = {}
-        for p in products:
-            if isinstance(p, dict):
-                # Nếu p đã là dictionary
-                p_dict[f"{p.get('Mã', '')} - {p.get('Tên', '')}"] = p
-            elif hasattr(p, 'code'):
-                # Nếu p là đối tượng (Object) từ ProductController
-                p_dict[f"{p.code} - {p.name}"] = {"Mã": p.code, "Tên": p.name, "Đvt": p.unit, "Tồn": p.stock}
-            else:
-                # Nếu p là list hoặc tuple (ví dụ: [ID, Mã, Tên, Đvt, Tồn])
-                p_dict[f"{p[1]} - {p[2]}"] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]}
-        # --- KẾT THÚC ĐOẠN FIX LỖI ---
+        product_dict = {f"{p[1]} - {p[2]}": p[1] for p in products}
+        selected = st.selectbox("Chọn hàng", list(product_dict.keys()))
+        prod_code = product_dict[selected]
+        qty = st.number_input("Số lượng", min_value=0.0, step=1.0)
+        trans_type = st.radio("Loại", ["Nhập", "Xuất"])
+        note = st.text_input("Ghi chú")
         
-        # --- KHUNG NHẬP LIỆU GIAO DỊCH ---
-        with st.container(border=True):
-            typ = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
-            
-            sel = st.selectbox(
-                "Chọn hàng hóa", 
-                options=list(p_dict.keys()), 
-                index=None, 
-                placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
-            )
-            
-            c1, c2, c3 = st.columns([1, 1.5, 1])
-            with c1:
-                qty = st.number_input("Số lượng", min_value=1, value=None, step=1, format="%d", placeholder="Nhập số...")
-            with c2:
-                note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
-            with c3:
-                if sel:
-                    current_stock = float(p_dict[sel]['Tồn'])
-                    unit = p_dict[sel]['Đvt']
-                    st.markdown(f"<div style='padding-top: 30px; font-size: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-                else:
-                    st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
-
-            if st.button("➕ Thêm vào lưới"):
-                if not sel or not qty:
-                    st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
-                else:
-                    prod_data = p_dict[sel]
-                    prod_code = prod_data["Mã"]
-                    current_stock = float(prod_data["Tồn"])
-
-                    if typ == "Xuất":
-                        cart_df = pd.DataFrame(st.session_state.cart) if st.session_state.cart else pd.DataFrame(columns=["Mã", "Loại", "Số lượng"])
-                        out_in_cart = cart_df[(cart_df["Mã"] == prod_code) & (cart_df["Loại"] == "Xuất")]["Số lượng"].sum() if not cart_df.empty else 0
-                        if qty + out_in_cart > current_stock:
-                            st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {current_stock:,.0f})")
-                            st.stop()
-
-                    st.session_state.cart.append({
-                        "Mã": prod_code,
-                        "Tên HH": prod_data["Tên"],
-                        "Đvt": prod_data["Đvt"],
-                        "Loại": typ,
-                        "Số lượng": qty,
-                        "Ghi chú": note if note else ""
-                    })
-                    st.rerun()
-
-        # --- HIỂN THỊ LƯỚI CHỜ ---
-        if st.session_state.cart:
-            st.markdown("### 📋 Lưới chờ xử lý")
-            st.caption("💡 *Mẹo: Click đúp chuột vào ô Số lượng hoặc Ghi chú để sửa trực tiếp trên bảng.*")
-            
-            edited_df = st.data_editor(
-                pd.DataFrame(st.session_state.cart),
-                column_config={
-                    "Mã": st.column_config.TextColumn("Mã HH", disabled=True),
-                    "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True),
-                    "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
-                    "Loại": st.column_config.TextColumn("Loại", disabled=True),
-                    "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1, format="%d"),
-                    "Ghi chú": st.column_config.TextColumn("Ghi chú")
-                },
-                hide_index=True,
-                key="cart_editor"
-            )
-            
-            col_x, col_y = st.columns([1, 4])
-            with col_x:
-                if st.button("✅ Xác nhận tất cả", type="primary"):
-                    for _, row in edited_df.iterrows():
-                        t_controller.process_transaction(row["Mã"], row["Loại"], row["Số lượng"], str(row["Ghi chú"]) if pd.notna(row["Ghi chú"]) else "")
-                    
-                    st.session_state.cart = []
-                    clear_all_caches()
-                    st.success("🎉 Giao dịch thành công!")
-                    st.rerun()
-            with col_y:
-                if st.button("🗑️ Hủy lưới"):
-                    st.session_state.cart = []
-                    st.rerun()
+        if st.button("Xác nhận giao dịch"):
+            service.add_transaction(prod_code, qty, trans_type, note)
+            service.update_stock(prod_code, qty, trans_type)
+            st.cache_data.clear()
+            st.success("Đã cập nhật tồn kho!"); st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho":
