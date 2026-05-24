@@ -34,7 +34,16 @@ st.markdown("""
     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;}         
+        color: white !important;}    
+    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ TIÊU ĐỀ PHỤ LẠI VỚI NHAU */
+    h1 {
+        padding-bottom: 0rem !important;
+        margin-bottom: -1rem !important; /* Cắt giảm khoảng trống dưới chữ Quản lý kho */
+    }
+    h3 {
+        padding-top: 0rem !important;
+        margin-top: -0.5rem !important; /* Cắt giảm khoảng trống trên chữ Nhập/Xuất kho */
+    }     
     </style>
 """, unsafe_allow_html=True)
 
