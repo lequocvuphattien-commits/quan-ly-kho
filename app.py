@@ -308,14 +308,14 @@ elif menu == "Lịch sử giao dịch":
         AgGrid(
             df,
             gridOptions=go,
-
-            # Tự co giãn theo dữ liệu
-            fit_columns_on_grid_load=True,
-
+            
+            # Tự động co giãn các cột để lấp đầy chiều rộng màn hình
+            fit_columns_on_grid_load=True, 
+            
             theme='streamlit',
-
-            # Full width
-            use_container_width=True
+            
+            # Tăng chiều cao khung hiển thị (mặc định là 400, tăng lên 650)
+            height=650 
         )
 
 
