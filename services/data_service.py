@@ -67,3 +67,13 @@ class DataService:
         xuat = period_data[period_data['type'] == 'XUẤT']['qty'].sum()
         
         return float(ton_dau), float(nhap), float(xuat)
+    
+    def get_products(self):
+        """Lấy danh mục sản phẩm"""
+        data = self.sheet_products.get_all_values()
+        if len(data) > 1:
+            # Ví dụ xử lý: cắt dữ liệu từ dòng 2 (bỏ header)
+            cleaned_data = [row[:5] for row in data[1:]]
+            # ... logic xử lý dữ liệu ...
+            return cleaned_data
+        return []
