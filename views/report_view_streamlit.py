@@ -107,7 +107,7 @@ def show_report():
             
             # --- 2. CẤU HÌNH ĐỘ RỘNG CÁC CỘT CHỮ ---
             # (Lưu ý: Tên cột dưới đây phải khớp với tên trong df_report của bạn, ví dụ "Mã", "Tên", "Đvt")
-            gb.configure_column("Mã", width=90, suppressSizeToFit=True)
+            #gb.configure_column("Mã", width=90, suppressSizeToFit=True)
             gb.configure_column("Tên", width=250, minWidth=200) # Nhường khoảng trống cho cột Tên giãn ra
             gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
 
@@ -115,7 +115,7 @@ def show_report():
             for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
                 gb.configure_column(
                     col_name,
-                    width=110, suppressSizeToFit=True, # Khóa độ rộng 110px để số không bị che khuất
+                    width=80, suppressSizeToFit=True, # Khóa độ rộng 110px để số không bị che khuất
                     type=["numericColumn"],
                     filter='agNumberColumnFilter',
                     valueFormatter="Number(x).toLocaleString('en-US')", # Thêm dấu phẩy hàng nghìn (VD: 3,010)
