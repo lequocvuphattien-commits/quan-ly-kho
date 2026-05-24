@@ -47,7 +47,7 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        # --- TẠO LƯỚI AG-GRID (GIAO DIỆN TỐI GIẢN) ---
+        # --- TẠO LƯỚI AG-GRID (GIAO DIỆN TỐI GIẢN CHỈ CÓ Ô NHẬP LIỆU) ---
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
         
         gb.configure_default_column(
@@ -55,7 +55,7 @@ if menu == "Danh mục hàng":
             filter=True,
             floatingFilter=True, 
             resizable=True,
-            suppressMenu=True,
+            suppressMenu=True, 
             filterParams={"suppressFilterButton": True} 
         )
         
@@ -82,6 +82,7 @@ if menu == "Danh mục hàng":
                 filtered_df.to_excel(writer, index=False, sheet_name='DanhMuc')
                 worksheet = writer.sheets['DanhMuc']
                 worksheet.freeze_panes = 'A2'
+                
                 max_row = worksheet.max_row
                 max_col = worksheet.max_column
                 if max_row > 1:
@@ -106,7 +107,6 @@ if menu == "Danh mục hàng":
                     service.add_product(code.upper(), name, unit)
                     st.cache_data.clear()
                     st.success("Đã thêm thành công!"); st.rerun()
-
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
@@ -134,7 +134,7 @@ elif menu == "Nhập/Xuất":
             with c1:
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
             with c2:
-                note = st.text_input("Ghi chú", placeholder="Nhập ghi chú (tùy chọn)...")
+                note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
             with c3:
                 if selected:
                     current_stock = float(p_dict[selected]['Tồn'])
@@ -153,14 +153,14 @@ elif menu == "Nhập/Xuất":
                     
                     if trans_type == "Xuất":
                         current_stock = float(prod_data["Tồn"])
-                        out_in_cart = sum(item["Số lượng"] for item in st.session_state.cart if item["Mã"] == prod_data["Mã"] and item["Loại"] == "Xuất")
+                        out_in_cart = sum(item["Số lượng"] for item in st.session_state.cart if item["Mã HH"] == prod_data["Mã"] and item["Loại"] == "Xuất")
                         if qty + out_in_cart > current_stock:
                             st.error(f"❌ Không đủ tồn kho!")
                             st.stop()
 
                     st.session_state.cart.append({
-                        "Mã HH": prod_data["Mã"], # Chỉnh tên key cho chuẩn
-                        "Tên HH": prod_data["Tên"], # THÊM CỘT TÊN HÀNG HÓA
+                        "Mã HH": prod_data["Mã"],
+                        "Tên HH": prod_data["Tên"], # Đã thêm cột Tên hàng
                         "Đvt": prod_data["Đvt"],
                         "Số lượng": float(qty),
                         "Ghi chú": note if note else "",
@@ -176,7 +176,7 @@ elif menu == "Nhập/Xuất":
                 pd.DataFrame(st.session_state.cart),
                 column_config={
                     "Mã HH": st.column_config.TextColumn("Mã HH", disabled=True),
-                    "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True), # CẤU HÌNH CỘT TÊN HH
+                    "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True),
                     "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
                     "Loại": st.column_config.TextColumn("Loại", disabled=True),
                     "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1.0, format="%.0f"),
