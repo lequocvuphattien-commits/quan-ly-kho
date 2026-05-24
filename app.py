@@ -103,6 +103,9 @@ if menu == "Danh mục hàng":
 elif menu == "Nhập/Xuất":
     st.subheader("🔄 Nhập/Xuất kho")
     
+    # THÊM DÒNG NÀY VÀO ĐÂY: Lấy danh sách kho từ Sheet Config
+    kho_nhap_list, kho_xuat_list = service.get_config_options()
+
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     products = get_cached_products(service)
@@ -129,11 +132,20 @@ elif menu == "Nhập/Xuất":
             with c1:
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
             with c2:
-                note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
+                # SỬA Ở ĐÂY: Quyết định danh sách hiển thị dựa vào Loại giao dịch
+                current_options = kho_nhap_list if trans_type == "Nhập" else kho_xuat_list
+                
+                # Biến note bây giờ sẽ lưu giá trị người dùng chọn từ Selectbox
+                note = st.selectbox(
+                    "Diễn giải / Kho", 
+                    options=current_options, 
+                    index=None, 
+                    placeholder="Chọn địa điểm..."
+                )
             with c3:
                 st.write("") 
                 if st.button("➕ Thêm vào lưới", key="add_to_cart"):
-                    if not selected or not qty:
+                    if not selected or not qty or not note:
                         st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
                     else:
                         prod_data = p_dict[selected]
@@ -175,7 +187,7 @@ elif menu == "Nhập/Xuất":
                 st.success("🎉 Giao dịch thành công!")
                 st.rerun()
 
-elif menu == "Báo cáo tồn kho": show_report()
+elif menu == "Báo cáo tồn kho": show_report() # Gọi hàm hiển thị báo cáo tồn kho
 
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
