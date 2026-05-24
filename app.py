@@ -213,44 +213,111 @@ elif menu == "Nhập/Xuất":
 elif menu == "Báo cáo tồn kho": show_report() # Gọi hàm hiển thị báo cáo tồn kho
 
 elif menu == "Lịch sử giao dịch":
+
     st.header("Lịch sử giao dịch")
+
     history = get_cached_history(service)
-    
+
     if history:
-        # 1. Tạo DataFrame từ dữ liệu giao dịch
-        df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
-        
-        # Ép kiểu số cho cột Số Lượng để đảm bảo dữ liệu chuẩn
-        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
-        
-        # 2. Khởi tạo cấu hình cho bảng AgGrid
+
+        # Tạo DataFrame
+        df = pd.DataFrame(
+            history,
+            columns=[
+                "Ngày",
+                "Mã",
+                "Tên Hàng Hóa",
+                "Loại",
+                "Số Lượng",
+                "Ghi Chú"
+            ]
+        )
+
+        # Ép kiểu số
+        df["Số Lượng"] = pd.to_numeric(
+            df["Số Lượng"],
+            errors="coerce"
+        ).fillna(0)
+
+        # Khởi tạo AgGrid
         gb = GridOptionsBuilder.from_dataframe(df)
-        gb.configure_default_column(sortable=True, filter=True, resizable=True)
-        
-        # 3. Định dạng cột Số Lượng với dấu phẩy và canh phải
+
+        # Cấu hình mặc định
+        gb.configure_default_column(
+            sortable=True,
+            filter=True,
+            resizable=True,
+            flex=1,
+            minWidth=100
+        )
+
+        # Cột Mã
         gb.configure_column(
-            "Số Lượng", 
+            "Mã",
+            minWidth=90,
+            maxWidth=130,
+            cellStyle={'textAlign': 'center'}
+        )
+
+        # Cột Tên Hàng Hóa
+        gb.configure_column(
+            "Tên Hàng Hóa",
+            minWidth=220,
+            cellStyle={'textAlign': 'left'}
+        )
+
+        # Cột Loại
+        gb.configure_column(
+            "Loại",
+            minWidth=90,
+            maxWidth=120,
+            cellStyle={'textAlign': 'center'}
+        )
+
+        # Cột Số Lượng
+        gb.configure_column(
+            "Số Lượng",
             type=["numericColumn"],
-            valueFormatter="Number(x).toLocaleString('en-US')", # Thêm dòng này để format 3,010
+            minWidth=120,
+            maxWidth=160,
+
+            # Format 1,000
+            valueFormatter="""
+                Number(value).toLocaleString('en-US')
+            """,
+
+            # Canh phải
             headerClass='ag-right-aligned-header',
-            cellClass='ag-right-aligned-cell'
+            cellClass='ag-right-aligned-cell',
+
+            cellStyle={
+                'textAlign': 'right',
+                'fontWeight': 'bold'
+            }
         )
-        
-        # Ép cột văn bản "Ghi Chú" canh phải hoàn toàn (Cả tiêu đề và chữ)
+
+        # Cột Ghi Chú
         gb.configure_column(
-            "Ghi Chú", 
-            headerClass='ag-right-aligned-header', 
-            cellStyle={'textAlign': 'right'}
+            "Ghi Chú",
+            minWidth=200,
+            cellStyle={'textAlign': 'left'}
         )
-        
+
+        # Build grid
         go = gb.build()
-        
-        # 3. Hiển thị bảng bằng AgGrid chuyên nghiệp
+
+        # Hiển thị bảng
         AgGrid(
             df,
             gridOptions=go,
+
+            # Tự co giãn theo dữ liệu
             fit_columns_on_grid_load=True,
-            theme='streamlit'
+
+            theme='streamlit',
+
+            # Full width
+            use_container_width=True
         )
 
 
