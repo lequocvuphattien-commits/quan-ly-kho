@@ -102,9 +102,9 @@ if menu == "Danh mục hàng":
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.subheader("🔄 Nhập/Xuất kho")
-    with st.expander("➕ Thêm kho mới"):
-        new_kho = st.text_input("Tên kho mới", placeholder="Ví dụ: Kho đông lạnh...")
-        if st.button("Lưu kho mới"):
+    with st.expander("➕ Thêm địa điểm mới"):
+        new_kho = st.text_input("Tên địa điểm", placeholder="Ví dụ: Kho đông lạnh...")
+        if st.button("Lưu địa điểm mới"):
             if new_kho:
                 # Gọi hàm ghi xuống sheet Config
                 service.add_config_option(trans_type, new_kho)
@@ -113,7 +113,7 @@ elif menu == "Nhập/Xuất":
                 st.rerun() # Tải lại trang để cập nhật selectbox
             else:
                 st.warning("Vui lòng nhập tên kho!")
-                
+
     kho_nhap_list, kho_xuat_list = service.get_config_options()
 
     if 'cart' not in st.session_state: st.session_state.cart = []
