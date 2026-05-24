@@ -1,5 +1,7 @@
 import sys
 import os
+import uuid
+import uuid
 import pandas as pd
 
 # Thêm thư mục gốc của dự án vào hệ thống để Python tìm thấy 'controllers'
@@ -84,3 +86,19 @@ class DataService:
         # Dùng .strip().lower() để so sánh không phân biệt hoa thường/khoảng trắng
         # Giả định cột thứ 2 (index 1) là cột chứa Mã hàng hóa
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
+    
+    def add_product(self, code, name, unit):
+        """Thêm hàng hóa mới vào Google Sheet"""
+        # Tạo một ID ngẫu nhiên, cắt lấy 8 ký tự đầu và in hoa
+        new_id = str(uuid.uuid4())[:8].upper()
+        
+        # Thêm một dòng mới vào sheet 'Products'
+        # Cấu trúc: [ID, Mã HH, Tên HH, Đơn vị tính, Tồn kho ban đầu]
+        self.sheet_products.append_row([
+            new_id,       
+            code,         
+            name,         
+            unit,         
+            0.0           # Tồn kho ban đầu mặc định là 0
+        ])
+        return True
