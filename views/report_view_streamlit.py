@@ -5,6 +5,7 @@ from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
 from datetime import date  # Thêm thư viện này để cấu hình ngày mặc định
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 def export_to_excel(df):
     buffer = io.BytesIO()
@@ -92,7 +93,38 @@ def show_report():
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            st.dataframe(df_report, width='stretch', hide_index=True)
+            # --- ĐOẠN CODE HIỂN THỊ BẢNG BẰNG AGGRID ---
+            # 1. Khởi tạo cấu hình bảng từ df_report
+            gb = GridOptionsBuilder.from_dataframe(df_report)
+            
+            # 2. Bật tính năng Lọc (filter) và Ô tìm kiếm nhanh (floatingFilter) cho TẤT CẢ các cột
+            gb.configure_default_column(
+                sortable=True, 
+                filter=True, 
+                floatingFilter=True, 
+                resizable=True
+            )
+            
+            # 3. Định dạng chuyên sâu cho các cột số lượng (Canh lề phải + Bộ lọc Toán học)
+            for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
+                gb.configure_column(
+                    col_name,
+                    type=["numericColumn"],
+                    filter='agNumberColumnFilter', # Cho phép lọc số: Lớn hơn, nhỏ hơn, bằng...
+                    headerClass='ag-right-aligned-header',
+                    cellClass='ag-right-aligned-cell'
+                )
+            
+            go = gb.build()
+            
+            # 4. Hiển thị bảng
+            AgGrid(
+                df_report,
+                gridOptions=go,
+                fit_columns_on_grid_load=True,
+                theme='streamlit'
+            )
+            # --- KẾT THÚC ĐOẠN CODE HIỂN THỊ ---
             
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
