@@ -43,7 +43,7 @@ def show_report():
                 st.info("Chưa có giao dịch.")
                 return
 
-            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "type", "qty", "note"])
+            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "product_name", "qty", "note"])
             
             if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
                 df_h = df_h.iloc[1:].copy()
@@ -55,6 +55,7 @@ def show_report():
             
             df_h['qty'] = pd.to_numeric(df_h['qty'], errors='coerce').fillna(0)
             df_h['product_id'] = df_h['product_id'].astype(str).str.strip().str.upper()
+            df_h['product_name'] = df_h['product_name'].astype(str).str.strip()
             df_h['type'] = df_h['type'].astype(str).str.strip().str.capitalize()
             
             df_products = pd.DataFrame(
