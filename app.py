@@ -17,7 +17,7 @@ st.markdown("""
         color: white !important;
     }
     /* Chỉnh sửa khoảng cách cho gọn gàng */
-    .block-container { padding-top: 0rem !important; }
+    .block-container { padding-top: 1rem !important; }
     </style>
 """, unsafe_allow_html=True)
 
