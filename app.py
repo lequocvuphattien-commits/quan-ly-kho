@@ -156,23 +156,7 @@ elif menu == "Nhập/Xuất":
             with c3:
                 st.write("") # Căn chỉnh cho nút nằm thấp xuống bằng hàng input
                 st.write("")
-                if st.button("➕ Thêm vào lưới"):
-                    # ... (giữ nguyên logic xử lý thêm vào giỏ hàng của bạn)
-                    if not selected or not qty:
-                        st.warning("⚠️ Chọn hàng & nhập số lượng!")
-                    else:
-                        prod_data = p_dict[selected]
-                        # ... (giữ nguyên logic tính tồn khi xuất)
-                        st.session_state.cart.append({
-                            "Mã HH": prod_data["Mã"],
-                            "Tên HH": prod_data["Tên"],
-                            "Đvt": prod_data["Đvt"],
-                            "Số lượng": float(qty),
-                            "Ghi chú": note if note else "",
-                            "Loại": trans_type
-                        })
-                        st.rerun()
-
+                
             if st.button("➕ Thêm vào lưới"):
                 if not selected or not qty:
                     st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
