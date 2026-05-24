@@ -21,18 +21,9 @@ st.markdown("""
     .block-container { padding-top: 1rem !important; }
     
     /* TĂNG CỠ CHỮ MENU SIDEBAR */
-    [data-testid="stSidebar"] {
-        font-size: 50px !important;
-    }
-    /* Tăng cỡ chữ cho các mục lựa chọn trong selectbox của menu */
-    [data-testid="stSidebar"] div[role="listbox"] {
-        font-size: 48px !important;
-    }
-    /* Tăng cỡ chữ cho label của menu */
-    [data-testid="stSidebar"] label {
-        font-size: 48px !important;
-        font-weight: bold !important;
-    }
+    [data-testid="stSidebar"] { font-size: 20px !important; }
+    [data-testid="stSidebar"] div[role="listbox"] { font-size: 18px !important; }
+    [data-testid="stSidebar"] label { font-size: 18px !important; font-weight: bold !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -52,37 +43,22 @@ st.title("📦 Quản lý kho")
 
 menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
-# --- TAB 1: DANH MỤC HÀNG ---
+# --- TAB 1: DANH MỤC HÀNG HÓA ---
 if menu == "Danh mục hàng":
-    st.subheader("📋 Danh mục hàng")
+    st.header("📋 Danh mục hàng")
     products = get_cached_products(service)
-    
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
-        gb.configure_default_column(
-            sortable=True,
-            filter=True,
-            floatingFilter=True, 
-            resizable=True,
-            suppressMenu=True, 
-            filterParams={"suppressFilterButton": True} 
-        )
+        gb.configure_default_column(sortable=True, filter=True, floatingFilter=True, resizable=True, suppressMenu=True, filterParams={"suppressFilterButton": True})
         go = gb.build()
         if 'columnDefs' in go:
             for col in go['columnDefs']:
-                if col.get('field') == 'Tồn':
-                    col['filter'] = 'agNumberColumnFilter'
+                if col.get('field') == 'Tồn': col['filter'] = 'agNumberColumnFilter'
 
-        grid_response = AgGrid(
-            df[["Mã", "Tên", "Đvt", "Tồn"]],
-            gridOptions=go,
-            fit_columns_on_grid_load=True,
-            theme='streamlit',
-            data_return_mode=DataReturnMode.FILTERED_AND_SORTED 
-        )
+        grid_response = AgGrid(df[["Mã", "Tên", "Đvt", "Tồn"]], gridOptions=go, fit_columns_on_grid_load=True, theme='streamlit', data_return_mode=DataReturnMode.FILTERED_AND_SORTED)
         
         filtered_df = pd.DataFrame(grid_response['data'])
         buffer = io.BytesIO()
@@ -91,19 +67,11 @@ if menu == "Danh mục hàng":
                 filtered_df.to_excel(writer, index=False, sheet_name='DanhMuc')
                 worksheet = writer.sheets['DanhMuc']
                 worksheet.freeze_panes = 'A2'
-                max_row = worksheet.max_row
-                max_col = worksheet.max_column
-                if max_row > 1:
-                    worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-                for col in range(1, max_col + 1):
-                    worksheet.column_dimensions[get_column_letter(col)].width = 15
+                max_row, max_col = worksheet.max_row, worksheet.max_column
+                if max_row > 1: worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+                for col in range(1, max_col + 1): worksheet.column_dimensions[get_column_letter(col)].width = 15
         
-        st.download_button(
-            label="📥 Xuất danh mục ra Excel (.xlsx)",
-            data=buffer.getvalue(),
-            file_name="DanhMucHangHoa.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+        st.download_button("📥 Xuất danh mục ra Excel (.xlsx)", data=buffer.getvalue(), file_name="DanhMucHangHoa.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     
     with st.expander("➕ Thêm hàng hóa mới"):
         with st.form("add_form", clear_on_submit=True):
@@ -119,71 +87,44 @@ if menu == "Danh mục hàng":
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất":
     st.subheader("🔄 Nhập/Xuất kho")
-    
     if 'cart' not in st.session_state: st.session_state.cart = []
     
     products = get_cached_products(service)
-    
     if products:
-        # Hiển thị tồn ngay trong ô chọn hàng hóa: "Mã - Tên (Tồn: 1.520 cái)"
-        p_dict = {
-            f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {
-                "Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]
-            } 
-            for p in products
-        }
+        p_dict = {f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         
         with st.container(border=True):
             trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
-            selected = st.selectbox(
-                "Chọn hàng hóa", 
-                options=list(p_dict.keys()), 
-                index=None, 
-                placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
-            )
+            selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng...")
             
+            # CẤU TRÚC LỒNG CỘT MỚI: Đẩy Tồn lên cạnh Số lượng
             c1, c2, c3 = st.columns([1.5, 2, 1])
             with c1:
-                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
+                # Gộp Số lượng và Tồn vào cột 1
+                sub_c1, sub_c2 = st.columns([1, 1])
+                with sub_c1:
+                    qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
+                with sub_c2:
+                    if selected:
+                        current_stock = float(p_dict[selected]['Tồn'])
+                        unit = p_dict[selected]['Đvt']
+                        st.markdown(f"<div style='margin-top: 30px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
             with c2:
                 note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
             with c3:
                 st.write("") 
-                if st.button("➕ Thêm vào lưới", key="add_to_cart"):
-                    if not selected or not qty:
-                        st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
+                st.write("")
+                if st.button("➕ Thêm vào lưới", key="btn_add_cart"):
+                    if not selected or not qty: st.warning("⚠️ Chọn hàng & nhập số lượng!")
                     else:
                         prod_data = p_dict[selected]
-                        if trans_type == "Xuất":
-                            if qty > float(prod_data["Tồn"]):
-                                st.error("❌ Không đủ tồn kho!")
-                                st.stop()
-                        st.session_state.cart.append({
-                            "Mã HH": prod_data["Mã"],
-                            "Tên HH": prod_data["Tên"],
-                            "Đvt": prod_data["Đvt"],
-                            "Số lượng": float(qty),
-                            "Ghi chú": note,
-                            "Loại": trans_type
-                        })
+                        st.session_state.cart.append({"Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên"], "Đvt": prod_data["Đvt"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
                         st.rerun() 
 
         if st.session_state.cart:
             st.markdown("### 📋 Lưới chờ xử lý")
-            edited_df = st.data_editor(
-                pd.DataFrame(st.session_state.cart),
-                column_config={
-                    "Mã HH": st.column_config.TextColumn("Mã HH", disabled=True),
-                    "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True),
-                    "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
-                    "Loại": st.column_config.TextColumn("Loại", disabled=True),
-                    "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1.0, format="%.0f"),
-                    "Ghi chú": st.column_config.TextColumn("Ghi chú")
-                },
-                hide_index=True, use_container_width=True
-            )
-            
-            if st.button("✅ Xác nhận tất cả", type="primary"): 
+            edited_df = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
+            if st.button("✅ Xác nhận tất cả", type="primary", key="btn_confirm"): 
                 for _, row in edited_df.iterrows():
                     service.add_transaction(row["Mã HH"], row["Số lượng"], row["Loại"], row["Ghi chú"])
                     service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
