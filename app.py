@@ -36,18 +36,18 @@ def get_cached_history(_svc):
 
 st.title("📦 Quản lý kho")
 
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng hóa", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
+menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 
 # --- TAB 1: DANH MỤC HÀNG HÓA ---
-if menu == "Danh mục hàng hóa":
-    st.header("📋 Danh mục hàng hóa")
+if menu == "Danh mục hàng":
+    st.header("📋 Danh mục hàng")
     products = get_cached_products(service)
     
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         
-        st.caption("💡 *Mẹo: Gõ từ khóa trực tiếp vào các ô trống ngay dưới tiêu đề cột để lọc dữ liệu nhanh.*")
+        #st.caption("💡 *Mẹo: Gõ từ khóa trực tiếp vào các ô trống ngay dưới tiêu đề cột để lọc dữ liệu nhanh.*")
 
         # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ ---
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
