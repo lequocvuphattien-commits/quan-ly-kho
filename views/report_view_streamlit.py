@@ -94,26 +94,16 @@ def show_report():
             df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             # --- ĐOẠN CODE HIỂN THỊ BẢNG BẰNG AGGRID ---
-            # 1. Khởi tạo cấu hình bảng từ df_report
+            # --- 1. KHỞI TẠO CẤU HÌNH BẢNG ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
             
-            # 2. Bật tính năng Lọc (filter) và Ô tìm kiếm nhanh (floatingFilter) cho TẤT CẢ các cột
+            # Bật lọc và sắp xếp mặc định
             gb.configure_default_column(
                 sortable=True, 
                 filter=True, 
                 floatingFilter=True, 
                 resizable=True
             )
-            
-            # 3. Định dạng chuyên sâu cho các cột số lượng (Canh lề phải + Bộ lọc Toán học)
-            for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
-                gb.configure_column(
-                    col_name,
-                    type=["numericColumn"],
-                    filter='agNumberColumnFilter', # Cho phép lọc số: Lớn hơn, nhỏ hơn, bằng...
-                    headerClass='ag-right-aligned-header',
-                    cellClass='ag-right-aligned-cell'
-                )
             
             # --- 2. CẤU HÌNH ĐỘ RỘNG CÁC CỘT CHỮ ---
             # (Lưu ý: Tên cột dưới đây phải khớp với tên trong df_report của bạn, ví dụ "Mã", "Tên", "Đvt")
