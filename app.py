@@ -127,30 +127,37 @@ elif menu == "Nhập/Xuất":
                 else:
                     st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
 
-            # Thêm vào lưới (Lưu vào bộ nhớ RAM nên siêu nhanh)
+            # Thêm vào lưới (TỐI ƯU HIỆU SUẤT X10)
             if st.button("➕ Thêm vào lưới"):
                 if not selected or not qty:
                     st.warning("⚠️ Vui lòng chọn hàng hóa và nhập số lượng!")
                 else:
                     prod_data = p_dict[selected]
                     
-                    # Logic kiểm tra tồn nếu là Xuất
+                    # Logic kiểm tra tồn bằng PYTHON THUẦN (siêu nhanh, không dùng Pandas)
                     if trans_type == "Xuất":
-                        cart_df = pd.DataFrame(st.session_state.cart) if st.session_state.cart else pd.DataFrame()
-                        out_in_cart = cart_df[(cart_df["Mã"] == prod_data["Mã"]) & (cart_df["Loại"] == "Xuất")]["Số lượng"].sum() if not cart_df.empty else 0
+                        current_stock = float(prod_data["Tồn"])
                         
-                        if qty + out_in_cart > float(prod_data["Tồn"]):
-                            st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {float(prod_data['Tồn']):,.0f})")
+                        # Dùng generator expression của Python để tính tổng cực nhanh
+                        out_in_cart = sum(
+                            item["Số lượng"] 
+                            for item in st.session_state.cart 
+                            if item["Mã"] == prod_data["Mã"] and item["Loại"] == "Xuất"
+                        )
+                        
+                        if qty + out_in_cart > current_stock:
+                            st.error(f"❌ Không đủ tồn kho! (Tồn hiện tại: {current_stock:,.0f})")
                             st.stop()
 
+                    # Đưa vào RAM
                     st.session_state.cart.append({
                         "Mã": prod_data["Mã"],
                         "Loại": trans_type,
                         "Đvt": prod_data["Đvt"],
-                        "Số lượng": qty,
+                        "Số lượng": float(qty),
                         "Ghi chú": note if note else ""
                     })
-                    st.rerun()
+                    st.rerun() # Load lại UI lập tức
 
         # --- 2. HIỂN THỊ LƯỚI CHỜ (CÓ THỂ SỬA TRỰC TIẾP) ---
         if st.session_state.cart:
