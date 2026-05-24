@@ -44,25 +44,28 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
+        # Cấu hình AgGrid với tính năng lọc nâng cao và sắp xếp
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
-        gb.configure_pagination(paginationAutoPageSize=True) # Chỉ hiển thị một số hàng mỗi trang
         gb.configure_default_column(
             sortable=True,
             filter=True,
             floatingFilter=True, 
             resizable=True,
-            suppressMenu=True
+            suppressMenu=True, 
+            filterParams={"suppressFilterButton": True} 
         )
         go = gb.build()
+        if 'columnDefs' in go:
+            for col in go['columnDefs']:
+                if col.get('field') == 'Tồn':
+                    col['filter'] = 'agNumberColumnFilter'
 
-        # Hiển thị với chế độ tối ưu
-        AgGrid(
+        grid_response = AgGrid(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
             gridOptions=go,
             fit_columns_on_grid_load=True,
             theme='streamlit',
-            update_mode='NO_UPDATE', # Chỉ cập nhật khi cần thiết
-            reload_data=False        # Không reload dữ liệu thừa
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED 
         )
         
         filtered_df = pd.DataFrame(grid_response['data'])
