@@ -38,7 +38,7 @@ st.markdown("""
     /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ TIÊU ĐỀ PHỤ LẠI VỚI NHAU */
     h1 {
         padding-bottom: 0rem !important;
-        margin-bottom: -1rem !important; /* Cắt giảm khoảng trống dưới chữ Quản lý kho */
+        margin-bottom: 0rem !important; /* Cắt giảm khoảng trống dưới chữ Quản lý kho */
     }
     h3 {
         padding-top: 0rem !important;
