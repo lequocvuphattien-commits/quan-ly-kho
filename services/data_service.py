@@ -102,3 +102,26 @@ class DataService:
             0.0           # Tồn kho ban đầu mặc định là 0
         ])
         return True
+    
+    def update_stock(self, product_code, qty, trans_type):
+        """Cập nhật số lượng tồn kho trực tiếp vào sheet Products"""
+        # Lấy toàn bộ dữ liệu từ sheet Products
+        records = self.sheet_products.get_all_values()
+        
+        for i, row in enumerate(records):
+            # i > 0 để bỏ qua dòng tiêu đề. Giả định cột Mã HH là cột thứ 2 (index 1)
+            if i > 0 and len(row) > 1 and str(row[1]).strip().lower() == str(product_code).strip().lower():
+                # Lấy số lượng tồn hiện tại ở cột thứ 5 (index 4)
+                current_stock = float(row[4]) if len(row) > 4 and row[4] else 0.0
+                
+                # Tính toán lại tồn kho
+                if trans_type.strip().capitalize() == "Nhập":
+                    new_stock = current_stock + float(qty)
+                else: # Xuất
+                    new_stock = current_stock - float(qty)
+                
+                # Cập nhật ô trong Google Sheets (Dòng i+1 do gspread đếm từ 1, Cột 5)
+                self.sheet_products.update_cell(i + 1, 5, new_stock)
+                return True
+                
+        return False # Trả về False nếu không tìm thấy mã hàng
