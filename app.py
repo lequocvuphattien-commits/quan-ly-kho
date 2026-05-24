@@ -56,6 +56,8 @@ if menu == "Danh mục hàng":
          # --- THÊM DÒNG NÀY ĐỂ CỘT ĐVT VỪA VỚI DỮ LIỆU ---
         gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
         gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'left'}) # Cột Đvt nhỏ gọn, canh giữa
+        gb.configure_column("Tên", width=200, cellStyle={'textAlign': 'left'}) # Cột Tên rộng hơn, canh trái
+        # --- THÊM DÒNG NÀY ĐỂ CỘT TỒN CANH PHẢI HOÀN TOÀN ---
 
         gb.configure_default_column(
             sortable=True,
