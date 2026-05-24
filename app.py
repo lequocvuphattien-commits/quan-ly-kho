@@ -4,6 +4,7 @@ import io
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 # Cấu hình trang (Luôn để đầu tiên)
 st.set_page_config(page_title="Quản Lý Kho", layout="wide")
@@ -46,48 +47,47 @@ if menu == "Danh mục hàng hóa":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         
-        # --- BỘ LỌC TÌM KIẾM (FILTER) ---
-        col_search1, col_search2 = st.columns([2, 1])
-        with col_search1:
-            search_term = st.text_input("🔍 Tìm kiếm", placeholder="Gõ Mã hoặc Tên hàng hóa để lọc...")
-        with col_search2:
-            stock_filter = st.selectbox("📦 Lọc theo Tồn kho", ["Tất cả", "Còn hàng (>0)", "Hết hàng (=0)"])
+        st.caption("💡 *Mẹo: Gõ từ khóa trực tiếp vào các ô trống ngay dưới tiêu đề cột để lọc dữ liệu nhanh.*")
 
-        # Logic xử lý lọc dữ liệu
-        filtered_df = df.copy()
+        # --- TẠO LƯỚI AG-GRID VỚI FILTER TRÊN TIÊU ĐỀ ---
+        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
+        gb.configure_default_column(
+            sortable=True,
+            filter=True,
+            floatingFilter=True, # BẬT TÍNH NĂNG FILTER TRỰC TIẾP TRÊN TIÊU ĐỀ
+            resizable=True
+        )
+        # Cấu hình riêng cho cột tồn kho (lọc theo số)
+        gb.configure_column("Tồn", filter="agNumberColumnFilter")
+        go = gb.build()
+
+        # Hiển thị lưới và lấy dữ liệu trả về sau khi người dùng lọc
+        grid_response = AgGrid(
+            df[["Mã", "Tên", "Đvt", "Tồn"]],
+            gridOptions=go,
+            fit_columns_on_grid_load=True,
+            theme='streamlit', # Giao diện sáng sủa đồng bộ với app
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED # Chỉ lấy dữ liệu đã được lọc
+        )
         
-        # 1. Lọc theo từ khóa (Không phân biệt hoa thường)
-        if search_term:
-            search_term = search_term.lower()
-            filtered_df = filtered_df[
-                filtered_df["Mã"].astype(str).str.lower().str.contains(search_term, na=False) |
-                filtered_df["Tên"].astype(str).str.lower().str.contains(search_term, na=False)
-            ]
-            
-        # 2. Lọc theo trạng thái tồn
-        if stock_filter == "Còn hàng (>0)":
-            filtered_df = filtered_df[filtered_df["Tồn"] > 0]
-        elif stock_filter == "Hết hàng (=0)":
-            filtered_df = filtered_df[filtered_df["Tồn"] <= 0]
-
-        # Hiển thị số lượng kết quả tìm thấy
-        st.caption(f"Hiển thị {len(filtered_df)} / {len(df)} mặt hàng")
-
-        # Hiển thị bảng dữ liệu ĐÃ LỌC
-        st.dataframe(filtered_df[["Mã", "Tên", "Đvt", "Tồn"]], width='stretch', hide_index=True)
+        # --- ĐỒNG BỘ VỚI NÚT XUẤT EXCEL ---
+        # Lấy dataframe đã được lọc từ lưới AgGrid
+        filtered_df = pd.DataFrame(grid_response['data'])
         
-        # Chức năng xuất Excel (Xuất đúng dữ liệu đã lọc)
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            filtered_df[["Mã", "Tên", "Đvt", "Tồn"]].to_excel(writer, index=False, sheet_name='DanhMuc')
-            worksheet = writer.sheets['DanhMuc']
-            worksheet.freeze_panes = 'A2'
-            max_row = worksheet.max_row
-            max_col = worksheet.max_column
-            if max_row > 1: # Chỉ tạo filter nếu có dữ liệu
-                worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-            for col in range(1, max_col + 1):
-                worksheet.column_dimensions[get_column_letter(col)].width = 15
+            # Chống lỗi nếu người dùng lọc không còn dòng nào
+            if not filtered_df.empty:
+                filtered_df.to_excel(writer, index=False, sheet_name='DanhMuc')
+                worksheet = writer.sheets['DanhMuc']
+                worksheet.freeze_panes = 'A2'
+                
+                max_row = worksheet.max_row
+                max_col = worksheet.max_column
+                if max_row > 1:
+                    worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
+                for col in range(1, max_col + 1):
+                    worksheet.column_dimensions[get_column_letter(col)].width = 15
         
         st.download_button(
             label="📥 Xuất danh mục ra Excel (.xlsx)",
@@ -99,7 +99,7 @@ if menu == "Danh mục hàng hóa":
     with st.expander("➕ Thêm hàng hóa mới"):
         with st.form("add_form", clear_on_submit=True):
             code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
-            if st.form_submit_button("Lưu hàng hóa"):
+            if st.form_submit_button("Thêm hàng hóa"):
                 if not code or not name: st.warning("Nhập đủ Mã và Tên!")
                 elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
                 else:
