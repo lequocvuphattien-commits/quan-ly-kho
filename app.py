@@ -40,7 +40,7 @@ menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất", "Báo 
 
 # --- TAB 1: DANH MỤC HÀNG HÓA ---
 if menu == "Danh mục hàng":
-    st.header("📋 Danh mục hàng")
+    st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     
     if products:
