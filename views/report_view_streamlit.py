@@ -86,7 +86,7 @@ def show_report():
             gb.configure_default_column(sortable=True, filter=True, floatingFilter=True, resizable=True)
             
             # Cấu hình độ rộng chi tiết
-            #gb.configure_column("Mã HH", width=100, suppressSizeToFit=True)
+            gb.configure_column("Mã HH", width=80, suppressSizeToFit=True)
             gb.configure_column("Tên", width=250, minWidth=200)
             gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
 
@@ -94,7 +94,7 @@ def show_report():
             for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
                 gb.configure_column(
                     col_name,
-                    width=100, suppressSizeToFit=True,
+                    width=80, suppressSizeToFit=True,
                     type=["numericColumn"],
                     filter='agNumberColumnFilter',
                     valueFormatter="Number(x).toLocaleString('en-US')",
