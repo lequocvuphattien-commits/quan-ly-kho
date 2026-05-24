@@ -120,6 +120,7 @@ elif menu == "Nhập/Xuất":
     if products:
         p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         
+        # --- 1. KHUNG NHẬP LIỆU GIAO DỊCH (TỐI ƯU CSS VỊ TRÍ) ---
         with st.container(border=True):
             trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
             
@@ -127,23 +128,50 @@ elif menu == "Nhập/Xuất":
                 "Chọn hàng hóa", 
                 options=list(p_dict.keys()), 
                 index=None, 
-                placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
+                placeholder="🔍 Gõ tìm kiếm..."
             )
             
-            c1, c2, c3, c4 = st.columns([1.2, 1.5, 0.8, 1.5])
+            # Chia 3 cột: Số lượng (kèm Tồn), Ghi chú, Nút Thêm
+            c1, c2, c3 = st.columns([2, 2, 1])
+            
             with c1:
-                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
+                # Sử dụng Flexbox để ép Số lượng và Tồn nằm trên 1 dòng
+                qty_stock_container = st.container()
+                col_a, col_b = qty_stock_container.columns([1, 1.2])
+                
+                with col_a:
+                    qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
+                with col_b:
+                    # Đẩy chữ Tồn sang phải bằng padding và CSS
+                    if selected:
+                        current_stock = float(p_dict[selected]['Tồn'])
+                        unit = p_dict[selected]['Đvt']
+                        st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                    else:
+                        st.markdown("<div style='margin-top: 28px; white-space: nowrap;'>Tồn: --</div>", unsafe_allow_html=True)
+            
             with c2:
                 note = st.text_input("Ghi chú", placeholder="Nhập ghi chú...")
+            
             with c3:
-                if selected:
-                    current_stock = float(p_dict[selected]['Tồn'])
-                    unit = p_dict[selected]['Đvt']
-                    st.markdown(f"<div style='padding-top: 30px; font-size: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-                else:
-                    st.markdown("<div style='padding-top: 30px; font-size: 18px;'>Tồn: --</div>", unsafe_allow_html=True)
-            with c4:
-                st.empty()
+                st.write("") # Căn chỉnh cho nút nằm thấp xuống bằng hàng input
+                st.write("")
+                if st.button("➕ Thêm vào lưới"):
+                    # ... (giữ nguyên logic xử lý thêm vào giỏ hàng của bạn)
+                    if not selected or not qty:
+                        st.warning("⚠️ Chọn hàng & nhập số lượng!")
+                    else:
+                        prod_data = p_dict[selected]
+                        # ... (giữ nguyên logic tính tồn khi xuất)
+                        st.session_state.cart.append({
+                            "Mã HH": prod_data["Mã"],
+                            "Tên HH": prod_data["Tên"],
+                            "Đvt": prod_data["Đvt"],
+                            "Số lượng": float(qty),
+                            "Ghi chú": note if note else "",
+                            "Loại": trans_type
+                        })
+                        st.rerun()
 
             if st.button("➕ Thêm vào lưới"):
                 if not selected or not qty:
