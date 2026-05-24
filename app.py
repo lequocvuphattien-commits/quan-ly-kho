@@ -185,7 +185,7 @@ elif menu == "Nhập/Xuất":
             
             if st.button("✅ Xác nhận tất cả", type="primary"): 
                 for _, row in edited_df.iterrows():
-                    service.add_transaction(row["Mã HH"], row["Số lượng"], row["Loại"], row["Ghi chú"])
+                    service.add_transaction(row["Mã HH"],row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"])
                     service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                 st.session_state.cart = []
                 st.cache_data.clear()
