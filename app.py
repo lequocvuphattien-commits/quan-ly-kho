@@ -208,7 +208,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
             st.divider()
-            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, key="cart_editor")
+            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
             if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
                 for _, row in edited_df_cart.iterrows():
                     service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
