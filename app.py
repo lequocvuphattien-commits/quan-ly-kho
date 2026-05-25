@@ -55,6 +55,9 @@ st.markdown("""
        
     /* Gom các cột lại gần nhau bằng cách giảm margin-right */
     [data-testid="column"] { padding-right: 2px !important; }
+            
+    /* 2. Thu nhỏ font chữ để giao diện trông "nhỏ nhắn" hơn */
+    label { font-size: 13px !important; }
     </style>
 """, unsafe_allow_html=True)
 
