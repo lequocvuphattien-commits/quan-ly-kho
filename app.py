@@ -49,6 +49,7 @@ if not st.session_state.logged_in:
             if user_data["status"]: 
                 st.session_state.logged_in = True
                 st.session_state.user_name = user_data["name"]
+                st.session_state.user_role = user_data["role"] # Lưu chức vụ
                 st.rerun() 
             else: st.error("❌ Mã NV hoặc mật khẩu không đúng!")
     st.stop() 
@@ -60,6 +61,12 @@ if st.sidebar.button("Đăng xuất"):
     st.rerun()
 
 menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
+
+# Kiểm tra quyền: Nếu là Quản lý thì mới thêm vào danh sách
+if st.session_state.get("user_role") == "Quản lý":
+    menu_options.append("Quản lý nhân viên")
+
+menu = st.selectbox("Chức năng", menu_options, label_visibility="collapsed")
 
 # --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
@@ -145,7 +152,11 @@ elif menu == "Lịch sử giao dịch":
 # --- [THÊM MỚI]: TAB 5: QUẢN LÝ NHÂN VIÊN ---
 # =====================================================================
 elif menu == "Quản lý nhân viên":
+    if st.session_state.user_role != "Quản lý":
+        st.error("🚫 Bạn không có quyền truy cập trang này!")
+        st.stop()
     st.subheader("👥 Quản lý nhân viên")
+    
     employees = get_cached_employees(service)
     
     if employees:
