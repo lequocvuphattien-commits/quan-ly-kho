@@ -35,16 +35,28 @@ def get_data_service(): return DataService(mode="ONLINE")
 service = get_data_service()
 st.title("📦 Quản lý kho")
 
-# --- ĐĂNG NHẬP ---
-#if "logged_in" not in st.session_state: st.session_state.logged_in = False
-#if not st.session_state.logged_in:
-    #with st.container(border=True):
-        #st.subheader("🔒 Đăng nhập hệ thống")
-        #pwd = st.text_input("Mật khẩu:", type="password") 
-        #if st.button("Đăng nhập", type="primary"):
-            #if pwd == "123": st.session_state.logged_in = True; st.rerun() 
-            #else: st.error("❌ Mật khẩu không đúng!")
-    #st.stop() 
+# --- MÀN HÌNH ĐĂNG NHẬP MỚI ---
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "user_name" not in st.session_state: st.session_state.user_name = None
+
+if not st.session_state.logged_in:
+    with st.container(border=True):
+        st.subheader("🔒 Đăng nhập hệ thống")
+        user = st.text_input("Tên đăng nhập (Mã NV):")
+        pwd = st.text_input("Mật khẩu:", type="password") 
+        
+        if st.button("Đăng nhập", type="primary"):
+            user_data = service.check_login(user, pwd)
+            if user_data["status"]: 
+                st.session_state.logged_in = True
+                st.session_state.user_name = user_data["name"] # Lưu tên người dùng
+                st.rerun() 
+            else:
+                st.error("❌ Mã NV hoặc mật khẩu không đúng!")
+    st.stop() 
+
+# Hiển thị tên người dùng đang đăng nhập (tùy chọn)
+st.sidebar.write(f"👤 Người dùng: **{st.session_state.user_name}**") 
 
 menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
 
@@ -144,17 +156,23 @@ elif menu == "Nhập/Xuất Kho":
             # --- CHỌN NHÂN VIÊN TRƯỚC KHI XÁC NHẬN ---
             emp_list = [emp[1] for emp in employees]
             selected_emp = st.selectbox("Nhân viên thực hiện:", options=emp_list, index=None, placeholder="Chọn tên bạn...")
-            
+            # --- XÁC NHẬN GIAO DỊCH ---
             if st.button("✅ Xác nhận tất cả", type="primary"): 
-                if not selected_emp: st.warning("⚠️ Vui lòng chọn nhân viên thực hiện!")
-                else:
-                    for _, row in edited_df_cart.iterrows():
-                        service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], selected_emp)
-                        service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                    st.session_state.cart = []
-                    st.cache_data.clear()
-                    st.success(f"🎉 Giao dịch thành công bởi {selected_emp}!")
-                    st.rerun()
+                # Không cần chọn nữa, lấy thẳng từ session
+                current_user = st.session_state.user_name 
+                
+                for _, row in edited_df_cart.iterrows():
+                    # Truyền thẳng current_user vào hàm add_transaction
+                    service.add_transaction(
+                        row["Mã HH"], row["Tên HH"], row["Số lượng"], 
+                        row["Loại"], row["Ghi chú"], current_user
+                    )
+                    service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                
+                st.session_state.cart = []
+                st.cache_data.clear()
+                st.success(f"🎉 Giao dịch thành công! (Người thực hiện: {current_user})")
+                st.rerun()
 
 # --- TAB 4: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho": show_report()
