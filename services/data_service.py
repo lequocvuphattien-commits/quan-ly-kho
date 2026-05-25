@@ -35,12 +35,12 @@ class DataService:
             return df.values.tolist()
         return []
 
-    def add_transaction(self, product_id, product_name, qty, trans_type, note, voucher_number):
+    def add_transaction(self, product_id, product_name, qty, trans_type, note):
         """Ghi đầy đủ 6 thông tin vào sheet Transactions"""
         # Ép múi giờ về Việt Nam (UTC+7)
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
         # Đảm bảo thứ tự: Date, ID, Tên, Loại, Số lượng, Ghi chú
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), note, voucher_number])
+        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), str(note)])
 
     def get_config_options(self):
         """Đọc danh sách Kho Nhập (Cột A) và Kho Xuất (Cột B) từ sheet Config"""
@@ -193,28 +193,3 @@ class DataService:
                 
         return False # Trả về False nếu không tìm thấy mã hàng
     
-    def generate_voucher_number(self, trans_type):
-        history = self.get_history()
-        current_year = str(datetime.datetime.now().year)
-        prefix = "N" if trans_type == "Nhập" else "X"
-        max_num = 0
-
-        # Duyệt qua lịch sử để tìm số phiếu lớn nhất trong năm nay
-        for row in history:
-            if len(row) >= 7: # Đảm bảo dòng có dữ liệu ở cột Số phiếu
-                date_str = str(row[0])
-                voucher = str(row[6]).strip()
-                
-                # Nếu cùng năm hiện hành và đúng loại phiếu (N hoặc X)
-                if current_year in date_str and voucher.startswith(prefix):
-                    try:
-                        # Tách phần số phía sau (Ví dụ N001 -> 1)
-                        num = int(voucher[1:])
-                        if num > max_num:
-                            max_num = num
-                    except ValueError:
-                        continue
-        
-        # Phiếu mới sẽ cộng 1, định dạng 3 chữ số (001, 002)
-        new_num = max_num + 1
-        return f"{prefix}{new_num:03d}"
