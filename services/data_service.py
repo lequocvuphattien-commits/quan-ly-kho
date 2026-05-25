@@ -240,3 +240,14 @@ class DataService:
                 self.sheet_employees.delete_rows(i + 1)
                 return True
         return False
+    
+    # Hàm kiểm tra đăng nhập dựa trên Mã NV (Username) và Mật khẩu (giả sử cột 4 là mật khẩu)
+    def check_login(self, username, password):
+        """Kiểm tra đăng nhập dựa trên sheet NhanVien"""
+        employees = self.get_employees() # Lấy danh sách nhân viên từ sheet
+        # Giả sử: Cột 0 là Mã NV, Cột 4 là Mật khẩu (Cột E)
+        for emp in employees:
+            if len(emp) >= 5: # Đảm bảo dòng có đủ dữ liệu
+                if str(emp[0]).strip().upper() == username.strip().upper() and str(emp[4]).strip() == password:
+                    return {"status": True, "name": emp[1]} # Trả về Tên nhân viên
+        return {"status": False, "name": None}
