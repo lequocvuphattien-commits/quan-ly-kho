@@ -4,7 +4,8 @@ import io
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
-from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
+# --- [QUAN TRỌNG]: Đã thêm GridUpdateMode vào thư viện import ---
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
 # --- BỘ NHỚ ĐỆM (CACHE) TỐI ƯU TỐC ĐỘ ---
 @st.cache_data(ttl=600, show_spinner=False)
@@ -67,7 +68,7 @@ service = get_data_service()
 
 st.title("📦 Quản lý kho")
 
-# --- [THÊM MỚI] BẢO MẬT: MÀN HÌNH ĐĂNG NHẬP ---
+# --- BẢO MẬT: MÀN HÌNH ĐĂNG NHẬP ---
 # ==========================================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -78,36 +79,25 @@ if not st.session_state.logged_in:
         st.subheader("🔒 Đăng nhập hệ thống")
         st.info("Vui lòng nhập mật khẩu để truy cập phần mềm quản lý.")
         
-        # type="password" giúp mã hóa ký tự thành dấu chấm tròn
         pwd = st.text_input("Mật khẩu:", type="password") 
         
         if st.button("Đăng nhập", type="primary"):
-            # Bạn có thể thay đổi mật khẩu "123" thành bất kỳ chuỗi nào bạn muốn
             if pwd == "123":  
                 st.session_state.logged_in = True
-                st.rerun() # Tải lại trang để vào ứng dụng
+                st.rerun() 
             else:
                 st.error("❌ Mật khẩu không đúng!")
                 
-    # Lệnh st.stop() là "bức tường" chặn không cho code bên dưới chạy nếu chưa đăng nhập
     st.stop() 
-
-# Thêm nút Đăng xuất nhỏ gọn ở góc phải phía trên menu
-#col_space, col_logout = st.columns([8, 2])
-#with col_logout:
-    #if st.button("Đăng xuất 🚪"):
-        #st.session_state.logged_in = False
-        #st.rerun()
-# ==========================================
-# --- KẾT THÚC PHẦN ĐĂNG NHẬP ---
 # ==========================================
 
 # Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi
 menu = st.selectbox(
     "Chức năng", 
     ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"],
-    label_visibility="collapsed" # Ẩn chữ "Chức năng" để tiết kiệm tối đa diện tích màn hình điện thoại
+    label_visibility="collapsed" 
 )
+
 # --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
@@ -117,38 +107,60 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        # --- SỬ DỤNG DATA_EDITOR ĐỂ SỬA TRỰC TIẾP TRÊN BẢNG ---
+        # --- [THAY ĐỔI MỚI]: CHUYỂN SANG DÙNG AGGRID ĐỂ CÓ BỘ LỌC CHUYÊN NGHIỆP ---
+        #st.markdown("💡 *Mẹo: Bấm vào biểu tượng 3 gạch trên tiêu đề cột để **Lọc**. Click đúp vào ô có nền xanh (Tên, Đvt) để **Sửa**.*")
         
-        edited_df = st.data_editor(
+        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
+        
+        # Cấu hình chi tiết từng cột (Chỉ cho phép sửa Tên và Đvt, tô màu nền xanh nhạt để phân biệt)
+        gb.configure_column("Mã", minWidth=100, editable=False, cellStyle={'textAlign': 'center'})
+        gb.configure_column("Tên", minWidth=200, editable=True, cellStyle={'backgroundColor': '#f0f8ff'}) 
+        gb.configure_column("Đvt", minWidth=100, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Tồn", minWidth=100, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'})
+        
+        go = gb.build()
+        
+        grid_response = AgGrid(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
-            column_config={
-                "Mã": st.column_config.TextColumn("Mã", disabled=True), # Khóa không cho sửa Mã
-                "Tồn": st.column_config.NumberColumn("Tồn", format="%,.0f", disabled=True) # Khóa tồn, hiển thị dấu phẩy (3,010)
-            },
-            hide_index=True, use_container_width=True
+            gridOptions=go,
+            fit_columns_on_grid_load=True,
+            theme='streamlit',
+            update_mode=GridUpdateMode.MODEL_CHANGED,
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED, # Khi xuất excel sẽ chỉ xuất những dòng đã lọc
+            height=400
         )
 
-        # --- [THAY ĐỔI]: KIỂM TRA SỰ KHÁC BIỆT ĐỂ ẨN/HIỆN NÚT LƯU ---
-        has_changes = False
-        changes_to_save = [] # Lưu lại vị trí các dòng bị sửa để update cho nhanh
-        
-        for i in range(len(edited_df)):
-            if edited_df.iloc[i]["Tên"] != df.iloc[i]["Tên"] or edited_df.iloc[i]["Đvt"] != df.iloc[i]["Đvt"]:
-                has_changes = True
-                changes_to_save.append(i)
+        edited_df = pd.DataFrame(grid_response['data'])
 
-        # CHỈ hiển thị nút Lưu nếu có sự thay đổi
+        # --- XỬ LÝ LƯU THAY ĐỔI TỪ AGGRID ---
+        has_changes = False
+        changes_to_save = [] 
+        
+        if not edited_df.empty:
+            for i in range(len(edited_df)):
+                ma = edited_df.iloc[i]["Mã"]
+                ten_moi = edited_df.iloc[i]["Tên"]
+                dvt_moi = edited_df.iloc[i]["Đvt"]
+                
+                # Tìm dòng dữ liệu gốc bằng Mã để so sánh độ chênh lệch
+                orig_row = df[df["Mã"] == ma].iloc[0]
+                
+                if ten_moi != orig_row["Tên"] or dvt_moi != orig_row["Đvt"]:
+                    has_changes = True
+                    changes_to_save.append({"Mã": ma, "Tên": ten_moi, "Đvt": dvt_moi})
+
         if has_changes:
             st.info("⚠️ Có thay đổi chưa được lưu!")
             if st.button("💾 Lưu thay đổi", type="primary"):
-                for i in changes_to_save:
-                    service.update_product(edited_df.iloc[i]["Mã"], edited_df.iloc[i]["Tên"], edited_df.iloc[i]["Đvt"])
+                for item in changes_to_save:
+                    service.update_product(item["Mã"], item["Tên"], item["Đvt"])
                 
                 st.cache_data.clear()
                 st.success("🎉 Đã cập nhật thông tin thành công!")
                 st.rerun()
 
-        # Xuất file Excel
+        # Xuất file Excel (Dựa trên dữ liệu đã lọc trên lưới AgGrid)
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             if not edited_df.empty:
@@ -196,12 +208,8 @@ if menu == "Danh mục hàng":
 elif menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
     
-    # 1. Đặt radio trước để khởi tạo biến trans_type
     trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
-    
-    # 2. Khai báo danh sách kho ngay sau khi biết trans_type
     kho_nhap_list, kho_xuat_list = service.get_config_options()
-        
     products = get_cached_products(service)
     
     if products:
@@ -242,7 +250,6 @@ elif menu == "Nhập/Xuất Kho":
                         })
                         st.rerun()
                     
-        # 3. Đưa phần Thêm kho vào đây (đã có trans_type)
         with st.expander(f"➕ Thêm địa điểm mới: {trans_type}"):
             new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho hoặc địa điểm...")
             if st.button("Lưu địa điểm mới"):
@@ -280,17 +287,13 @@ elif menu == "Nhập/Xuất Kho":
                 st.success("🎉 Giao dịch thành công!")
                 st.rerun()
 
-elif menu == "Báo cáo tồn kho": show_report() # Gọi hàm hiển thị báo cáo tồn kho
+elif menu == "Báo cáo tồn kho": show_report()
 
 elif menu == "Lịch sử giao dịch":
-
     st.header("Lịch sử giao dịch")
-
     history = get_cached_history(service)
 
     if history:
-
-        # Tạo DataFrame
         df = pd.DataFrame(
             history,
             columns=[
@@ -303,77 +306,26 @@ elif menu == "Lịch sử giao dịch":
             ]
         )
 
-        # Ép kiểu số
-        df["Số Lượng"] = pd.to_numeric(
-            df["Số Lượng"],
-            errors="coerce"
-        ).fillna(0)
+        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
 
-        # Khởi tạo AgGrid
         gb = GridOptionsBuilder.from_dataframe(df)
-
-        # Cấu hình mặc định
-        gb.configure_default_column(
-            sortable=True,
-            filter=True,
-            resizable=True,
-            flex=1,
-            minWidth=100
-        )
-
-        # Cột Mã
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
+        
+        gb.configure_column("Mã", minWidth=90, maxWidth=130, cellStyle={'textAlign': 'center'})
+        gb.configure_column("Tên Hàng Hóa", minWidth=220, cellStyle={'textAlign': 'left'})
+        gb.configure_column("Loại", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
         gb.configure_column(
-            "Mã",
-            minWidth=90,
-            maxWidth=130,
-            cellStyle={'textAlign': 'center'}
+            "Số Lượng", width=60, suppressSizeToFit=True, type=["numericColumn"], 
+            valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'}
         )
+        gb.configure_column("Ghi Chú", minWidth=200, cellStyle={'textAlign': 'left'})
 
-        # Cột Tên Hàng Hóa
-        gb.configure_column(
-            "Tên Hàng Hóa",
-            minWidth=220,
-            cellStyle={'textAlign': 'left'}
-        )
-
-        # Cột Loại
-        gb.configure_column(
-            "Loại",
-            minWidth=90,
-            maxWidth=120,
-            cellStyle={'textAlign': 'center'}
-        )
-
-        # Cột Số Lượng
-        gb.configure_column(
-            "Số Lượng", 
-            width=60, 
-            suppressSizeToFit=True, 
-            type=["numericColumn"], # Khai báo là cột số
-            valueFormatter="Number(x).toLocaleString('en-US')", # Format hàng nghìn (3,010)
-            cellStyle={'textAlign': 'right'}
-        )
-
-        # Cột Ghi Chú
-        gb.configure_column(
-            "Ghi Chú",
-            minWidth=200,
-            cellStyle={'textAlign': 'left'}
-        )
-
-        # Build grid
         go = gb.build()
-
-        # Hiển thị bảng
+        
         AgGrid(
             df,
             gridOptions=go,
-            
-            # Tự động co giãn các cột để lấp đầy chiều rộng màn hình
             fit_columns_on_grid_load=True, 
-            
             theme='streamlit',
-            
-            # Tăng chiều cao khung hiển thị (mặc định là 400, tăng lên 650)
             height=650 
         )
