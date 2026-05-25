@@ -57,8 +57,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Khởi tạo dịch vụ
-service = DataService(mode="ONLINE")
+# --- [TỐI ƯU]: KHỞI TẠO KẾT NỐI API 1 LẦN DUY NHẤT ---
+@st.cache_resource(show_spinner=False)
+def get_data_service():
+    # Ứng dụng chỉ gọi lên Google 1 lần lúc mới mở app để lấy token kết nối
+    return DataService(mode="ONLINE")
+
+service = get_data_service()
 
 st.title("📦 Quản lý kho")
 
