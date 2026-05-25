@@ -164,8 +164,18 @@ elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
     if history:
+        # Đảm bảo danh sách cột ở đây khớp với 7 cột của hàm get_history mới
         df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
-        AgGrid(df, fit_columns_on_grid_load=True, theme='streamlit', height=650)
+        
+        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
+        
+        # Cập nhật AgGrid để hiển thị thêm cột Nhân viên
+        gb = GridOptionsBuilder.from_dataframe(df)
+        # ... (các cấu hình cột khác của bạn)
+        gb.configure_column("Nhân viên", minWidth=120, cellStyle={'textAlign': 'center'})
+        
+        go = gb.build()
+        AgGrid(df, gridOptions=go, fit_columns_on_grid_load=True, theme='streamlit', height=650)
 
 # =====================================================================
 # --- [THÊM MỚI]: TAB 5: QUẢN LÝ NHÂN VIÊN ---

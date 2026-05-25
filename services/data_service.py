@@ -19,14 +19,14 @@ class DataService:
         self.sheet_employees = self.provider.get_sheet("NhanVien")
 
     def get_history(self):
-        """Lấy lịch sử giao dịch với 6 cột mới: date, product_id, product_name, type, qty, note"""
+        """Lấy lịch sử giao dịch với 7 cột: date, product_id, product_name, type, qty, note, emp_name"""
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            # Tăng số cột xử lý lên 6
-            cleaned_data = [row[:6] for row in data[1:]]
-            cleaned_data = [row + [""] * (6 - len(row)) for row in cleaned_data]
+            # Sửa từ 6 thành 7 để lấy thêm cột Nhân viên
+            cleaned_data = [row[:7] for row in data[1:]]
+            cleaned_data = [row + [""] * (7 - len(row)) for row in cleaned_data]
 
-            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "type", "qty", "note"])
+            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "type", "qty", "note", "emp_name"])
             
             # Chuẩn hóa dữ liệu
             df['product_id'] = df['product_id'].astype(str).str.strip()
