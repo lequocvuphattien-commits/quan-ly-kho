@@ -51,14 +51,14 @@ if not st.session_state.logged_in:
                 st.session_state.user_name = user_data["name"]
                 st.write(user_data) # Dòng này sẽ in kết quả hàm check_login ra màn hình app
                 st.session_state.user_role = user_data["role"] # Lưu chức vụ
-                # --- THÊM DÒNG NÀY VÀO ĐÂY ĐỂ KIỂM TRA ---
-                st.success(f"Đăng nhập thành công! Chức vụ của bạn là: {st.session_state.user_role}")
                 st.rerun() 
             else: st.error("❌ Mã NV hoặc mật khẩu không đúng!")
     st.stop() 
 
 # Thanh menu bên trái hiển thị user
 st.sidebar.write(f"👤 Người dùng: **{st.session_state.user_name}**")
+st.sidebar.write(f"💼 Chức vụ: **{st.session_state.user_role}**") # Dòng này sẽ luôn hiển thị
+
 if st.sidebar.button("Đăng xuất"):
     st.session_state.logged_in = False
     st.rerun()
