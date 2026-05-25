@@ -140,7 +140,13 @@ if st.session_state.current_menu == "Danh mục hàng":
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
-    trans_type = st.radio("Loại", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
+    
+    # Ép chữ "Loại:" và nút chọn nằm cùng 1 dòng bằng st.columns
+    col_label, col_radio = st.columns([1, 15])
+    with col_label:
+        st.markdown("<div style='margin-top: 8px; font-weight: bold;'>Loại:</div>", unsafe_allow_html=True)
+    with col_radio:
+        trans_type = st.radio("Loại", ["Nhập", "Xuất"], horizontal=True, label_visibility="collapsed", key="trans_type")
     
     kho_nhap_list, kho_xuat_list = get_cached_config(service)
     products = get_cached_products(service)
