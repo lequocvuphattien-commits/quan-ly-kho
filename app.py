@@ -18,7 +18,7 @@ def get_cached_employees(_svc): return _svc.get_employees()
 
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS TỐI ƯU GIAO DIỆN ---
+# --- CSS TỐI ƯU GIAO DIỆN KHÓA CỨNG TRÊN MOBILE ---
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
@@ -26,6 +26,27 @@ st.markdown("""
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
     div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
+    
+    /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
+    div[data-testid="stRadio"] { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        align-items: center !important; 
+        flex-wrap: nowrap !important; /* Cấm bẻ dòng */
+    }
+    div[data-testid="stRadio"] > label { 
+        margin-bottom: 0px !important; 
+        padding-bottom: 0px !important; 
+        font-weight: bold !important; 
+        font-size: 16px !important; 
+        white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
+        margin-right: 15px !important;
+    }
+    div[data-testid="stRadio"] > div { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,7 +58,6 @@ st.title("📦 Quản lý kho")
 
 # --- QUẢN LÝ TRẠNG THÁI ĐĂNG NHẬP & MENU (CHỐNG MẤT KHI BẤM F5) ---
 if "logged_in" not in st.session_state:
-    # Khi tải lại trang, kiểm tra xem trên URL có thông tin đăng nhập cũ không
     if st.query_params.get("logged_in") == "true":
         st.session_state.logged_in = True
         st.session_state.user_name = st.query_params.get("user_name")
@@ -60,12 +80,10 @@ if not st.session_state.logged_in:
                 st.session_state.user_name = user_data["name"]
                 st.session_state.user_role = user_data["role"]
                 
-                # LƯU TRẠNG THÁI VÀO URL (Để chống mất khi F5 tải lại trang)
                 st.query_params["logged_in"] = "true"
                 st.query_params["user_name"] = user_data["name"]
                 st.query_params["user_role"] = user_data["role"]
                 st.query_params["current_menu"] = st.session_state.current_menu
-                
                 st.rerun() 
             else: 
                 st.error("❌ Mã NV hoặc mật khẩu không đúng!")
@@ -78,7 +96,7 @@ st.sidebar.markdown("---")
 
 if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.session_state.logged_in = False
-    st.query_params.clear() # XÓA SẠCH URL ĐỂ BẮT BUỘC ĐĂNG NHẬP LẠI
+    st.query_params.clear() 
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
@@ -89,7 +107,6 @@ if st.session_state.get("user_role") == "Quản lý":
 if st.session_state.current_menu not in menu_options:
     st.session_state.current_menu = menu_options[0]
 
-# Thanh selectbox chọn Tab hiển thị trực quan ngay màn hình chính
 menu = st.selectbox(
     "Chức năng", 
     options=menu_options, 
@@ -97,10 +114,9 @@ menu = st.selectbox(
     label_visibility="collapsed"
 )
 
-# Kích hoạt chuyển trang mượt mà & Lưu vào URL
 if menu != st.session_state.current_menu:
     st.session_state.current_menu = menu
-    st.query_params["current_menu"] = menu # Nhớ Tab hiện tại vào URL
+    st.query_params["current_menu"] = menu 
     st.rerun()
 
 # --- TAB 1: DANH MỤC HÀNG ---
@@ -141,12 +157,7 @@ if st.session_state.current_menu == "Danh mục hàng":
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
     
-    # Ép chữ "Loại:" và nút chọn nằm cùng 1 dòng bằng st.columns
-    col_label, col_radio = st.columns([1, 15])
-    with col_label:
-        st.markdown("<div style='margin-top: 8px; font-weight: bold;'>Loại:</div>", unsafe_allow_html=True)
-    with col_radio:
-        trans_type = st.radio("Loại", ["Nhập", "Xuất"], horizontal=True, label_visibility="collapsed", key="trans_type")
+    trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
     
     kho_nhap_list, kho_xuat_list = get_cached_config(service)
     products = get_cached_products(service)
