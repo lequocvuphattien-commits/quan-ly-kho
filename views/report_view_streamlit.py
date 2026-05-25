@@ -28,33 +28,43 @@ def show_report():
     if "clicked_report_filter" not in st.session_state:
         st.session_state.clicked_report_filter = False
 
-    # =========================================================
-    # --- [MỚI] CSS ÉP BUỘC NẰM NGANG TRÊN MÀN HÌNH ĐIỆN THOẠI ---
-    # =========================================================
+    # =================================================================
+    # --- [CẢI TIẾN CSS]: ÉP HÀNG NGANG VÀ KÉO SÁT TIÊU ĐỀ TRÊN ĐIỆN THOẠI ---
+    # =================================================================
     st.markdown("""
         <style>
-        /* Ép các cột không được bẻ dòng trên điện thoại */
+        /* 1. Kéo tiêu đề h3 dịch xuống hoặc thu nhỏ khoảng trống bên dưới nó */
+        h3 {
+            margin-bottom: -0.5rem !important;
+            padding-bottom: 0rem !important;
+        }
+        
+        /* 2. Ép 3 thành phần nằm ngang và kéo mạnh lên sát tiêu đề h3 */
         [data-testid="stHorizontalBlock"] {
             flex-wrap: nowrap !important;
             flex-direction: row !important;
-            gap: 0.5rem !important; /* Khoảng cách giữa các ô */
+            gap: 0.4rem !important; /* Thu hẹp khoảng cách giữa các ô */
+            margin-top: -1.5rem !important; /* [QUAN TRỌNG] Lực hút đẩy dòng này lên sát tiêu đề */
         }
-        /* Cho phép các cột tự động co nhỏ lại cho vừa màn hình điện thoại */
+        
+        /* Cho phép các ô tự động co nhỏ cho vừa màn hình điện thoại */
         [data-testid="stHorizontalBlock"] > div {
             min-width: 0px !important; 
         }
-        /* Đẩy nút "Báo cáo" thụt xuống ngang hàng với ô nhập ngày */
+        
+        /* Đẩy nút "Lọc báo cáo" thụt xuống để thẳng hàng khít với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
-            padding-top: 1.75rem !important; 
+            padding-top: 1.55rem !important; 
         }
-        /* Làm nhỏ chữ ở tiêu đề ô ngày một chút để tránh bị tràn trên màn hình nhỏ */
+        
+        /* Làm nhỏ chữ tiêu đề "Từ ngày", "Đến ngày" để giao diện thanh thoát */
         [data-testid="stHorizontalBlock"] label {
-            font-size: -1rem !important;
+            font-size: 0.8rem !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Chia cột với tỉ lệ: Từ ngày (3 phần), Đến ngày (3 phần), Nút bấm (2 phần)
+    # Chia cột tỉ lệ phù hợp cho màn hình dọc điện thoại
     col1, col2, col3 = st.columns([3, 3, 2.5])
     
     with col1:
@@ -64,7 +74,7 @@ def show_report():
         end_date = st.date_input("Đến ngày")
         
     with col3:
-        if st.button("Báo cáo", type="primary", use_container_width=True):
+        if st.button("Lọc báo cáo", type="primary", use_container_width=True):
             st.session_state.clicked_report_filter = True
 
     # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
