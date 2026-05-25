@@ -21,7 +21,7 @@ st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_s
 # --- CSS TỐI ƯU GIAO DIỆN KHÓA CỨNG TRÊN MOBILE ---
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    .block-container { padding-top: 1rem !important; padding-bottom: -1rem !important; }
     div.stButton > button[kind="primary"] { background-color: #28a745 !important; color: white !important; }
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
@@ -36,7 +36,7 @@ st.markdown("""
     }
     div[data-testid="stRadio"] > label { 
         margin-bottom: 0px !important; 
-        padding-bottom: -5px !important; 
+        padding-bottom: 0px !important; 
         font-weight: bold !important; 
         font-size: 16px !important; 
         white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
