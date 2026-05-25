@@ -189,7 +189,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         with c4:
             st.write("") # Căn chỉnh label
             st.write("") 
-            if st.button("➕ Thêm", key="add_to_cart_btn"):
+            if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
                 if not selected or not qty or not note: 
                     st.warning("⚠️ Nhập đủ!")
                 else:
