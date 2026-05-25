@@ -104,25 +104,25 @@ if menu == "Danh mục hàng":
     products = get_cached_products(service)
     
     if products:
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
+        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
         # --- [THAY ĐỔI MỚI]: CHUYỂN SANG DÙNG AGGRID ĐỂ CÓ BỘ LỌC CHUYÊN NGHIỆP ---
         #st.markdown("💡 *Mẹo: Bấm vào biểu tượng 3 gạch trên tiêu đề cột để **Lọc**. Click đúp vào ô có nền xanh (Tên, Đvt) để **Sửa**.*")
         
-        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
+        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
         
         # Cấu hình chi tiết từng cột
         gb.configure_column("Mã", minWidth=50, editable=False, cellStyle={'textAlign': 'left'})
-        gb.configure_column("Tên", minWidth=150, editable=True, cellStyle={'textAlign': 'left'}) 
+        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'textAlign': 'left'}) 
         gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'textAlign': 'center'})
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'})
         
         go = gb.build()
         
         grid_response = AgGrid(
-            df[["Mã", "Tên", "Đvt", "Tồn"]],
+            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]],
             gridOptions=go,
             fit_columns_on_grid_load=True,
             theme='streamlit',
@@ -140,21 +140,21 @@ if menu == "Danh mục hàng":
         if not edited_df.empty:
             for i in range(len(edited_df)):
                 ma = edited_df.iloc[i]["Mã"]
-                ten_moi = edited_df.iloc[i]["Tên"]
+                ten_moi = edited_df.iloc[i]["Tên hàng hóa"]
                 dvt_moi = edited_df.iloc[i]["Đvt"]
                 
                 # Tìm dòng dữ liệu gốc bằng Mã để so sánh độ chênh lệch
                 orig_row = df[df["Mã"] == ma].iloc[0]
                 
-                if ten_moi != orig_row["Tên"] or dvt_moi != orig_row["Đvt"]:
+                if ten_moi != orig_row["Tên hàng hóa"] or dvt_moi != orig_row["Đvt"]:
                     has_changes = True
-                    changes_to_save.append({"Mã": ma, "Tên": ten_moi, "Đvt": dvt_moi})
+                    changes_to_save.append({"Mã": ma, "Tên hàng hóa": ten_moi, "Đvt": dvt_moi})
 
         if has_changes:
             st.info("⚠️ Có thay đổi chưa được lưu!")
             if st.button("💾 Lưu thay đổi", type="primary"):
                 for item in changes_to_save:
-                    service.update_product(item["Mã"], item["Tên"], item["Đvt"])
+                    service.update_product(item["Mã"], item["Tên hàng hóa"], item["Đvt"])
                 
                 st.cache_data.clear()
                 st.success("🎉 Đã cập nhật thông tin thành công!")
@@ -215,7 +215,7 @@ elif menu == "Nhập/Xuất Kho":
     if products:
         p_dict = {
             f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {
-                "Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]
+                "Mã": p[1], "Tên hàng hóa": p[2], "Đvt": p[3], "Tồn": p[4]
             } 
             for p in products
         }
@@ -245,7 +245,7 @@ elif menu == "Nhập/Xuất Kho":
                             st.error("❌ Không đủ tồn kho!")
                             st.stop()
                         st.session_state.cart.append({
-                            "Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên"], "Đvt": prod_data["Đvt"],
+                            "Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên hàng hóa"], "Đvt": prod_data["Đvt"],
                             "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type
                         })
                         st.rerun()
