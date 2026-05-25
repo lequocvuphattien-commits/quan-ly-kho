@@ -191,8 +191,8 @@ elif menu == "Lịch sử giao dịch":
             cellStyle={'textAlign': 'right'}
         )
         
-        gb.configure_column("Ghi Chú", minWidth=150)
-        gb.configure_column("Nhân viên", minWidth=120)
+        gb.configure_column("Ghi Chú", minWidth=100)
+        gb.configure_column("Nhân viên", minWidth=80)
 
         go = gb.build()
         
