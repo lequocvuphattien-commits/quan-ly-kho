@@ -49,6 +49,7 @@ if not st.session_state.logged_in:
             if user_data["status"]: 
                 st.session_state.logged_in = True
                 st.session_state.user_name = user_data["name"]
+                st.write(user_data) # Dòng này sẽ in kết quả hàm check_login ra màn hình app
                 st.session_state.user_role = user_data["role"] # Lưu chức vụ
                 st.rerun() 
             else: st.error("❌ Mã NV hoặc mật khẩu không đúng!")
@@ -156,7 +157,7 @@ elif menu == "Quản lý nhân viên":
         st.error("🚫 Bạn không có quyền truy cập trang này!")
         st.stop()
     st.subheader("👥 Quản lý nhân viên")
-    
+
     employees = get_cached_employees(service)
     
     if employees:
