@@ -4,7 +4,7 @@ import io
 from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
-from datetime import date  
+from datetime import date  # Thêm thư viện này để cấu hình ngày mặc định
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 def export_to_excel(df):
@@ -24,11 +24,32 @@ def show_report():
     t_controller = TransactionController()
     
     DEFAULT_START_DATE = date(2026, 1, 1)
-    col1, col2 = st.columns(2)
-    start_date = col1.date_input("Từ ngày", value=DEFAULT_START_DATE)
-    end_date = col2.date_input("Đến ngày")
     
-    if st.button("Lọc báo cáo", type="primary"):
+    # --- [CẢI TIẾN]: CHIA 3 CỘT ĐỂ ĐƯA NGÀY VÀ NÚT LỌC LÊN CÙNG 1 DÒNG ---
+    # Tỉ lệ [3, 3, 2] giúp 2 ô ngày rộng bằng nhau, cột chứa nút bấm nhỏ hơn một chút ở cuối
+    col1, col2, col3 = st.columns([3, 3, 2])
+    
+    with col1:
+        start_date = st.date_input("Từ ngày", value=DEFAULT_START_DATE)
+    
+    with col2:
+        end_date = st.date_input("Đến ngày")
+        
+    with col3:
+        # Tinh chỉnh khoảng cách CSS để đẩy nút bấm tụt xuống bằng khít với hàng của ô chọn ngày
+        st.markdown("""
+            <style>
+            div[data-testid="stVerticalBlock"] > div:has(button[kind="primary"]) {
+                padding-top: 1.55rem !important;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        
+        # Đặt nút bấm vào cột số 3
+        click_filter = st.button("Lọc báo cáo", type="primary", use_container_width=True)
+    
+    # --- THỰC HIỆN LOGIC LỌC KHI NGƯỜI DÙNG BẤM NÚT ---
+    if click_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
             all_history = t_controller.get_transaction_history()
@@ -92,13 +113,10 @@ def show_report():
             
             # --- CẤU HÌNH AGGRID VỚI BỘ LỌC 3 DẤU GẠCH NGANG ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
-            
-            # Bật filter=True để có biểu tượng 3 gạch, flex=1 để bảng tự động co giãn tràn màn hình cho đẹp
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
             
-            # Cấu hình độ rộng chi tiết và căn lề cho các cột chữ
             gb.configure_column("Mã HH", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
-            gb.configure_column("Tên hàng hóa", minWidth=200, cellStyle={'textAlign': 'left'})
+            gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
             gb.configure_column("Đvt", minWidth=80, maxWidth=100, cellStyle={'textAlign': 'center'})
 
             # Định dạng các cột số và thêm bộ lọc dạng số
@@ -107,8 +125,8 @@ def show_report():
                     col_name,
                     minWidth=90, maxWidth=130,
                     type=["numericColumn"],
-                    filter='agNumberColumnFilter', # Cho phép lọc số (Lớn hơn, nhỏ hơn, bằng...)
-                    valueFormatter="Number(x).toLocaleString('en-US')", # Dấu phẩy ngăn cách hàng nghìn
+                    filter='agNumberColumnFilter',
+                    valueFormatter="Number(x).toLocaleString('en-US')",
                     cellStyle={'textAlign': 'right'}
                 )
             
