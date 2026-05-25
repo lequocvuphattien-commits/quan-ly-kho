@@ -28,19 +28,32 @@ st.markdown("""
     <style>
     /* 1. KÉO NỘI DUNG LÊN SÁT CẠNH TRÊN MÀN HÌNH */
     .block-container {
-        padding-top: 1.5rem !important; /* Mặc định là khoảng 4-6rem, giảm xuống 1.5rem */
+        padding-top: 1.5rem !important;
         padding-bottom: 1rem !important;
     }
-     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
+    
+    /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;}    
-
-    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ TIÊU ĐỀ PHỤ LẠI VỚI NHAU */
+        color: white !important;
+    }    
+    
+    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ MENU LẠI VỚI NHAU */
     h1 {
-        padding-bottom: 0rem !important;
-        margin-bottom: 0rem !important; /* Cắt giảm khoảng trống dưới chữ Quản lý kho */
+        padding-bottom: 0.5rem !important;
+        margin-bottom: 0rem !important; 
     }   
+    
+    /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
+    h3 {
+        padding-top: 0rem !important;
+        margin-top: -1rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
+    }
+    
+    /* Ép khoảng trống dưới menu nhỏ lại */
+    div[data-testid="stSelectbox"] {
+        margin-bottom: -1rem !important; 
+    }  
     </style>
 """, unsafe_allow_html=True)
 
