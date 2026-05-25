@@ -51,7 +51,7 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa.*")
+        # st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa.*")
         edited_df = st.data_editor(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
             column_config={
