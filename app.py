@@ -93,11 +93,11 @@ if not st.session_state.logged_in:
     st.stop() 
 
 # Thêm nút Đăng xuất nhỏ gọn ở góc phải phía trên menu
-col_space, col_logout = st.columns([8, 2])
-with col_logout:
-    if st.button("Đăng xuất 🚪"):
-        st.session_state.logged_in = False
-        st.rerun()
+#col_space, col_logout = st.columns([8, 2])
+#with col_logout:
+    #if st.button("Đăng xuất 🚪"):
+        #st.session_state.logged_in = False
+        #st.rerun()
 # ==========================================
 # --- KẾT THÚC PHẦN ĐĂNG NHẬP ---
 # ==========================================
