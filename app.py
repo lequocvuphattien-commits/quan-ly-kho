@@ -46,13 +46,13 @@ st.markdown("""
     
     /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
     h3 {
-        padding-top: 0rem !important;
+        padding-top: -1rem !important;
         margin-top: 0rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
     }
     
     /* Ép khoảng trống dưới menu nhỏ lại */
     div[data-testid="stSelectbox"] {
-        margin-bottom: -2rem !important; 
+        margin-bottom: -1rem !important; 
     }  
     </style>
 """, unsafe_allow_html=True)
