@@ -54,7 +54,7 @@ def show_report():
         
         /* Đẩy nút "Báo cáo" thụt xuống để thẳng hàng khít với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
-            padding-top: 1.55rem !important; 
+            padding-top: 1.75rem !important; 
         }
         
         /* Làm nhỏ chữ tiêu đề "Từ ngày", "Đến ngày" để giao diện thanh thoát */
