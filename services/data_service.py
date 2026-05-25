@@ -205,8 +205,8 @@ class DataService:
         data = self.sheet_employees.get_all_values()
         if len(data) > 1:
             # Lấy dữ liệu từ dòng 2 trở đi, ép về mảng để phòng hụt cột
-            cleaned_data = [row[:4] for row in data[1:]] 
-            cleaned_data = [row + [""] * (4 - len(row)) for row in cleaned_data]
+            cleaned_data = [row[:5] for row in data[1:]] 
+            cleaned_data = [row + [""] * (5 - len(row)) for row in cleaned_data]
             return cleaned_data
         return []
 
@@ -217,8 +217,8 @@ class DataService:
 
     def add_employee(self, emp_code, name, phone, role):
         """Thêm nhân viên mới"""
-        # Cấu trúc: [Mã NV, Tên NV, Số điện thoại, Chức vụ]
-        self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role)])
+        # Cấu trúc: [Mã NV, Tên NV, Số điện thoại, Chức vụ, Mật khẩu]
+        self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role), ""])  # Mật khẩu mặc định là chuỗi rỗng
         return True
 
     def update_employee(self, emp_code, new_name, new_phone, new_role):
