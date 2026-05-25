@@ -35,10 +35,18 @@ def get_data_service(): return DataService(mode="ONLINE")
 service = get_data_service()
 st.title("📦 Quản lý kho")
 
-# --- QUẢN LÝ TRẠNG THÁI ĐĂNG NHẬP & MENU ---
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "user_name" not in st.session_state: st.session_state.user_name = None
-if "current_menu" not in st.session_state: st.session_state.current_menu = "Danh mục hàng"
+# --- QUẢN LÝ TRẠNG THÁI ĐĂNG NHẬP & MENU (CHỐNG MẤT KHI BẤM F5) ---
+if "logged_in" not in st.session_state:
+    # Khi tải lại trang, kiểm tra xem trên URL có thông tin đăng nhập cũ không
+    if st.query_params.get("logged_in") == "true":
+        st.session_state.logged_in = True
+        st.session_state.user_name = st.query_params.get("user_name")
+        st.session_state.user_role = st.query_params.get("user_role")
+        st.session_state.current_menu = st.query_params.get("current_menu", "Danh mục hàng")
+    else:
+        st.session_state.logged_in = False
+        st.session_state.user_name = None
+        st.session_state.current_menu = "Danh mục hàng"
 
 if not st.session_state.logged_in:
     with st.container(border=True):
@@ -51,6 +59,13 @@ if not st.session_state.logged_in:
                 st.session_state.logged_in = True
                 st.session_state.user_name = user_data["name"]
                 st.session_state.user_role = user_data["role"]
+                
+                # LƯU TRẠNG THÁI VÀO URL (Để chống mất khi F5 tải lại trang)
+                st.query_params["logged_in"] = "true"
+                st.query_params["user_name"] = user_data["name"]
+                st.query_params["user_role"] = user_data["role"]
+                st.query_params["current_menu"] = st.session_state.current_menu
+                
                 st.rerun() 
             else: 
                 st.error("❌ Mã NV hoặc mật khẩu không đúng!")
@@ -63,6 +78,7 @@ st.sidebar.markdown("---")
 
 if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.session_state.logged_in = False
+    st.query_params.clear() # XÓA SẠCH URL ĐỂ BẮT BUỘC ĐĂNG NHẬP LẠI
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
@@ -81,9 +97,10 @@ menu = st.selectbox(
     label_visibility="collapsed"
 )
 
-# Kích hoạt chuyển trang mượt mà dựa trên bộ nhớ đệm ẩn
+# Kích hoạt chuyển trang mượt mà & Lưu vào URL
 if menu != st.session_state.current_menu:
     st.session_state.current_menu = menu
+    st.query_params["current_menu"] = menu # Nhớ Tab hiện tại vào URL
     st.rerun()
 
 # --- TAB 1: DANH MỤC HÀNG ---
@@ -115,9 +132,7 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                # Sử dụng danh sách trực tiếp từ biến products để an toàn 100%
-                m_list = [p[1] for p in products]
-                del_code = st.selectbox("Chọn mã hàng cần xóa", options=m_list, key="delete_product_select")
+                del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist(), key="delete_product_select")
                 if st.button("Xác nhận xóa", key="delete_product_btn"):
                     service.delete_product(del_code)
                     st.cache_data.clear(); st.success(f"Đã xóa {del_code}!"); st.rerun()
@@ -150,8 +165,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             st.write("")
             st.write("")
             if st.button("➕ Thêm vào lưới", key="add_to_cart_btn"):
-                if not selected or not qty or not note: 
-                    st.warning("⚠️ Nhập đủ thông tin!")
+                if not selected or not qty or not note: st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
                     st.session_state.cart.append({"Mã HH": p_dict[selected]["Mã"], "Tên HH": p_dict[selected]["Tên"], "Đvt": p_dict[selected]["Đvt"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
@@ -253,8 +267,7 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
     with c2:
         with st.expander("🗑️ Xóa nhân viên"):
             if employees:
-                emp_list = [e[0] for e in employees]
-                del_emp_code = st.selectbox("Chọn mã NV cần xóa", options=emp_list, key="delete_emp_select")
+                del_emp_code = st.selectbox("Chọn mã NV cần xóa", options=df_emp["Mã NV"].tolist(), key="delete_emp_select")
                 if st.button("Xác nhận xóa nhân viên", key="delete_emp_btn"):
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
