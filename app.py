@@ -28,7 +28,7 @@ st.markdown("""
     <style>
     /* 1. KÉO NỘI DUNG LÊN SÁT CẠNH TRÊN MÀN HÌNH */
     .block-container {
-        padding-top: 0rem !important;
+        padding-top: 0.5rem !important;
         padding-bottom: 1rem !important;
     }
     
