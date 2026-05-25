@@ -55,7 +55,11 @@ st.markdown("""
        
     /* Gom các cột lại gần nhau bằng cách giảm margin-right */
     [data-testid="column"] { padding-right: 0px !important; }
-            
+
+    /* Ép cột chứa nút bấm sát vào bên trái */
+    [data-testid="column"]:has(button) {
+        padding-left: 0px !important;
+    }                
     </style>
 """, unsafe_allow_html=True)
 
