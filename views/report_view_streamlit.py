@@ -96,7 +96,7 @@ def show_report():
             
             # Cấu hình độ rộng chi tiết
             gb.configure_column("Mã HH", width=80, suppressSizeToFit=True)
-            gb.configure_column("Tên hàng hóa", width=250, minWidth=200)
+            gb.configure_column("Tên hàng hóa", width=150, minWidth=120)
             gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
 
             # Định dạng các cột số
