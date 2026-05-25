@@ -48,13 +48,15 @@ if not st.session_state.logged_in:
 
 menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
 
-# --- TAB DANH MỤC HÀNG ---
+# --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
+    
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
+        
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
@@ -64,9 +66,55 @@ if menu == "Danh mục hàng":
         
         grid_response = AgGrid(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, height=400)
         
-        # (Lưu thay đổi ở đây giống code cũ của bạn)
+        edited_df = pd.DataFrame(grid_response['data'])
+        has_changes = False
+        changes_to_save = [] 
+        
+        if not edited_df.empty:
+            for i in range(len(edited_df)):
+                ma = edited_df.iloc[i]["Mã"]
+                ten_moi = edited_df.iloc[i]["Tên hàng hóa"]
+                dvt_moi = edited_df.iloc[i]["Đvt"]
+                orig_row = df[df["Mã"] == ma].iloc[0]
+                if ten_moi != orig_row["Tên hàng hóa"] or dvt_moi != orig_row["Đvt"]:
+                    has_changes = True
+                    changes_to_save.append({"Mã": ma, "Tên hàng hóa": ten_moi, "Đvt": dvt_moi})
 
-# --- TAB NHẬP/XUẤT ---
+        if has_changes:
+            st.info("⚠️ Có thay đổi chưa được lưu!")
+            if st.button("💾 Lưu thay đổi", type="primary"):
+                for item in changes_to_save:
+                    service.update_product(item["Mã"], item["Tên hàng hóa"], item["Đvt"])
+                st.cache_data.clear()
+                st.success("🎉 Đã cập nhật thông tin thành công!")
+                st.rerun()
+
+    # --- BỔ SUNG LẠI PHẦN THÊM VÀ XÓA HÀNG HÓA ---
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.expander("➕ Thêm hàng hóa mới"):
+            with st.form("add_form", clear_on_submit=True):
+                code = st.text_input("Mã hàng")
+                name = st.text_input("Tên hàng")
+                unit = st.text_input("Đơn vị tính")
+                if st.form_submit_button("Thêm hàng hóa"):
+                    if not code or not name: st.warning("Nhập đủ Mã và Tên!")
+                    elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
+                    else:
+                        service.add_product(code.upper(), name, unit)
+                        st.cache_data.clear()
+                        st.success("Đã thêm thành công!"); st.rerun()
+    with c2:
+        with st.expander("🗑️ Xóa hàng hóa"):
+            if products:
+                del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist())
+                if st.button("Xác nhận xóa"):
+                    service.delete_product(del_code)
+                    st.cache_data.clear()
+                    st.success(f"Đã xóa {del_code}!")
+                    st.rerun()
+
+# --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
     trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
@@ -108,9 +156,10 @@ elif menu == "Nhập/Xuất Kho":
                     st.success(f"🎉 Giao dịch thành công bởi {selected_emp}!")
                     st.rerun()
 
+# --- TAB 4: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho": show_report()
 
-# --- TAB LỊCH SỬ GIAO DỊCH ---
+# --- TAB 3: LỊCH SỬ GIAO DỊCH ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
