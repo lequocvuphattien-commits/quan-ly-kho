@@ -167,8 +167,8 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
         # Chia 4 cột để gom nhóm: [Số lượng] [Tồn] [Diễn giải] [Nút Thêm]
-        # Điều chỉnh tỷ lệ các số trong [0.3, 0.5, 1.5, 0.5] để thu hẹp khoảng cách
-        c1, c2, c3, c4 = st.columns([0.3, 0.5, 1, 0.])
+        # Điều chỉnh tỷ lệ các số trong [0.8, 1, 1.5, 0.5] để thu hẹp khoảng cách
+        c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
         
         with c1: 
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
