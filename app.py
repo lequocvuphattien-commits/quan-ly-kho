@@ -159,23 +159,50 @@ elif menu == "Nhập/Xuất Kho":
 # --- TAB 4: BÁO CÁO TỒN KHO ---
 elif menu == "Báo cáo tồn kho": show_report()
 
-# --- TAB 3: LỊCH SỬ GIAO DỊCH ---
+# --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
+    
     if history:
-        # Đảm bảo danh sách cột ở đây khớp với 7 cột của hàm get_history mới
+        # Đảm bảo đúng 7 cột theo cấu trúc mới
         df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
         
+        # Định dạng cột Số Lượng
         df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
-        
-        # Cập nhật AgGrid để hiển thị thêm cột Nhân viên
+
+        # Cấu hình AgGrid với bộ lọc và định dạng số
         gb = GridOptionsBuilder.from_dataframe(df)
-        # ... (các cấu hình cột khác của bạn)
-        gb.configure_column("Nhân viên", minWidth=120, cellStyle={'textAlign': 'center'})
         
+        # Kích hoạt bộ lọc (3 dấu gạch ngang) cho tất cả các cột
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
+        
+        # Cấu hình chi tiết từng cột
+        gb.configure_column("Ngày", minWidth=150, maxWidth=200)
+        gb.configure_column("Mã", minWidth=90, maxWidth=130)
+        gb.configure_column("Tên hàng hóa", minWidth=200)
+        gb.configure_column("Loại", minWidth=90, maxWidth=120)
+        
+        # Định dạng số 31,000 cho cột Số Lượng
+        gb.configure_column(
+            "Số Lượng", 
+            type=["numericColumn"], 
+            valueFormatter="Number(x).toLocaleString('en-US')",
+            cellStyle={'textAlign': 'right'}
+        )
+        
+        gb.configure_column("Ghi Chú", minWidth=150)
+        gb.configure_column("Nhân viên", minWidth=120)
+
         go = gb.build()
-        AgGrid(df, gridOptions=go, fit_columns_on_grid_load=True, theme='streamlit', height=650)
+        
+        AgGrid(
+            df,
+            gridOptions=go,
+            fit_columns_on_grid_load=True, 
+            theme='streamlit',
+            height=650
+        )
 
 # =====================================================================
 # --- [THÊM MỚI]: TAB 5: QUẢN LÝ NHÂN VIÊN ---
