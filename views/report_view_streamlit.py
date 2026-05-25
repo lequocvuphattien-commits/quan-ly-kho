@@ -40,7 +40,16 @@ def show_report():
                 st.info("Chưa có giao dịch.")
                 return
 
-            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "product_name", "type", "qty", "note", "voucher"])
+            # --- [THÊM MỚI] ĐỒNG BỘ DỮ LIỆU CŨ VÀ MỚI ĐỂ LUÔN ĐẠT 7 CỘT ---
+            processed_history = []
+            for row in all_history:
+                row_copy = list(row)
+                while len(row_copy) < 7: 
+                    row_copy.append("") # Thêm ô rỗng cho các giao dịch cũ không có Số phiếu
+                processed_history.append(row_copy)
+
+            # Truyền processed_history vào DataFrame thay vì all_history
+            df_h = pd.DataFrame(processed_history, columns=["date", "product_id", "product_name", "type", "qty", "note", "voucher"])
             
             if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
                 df_h = df_h.iloc[1:].copy()
