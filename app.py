@@ -61,12 +61,15 @@ if st.sidebar.button("Đăng xuất"):
     st.session_state.logged_in = False
     st.rerun()
 
-menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
+# --- ĐIỀU KHIỂN MENU THEO QUYỀN ---
+# 1. Khởi tạo danh sách mặc định trước
+menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"]
 
-# Kiểm tra quyền: Nếu là Quản lý thì mới thêm vào danh sách
+# 2. Kiểm tra quyền để thêm vào danh sách
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
 
+# 3. Sau đó mới dùng biến này trong selectbox
 menu = st.selectbox("Chức năng", menu_options, label_visibility="collapsed")
 
 # --- TAB 1: DANH MỤC HÀNG ---
@@ -161,6 +164,7 @@ elif menu == "Quản lý nhân viên":
     employees = get_cached_employees(service)
     
     if employees:
+    
         df_emp = pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "Số điện thoại", "Chức vụ", "Mật khẩu"])
         
         # Cấu hình AgGrid cho phép Sửa trực tiếp (Trừ Mã NV)

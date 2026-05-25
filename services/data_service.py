@@ -72,12 +72,18 @@ class DataService:
         return ([str(r[0]) for r in data[1:] if r[0]], [str(r[1]) for r in data[1:] if len(r)>1 and r[1]])
 
     def get_employees(self):
+        """Lấy danh sách nhân viên từ sheet NhanVien, đảm bảo luôn trả về 5 cột"""
         data = self.sheet_employees.get_all_values()
         if len(data) > 1:
-            # Lấy dữ liệu từ dòng 2 trở đi, ép về mảng để phòng hụt cột
-            cleaned_data = [row[:5] for row in data[1:]] 
-            cleaned_data = [row + [""] * (5 - len(row)) for row in cleaned_data]
-            return cleaned_data
+            results = []
+            for row in data[1:]: # Bỏ qua dòng tiêu đề
+                # Lấy 5 cột đầu tiên
+                row_data = row[:5]
+                # Nếu dòng thiếu cột, bù bằng chuỗi rỗng
+                if len(row_data) < 5:
+                    row_data += [""] * (5 - len(row_data))
+                results.append(row_data)
+            return results
         return []
 
     def check_employee_exists(self, emp_code):
