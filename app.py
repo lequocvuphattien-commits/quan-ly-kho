@@ -113,7 +113,7 @@ if menu == "Danh mục hàng":
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
         
-        # Cấu hình chi tiết từng cột (Chỉ cho phép sửa Tên và Đvt, tô màu nền xanh nhạt để phân biệt)
+        # Cấu hình chi tiết từng cột
         gb.configure_column("Mã", minWidth=50, editable=False, cellStyle={'textAlign': 'left'})
         gb.configure_column("Tên", minWidth=200, editable=True, cellStyle={'textAlign': 'left'}) 
         gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'textAlign': 'left'})
