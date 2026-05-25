@@ -31,6 +31,11 @@ st.markdown("""
         padding-top: 1.5rem !important; /* Mặc định là khoảng 4-6rem, giảm xuống 1.5rem */
         padding-bottom: 1rem !important;
     }
+     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
+    div.stButton > button[kind="primary"] {
+        background-color: #28a745 !important;
+        color: white !important;}    
+
     /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ TIÊU ĐỀ PHỤ LẠI VỚI NHAU */
     h1 {
         padding-bottom: 0rem !important;
