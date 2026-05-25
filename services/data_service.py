@@ -115,8 +115,16 @@ class DataService:
         return [row[:5] + [""] * (5 - len(row)) for row in data[1:]] if len(data) > 1 else []
 
     def check_login(self, username, password):
-        employees = self.get_employees()
+        """Kiểm tra đăng nhập và trả về Tên + Chức vụ"""
+        employees = self.get_employees() 
         for emp in employees:
-            if str(emp[0]).strip().upper() == username.strip().upper() and str(emp[4]).strip() == password:
-                return {"status": True, "name": emp[1]}
-        return {"status": False, "name": None}
+            # Cấu trúc nhân viên: [Mã NV, Tên NV, SĐT, Chức vụ, Mật khẩu]
+            # Index:                 0        1       2       3         4
+            if len(emp) >= 5:
+                if str(emp[0]).strip().upper() == username.strip().upper() and str(emp[4]).strip() == password:
+                    return {
+                        "status": True, 
+                        "name": emp[1], 
+                        "role": str(emp[3]).strip() # Phải có dòng này để trả về 'role'
+                    }
+        return {"status": False, "name": None, "role": None}
