@@ -114,9 +114,9 @@ if menu == "Danh mục hàng":
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
         
         # Cấu hình chi tiết từng cột (Chỉ cho phép sửa Tên và Đvt, tô màu nền xanh nhạt để phân biệt)
-        gb.configure_column("Mã", minWidth=100, editable=False, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tên", minWidth=200, editable=True, cellStyle={'backgroundColor': '#f0f8ff'}) 
-        gb.configure_column("Đvt", minWidth=100, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Mã", minWidth=100, editable=False, cellStyle={'textAlign': 'left'})
+        gb.configure_column("Tên", minWidth=200, editable=True, cellStyle={'textAlign': 'left'}) 
+        gb.configure_column("Đvt", minWidth=100, editable=True, cellStyle={'textAlign': 'left', 'width': '60px'})
         gb.configure_column("Tồn", minWidth=100, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'})
         
         go = gb.build()
