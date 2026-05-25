@@ -48,7 +48,7 @@ st.markdown("""
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
     }
     /* Giảm khoảng cách giữa các khối (container) */
-    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
+    .block-container { padding-top: -1rem !important; padding-bottom: 0rem !important; }
     
     /* Giảm khoảng cách dưới mỗi widget (như ô nhập, selectbox) */
     div.stTextInput, div.stSelectbox, div.stNumberInput { margin-bottom: -15px !important; }
