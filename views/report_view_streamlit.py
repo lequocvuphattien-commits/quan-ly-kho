@@ -88,7 +88,7 @@ def show_report():
             df_report = df_report.merge(period_stats, left_on='code', right_index=True, how='left').fillna(0)
             
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
-            df_report.columns = ["Mã HH", "Tên", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
+            df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             # --- CẤU HÌNH AGGRID ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
@@ -96,7 +96,7 @@ def show_report():
             
             # Cấu hình độ rộng chi tiết
             gb.configure_column("Mã HH", width=80, suppressSizeToFit=True)
-            gb.configure_column("Tên", width=250, minWidth=200)
+            gb.configure_column("Tên hàng hóa", width=250, minWidth=200)
             gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
 
             # Định dạng các cột số
