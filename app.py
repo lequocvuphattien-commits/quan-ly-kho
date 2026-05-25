@@ -67,6 +67,41 @@ service = get_data_service()
 
 st.title("📦 Quản lý kho")
 
+# --- [THÊM MỚI] BẢO MẬT: MÀN HÌNH ĐĂNG NHẬP ---
+# ==========================================
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    # Vẽ một khung viền cho form đăng nhập nhìn chuyên nghiệp hơn
+    with st.container(border=True):
+        st.subheader("🔒 Đăng nhập hệ thống")
+        st.info("Vui lòng nhập mật khẩu để truy cập phần mềm quản lý.")
+        
+        # type="password" giúp mã hóa ký tự thành dấu chấm tròn
+        pwd = st.text_input("Mật khẩu:", type="password") 
+        
+        if st.button("Đăng nhập", type="primary"):
+            # Bạn có thể thay đổi mật khẩu "123" thành bất kỳ chuỗi nào bạn muốn
+            if pwd == "123":  
+                st.session_state.logged_in = True
+                st.rerun() # Tải lại trang để vào ứng dụng
+            else:
+                st.error("❌ Mật khẩu không đúng!")
+                
+    # Lệnh st.stop() là "bức tường" chặn không cho code bên dưới chạy nếu chưa đăng nhập
+    st.stop() 
+
+# Thêm nút Đăng xuất nhỏ gọn ở góc phải phía trên menu
+col_space, col_logout = st.columns([8, 2])
+with col_logout:
+    if st.button("Đăng xuất 🚪"):
+        st.session_state.logged_in = False
+        st.rerun()
+# ==========================================
+# --- KẾT THÚC PHẦN ĐĂNG NHẬP ---
+# ==========================================
+
 # Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi
 menu = st.selectbox(
     "Chức năng", 
