@@ -47,6 +47,12 @@ st.markdown("""
         flex-direction: row !important; 
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
     }
+    /* Ép cột chứa nút bấm dính sát vào bên trái */
+    [data-testid="column"]:has(button) {
+        display: flex;
+        align-items: flex-end; /* Căn đáy để nút thẳng hàng với ô chọn */
+        padding-left: 5px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
