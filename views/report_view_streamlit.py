@@ -49,7 +49,7 @@ def show_report():
         }
         /* Làm nhỏ chữ ở tiêu đề ô ngày một chút để tránh bị tràn trên màn hình nhỏ */
         [data-testid="stHorizontalBlock"] label {
-            font-size: 0rem !important;
+            font-size: -1rem !important;
         }
         </style>
     """, unsafe_allow_html=True)
