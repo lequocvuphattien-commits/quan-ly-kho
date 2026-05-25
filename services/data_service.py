@@ -148,6 +148,27 @@ class DataService:
         ])
         return True
     
+    # Cập nhật và xóa sản phẩm dựa trên Mã hàng (cột Mã HH - index 1)
+    def update_product(self, product_id, new_name, new_unit):
+        """Cập nhật thông tin sản phẩm dựa trên ID (cột A)"""
+        # Tìm dòng có product_id trùng với cột Mã (giả sử cột Mã là cột B - index 1)
+        data = self.sheet_products.get_all_values()
+        for i, row in enumerate(data):
+            if row[1] == product_id: # Index 1 là cột Mã
+                self.sheet_products.update_cell(i + 1, 3, new_name) # Cột Tên (C)
+                self.sheet_products.update_cell(i + 1, 4, new_unit) # Cột Đvt (D)
+                return True
+        return False
+    # Xóa sản phẩm dựa trên Mã hàng (cột Mã HH - index 1)
+    def delete_product(self, product_id):
+        """Xóa hàng hóa dựa trên ID"""
+        data = self.sheet_products.get_all_values()
+        for i, row in enumerate(data):
+            if row[1] == product_id:
+                self.sheet_products.delete_rows(i + 1)
+                return True
+        return False
+    
     def update_stock(self, product_code, qty, trans_type):
         """Cập nhật số lượng tồn kho trực tiếp vào sheet Products"""
         # Lấy toàn bộ dữ liệu từ sheet Products

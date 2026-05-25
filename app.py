@@ -59,52 +59,37 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        # Cấu hình AgGrid với tính năng lọc nâng cao và sắp xếp
-        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên", "Đvt", "Tồn"]])
-
-         # --- THÊM DÒNG NÀY ĐỂ CỘT ĐVT VỪA VỚI DỮ LIỆU ---
-        gb.configure_column("Mã", width=60, suppressSizeToFit=True) # Cột Mã nhỏ gọn, canh giữa
-        gb.configure_column("Đvt", width=60, suppressSizeToFit=True, cellStyle={'textAlign': 'center'}) # Cột Đvt nhỏ gọn, canh giữa
-        gb.configure_column("Tên", width=200, cellStyle={'textAlign': 'left'}) # Cột Tên rộng hơn, canh trái
-
-        # --- CẬP NHẬT LẠI CỘT TỒN: THÊM ĐỊNH DẠNG DẤU PHẨY ---
-        gb.configure_column(
-            "Tồn", 
-            width=60, 
-            suppressSizeToFit=True, 
-            type=["numericColumn"], # Khai báo là cột số
-            valueFormatter="Number(x).toLocaleString('en-US')", # Format hàng nghìn (3,010)
-            cellStyle={'textAlign': 'right'}
-        )
-        
-
-        gb.configure_default_column(
-            sortable=True,
-            filter=True,
-            floatingFilter=True, 
-            resizable=True,
-            suppressMenu=True, 
-            filterParams={"suppressFilterButton": True} 
-        )
-        go = gb.build()
-        if 'columnDefs' in go:
-            for col in go['columnDefs']:
-                if col.get('field') == 'Tồn':
-                    col['filter'] = 'agNumberColumnFilter'
-
-        grid_response = AgGrid(
+        # --- [THAY ĐỔI]: SỬ DỤNG DATA_EDITOR ĐỂ SỬA TRỰC TIẾP TRÊN BẢNG ---
+        st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa, sau đó bấm nút Lưu.*")
+        edited_df = st.data_editor(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
-            gridOptions=go,
-            fit_columns_on_grid_load=True,
-            theme='streamlit',
-            data_return_mode=DataReturnMode.FILTERED_AND_SORTED 
+            column_config={
+                "Mã": st.column_config.TextColumn("Mã", disabled=True), # Khóa không cho sửa Mã
+                "Tồn": st.column_config.NumberColumn("Tồn", format="%,.0f", disabled=True) # Khóa tồn, hiển thị dấu phẩy (3,010)
+            },
+            hide_index=True, use_container_width=True
         )
-        
-        filtered_df = pd.DataFrame(grid_response['data'])
+
+        # Xử lý khi bấm Lưu thay đổi
+        if st.button("💾 Lưu thay đổi", type="primary"):
+            has_changes = False
+            for i in range(len(edited_df)):
+                if edited_df.iloc[i]["Tên"] != df.iloc[i]["Tên"] or edited_df.iloc[i]["Đvt"] != df.iloc[i]["Đvt"]:
+                    service.update_product(edited_df.iloc[i]["Mã"], edited_df.iloc[i]["Tên"], edited_df.iloc[i]["Đvt"])
+                    has_changes = True
+            
+            if has_changes:
+                st.cache_data.clear()
+                st.success("🎉 Đã cập nhật thông tin thành công!")
+                st.rerun()
+            else:
+                st.info("Không có thay đổi nào để lưu.")
+
+        # Xuất file Excel
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            if not filtered_df.empty:
-                filtered_df.to_excel(writer, index=False, sheet_name='DanhMuc')
+            if not edited_df.empty:
+                edited_df.to_excel(writer, index=False, sheet_name='DanhMuc')
                 worksheet = writer.sheets['DanhMuc']
                 worksheet.freeze_panes = 'A2'
                 max_row = worksheet.max_row
@@ -121,16 +106,28 @@ if menu == "Danh mục hàng":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     
-    with st.expander("➕ Thêm hàng hóa mới"):
-        with st.form("add_form", clear_on_submit=True):
-            code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
-            if st.form_submit_button("Thêm hàng hóa"):
-                if not code or not name: st.warning("Nhập đủ Mã và Tên!")
-                elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
-                else:
-                    service.add_product(code.upper(), name, unit)
+    # --- [THAY ĐỔI]: GIAO DIỆN THÊM VÀ XÓA HÀNG HÓA NẰM CẠNH NHAU ---
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.expander("➕ Thêm hàng hóa mới"):
+            with st.form("add_form", clear_on_submit=True):
+                code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
+                if st.form_submit_button("Thêm hàng hóa"):
+                    if not code or not name: st.warning("Nhập đủ Mã và Tên!")
+                    elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
+                    else:
+                        service.add_product(code.upper(), name, unit)
+                        st.cache_data.clear()
+                        st.success("Đã thêm thành công!"); st.rerun()
+    with c2:
+        with st.expander("🗑️ Xóa hàng hóa"):
+            if products:
+                del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist())
+                if st.button("Xác nhận xóa"):
+                    service.delete_product(del_code)
                     st.cache_data.clear()
-                    st.success("Đã thêm thành công!"); st.rerun()
+                    st.success(f"Đã xóa {del_code}!")
+                    st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất Kho":
@@ -141,7 +138,7 @@ elif menu == "Nhập/Xuất Kho":
     
     # 2. Khai báo danh sách kho ngay sau khi biết trans_type
     kho_nhap_list, kho_xuat_list = service.get_config_options()
-       
+        
     products = get_cached_products(service)
     
     if products:
@@ -198,7 +195,7 @@ elif menu == "Nhập/Xuất Kho":
 
         if st.session_state.cart:
             st.markdown("### 📋 Lưới chờ xử lý")
-            edited_df = st.data_editor(
+            edited_df_cart = st.data_editor(
                 pd.DataFrame(st.session_state.cart),
                 column_config={
                     "Mã HH": st.column_config.TextColumn("Mã HH", disabled=True),
@@ -212,7 +209,7 @@ elif menu == "Nhập/Xuất Kho":
             )
             
             if st.button("✅ Xác nhận tất cả", type="primary"): 
-                for _, row in edited_df.iterrows():
+                for _, row in edited_df_cart.iterrows():
                     service.add_transaction(row["Mã HH"],row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"])
                     service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                 st.session_state.cart = []
@@ -317,5 +314,3 @@ elif menu == "Lịch sử giao dịch":
             # Tăng chiều cao khung hiển thị (mặc định là 400, tăng lên 650)
             height=650 
         )
-
-
