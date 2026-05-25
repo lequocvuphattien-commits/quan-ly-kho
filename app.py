@@ -1,4 +1,4 @@
-import streamlit st
+import streamlit as st
 import pandas as pd
 import io
 from openpyxl.utils import get_column_letter
@@ -134,7 +134,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         
         c1, c2, c3 = st.columns([2, 2, 1])
         with c1: 
-            # Giữ nguyên bố cục đẩy chữ Tồn lên nằm ngang hàng Số lượng
             sub_qty, sub_stock = st.columns([1, 1])
             with sub_qty:
                 qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
