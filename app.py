@@ -52,7 +52,7 @@ st.markdown("""
     
     /* Ép khoảng trống dưới menu nhỏ lại */
     div[data-testid="stSelectbox"] {
-        margin-bottom: -1rem !important; 
+        margin-bottom: -2rem !important; 
     }  
     </style>
 """, unsafe_allow_html=True)
