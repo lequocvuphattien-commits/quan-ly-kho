@@ -36,12 +36,14 @@ class DataService:
             return df.values.tolist()
         return []
 
-    def add_transaction(self, product_id, product_name, qty, trans_type, note):
-        """Ghi đầy đủ 6 thông tin vào sheet Transactions"""
+    def add_transaction(self, product_id, product_name, qty, trans_type, note, emp_name=""):
+        """Ghi đầy đủ 7 thông tin (bao gồm Nhân viên) vào sheet Transactions"""
         # Ép múi giờ về Việt Nam (UTC+7)
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
-        # Đảm bảo thứ tự: Date, ID, Tên, Loại, Số lượng, Ghi chú
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), str(note)])
+        # Ghi thêm emp_name vào cuối mảng (cột thứ 7)
+        self.sheet_transactions.append_row([
+            date_str, str(product_id), str(product_name), 
+            trans_type.upper(), float(qty), str(note), str(emp_name)])
 
     def get_config_options(self):
         """Đọc danh sách Kho Nhập (Cột A) và Kho Xuất (Cột B) từ sheet Config"""

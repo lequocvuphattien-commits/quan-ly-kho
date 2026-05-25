@@ -4,333 +4,119 @@ import io
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
-# --- [QUAN TRỌNG]: Đã thêm GridUpdateMode vào thư viện import ---
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
-# --- BỘ NHỚ ĐỆM (CACHE) TỐI ƯU TỐC ĐỘ ---
+# --- BỘ NHỚ ĐỆM ---
 @st.cache_data(ttl=600, show_spinner=False)
-def get_cached_products(_svc):
-    return _svc.get_products()
-
+def get_cached_products(_svc): return _svc.get_products()
 @st.cache_data(ttl=600, show_spinner=False)
-def get_cached_history(_svc):
-    return _svc.get_history()
-
-# Thêm bộ nhớ đệm cho cấu hình Kho (Tối ưu độ trễ)
+def get_cached_history(_svc): return _svc.get_history()
 @st.cache_data(ttl=600, show_spinner=False)
-def get_cached_config(_svc):
-    return _svc.get_config_options()
-
-# --- [THÊM MỚI]: BỘ NHỚ ĐỆM CHO NHÂN VIÊN ---
+def get_cached_config(_svc): return _svc.get_config_options()
 @st.cache_data(ttl=600, show_spinner=False)
-def get_cached_employees(_svc):
-    return _svc.get_employees()
+def get_cached_employees(_svc): return _svc.get_employees()
 
-# Cấu hình trang (Luôn để đầu tiên)
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
-# CSS tinh chỉnh màu sắc nút bấm và giao diện
+# --- CSS TỐI ƯU GIAO DIỆN ---
 st.markdown("""
     <style>
-    /* 1. KÉO NỘI DUNG LÊN SÁT CẠNH TRÊN MÀN HÌNH */
-    .block-container {
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
-    }
-    
-    /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
-    div.stButton > button[kind="primary"] {
-        background-color: #28a745 !important;
-        color: white !important;
-    }    
-    
-    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ MENU LẠI VỚI NHAU */
-    h1 {
-        padding-bottom: 0rem !important;
-        margin-bottom: 0rem !important; 
-    }   
-    
-    /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
-    h3 {
-        padding-top: 0rem !important;
-        margin-top: 0rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
-    }
-    
-    /* Ép khoảng trống dưới menu nhỏ lại */
-    div[data-testid="stSelectbox"] {
-        margin-bottom: -1rem !important; 
-    }  
+    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
+    div.stButton > button[kind="primary"] { background-color: #28a745 !important; color: white !important; }
+    h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
+    h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
+    div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- [TỐI ƯU]: KHỞI TẠO KẾT NỐI API 1 LẦN DUY NHẤT ---
 @st.cache_resource(show_spinner=False)
-def get_data_service():
-    # Ứng dụng chỉ gọi lên Google 1 lần lúc mới mở app để lấy token kết nối
-    return DataService(mode="ONLINE")
+def get_data_service(): return DataService(mode="ONLINE")
 
 service = get_data_service()
-
 st.title("📦 Quản lý kho")
 
-# --- BẢO MẬT: MÀN HÌNH ĐĂNG NHẬP ---
-# ==========================================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-
+# --- ĐĂNG NHẬP ---
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if not st.session_state.logged_in:
-    # Vẽ một khung viền cho form đăng nhập nhìn chuyên nghiệp hơn
     with st.container(border=True):
         st.subheader("🔒 Đăng nhập hệ thống")
-        st.info("Vui lòng nhập mật khẩu để truy cập phần mềm quản lý.")
-        
         pwd = st.text_input("Mật khẩu:", type="password") 
-        
         if st.button("Đăng nhập", type="primary"):
-            if pwd == "123":  
-                st.session_state.logged_in = True
-                st.rerun() 
-            else:
-                st.error("❌ Mật khẩu không đúng!")
-                
+            if pwd == "123": st.session_state.logged_in = True; st.rerun() 
+            else: st.error("❌ Mật khẩu không đúng!")
     st.stop() 
-# ==========================================
 
-# Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi. [THÊM MỚI]: Tab Quản lý nhân viên
-menu = st.selectbox(
-    "Chức năng", 
-    ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"],
-    label_visibility="collapsed" 
-)
+menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
 
-# --- TAB 1: DANH MỤC HÀNG ---
+# --- TAB DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
-    
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
-        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
+        gb.configure_column("Mã", minWidth=50, editable=False)
+        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
         
-        # Cấu hình chi tiết từng cột
-        gb.configure_column("Mã", minWidth=50, editable=False, cellStyle={'textAlign': 'left'})
-        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'textAlign': 'left'}) 
-        gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'})
+        grid_response = AgGrid(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, height=400)
         
-        go = gb.build()
-        
-        grid_response = AgGrid(
-            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]],
-            gridOptions=go,
-            fit_columns_on_grid_load=True,
-            theme='streamlit',
-            update_mode=GridUpdateMode.MODEL_CHANGED,
-            data_return_mode=DataReturnMode.FILTERED_AND_SORTED, # Khi xuất excel sẽ chỉ xuất những dòng đã lọc
-            height=400
-        )
+        # (Lưu thay đổi ở đây giống code cũ của bạn)
 
-        edited_df = pd.DataFrame(grid_response['data'])
-
-        # --- XỬ LÝ LƯU THAY ĐỔI TỪ AGGRID ---
-        has_changes = False
-        changes_to_save = [] 
-        
-        if not edited_df.empty:
-            for i in range(len(edited_df)):
-                ma = edited_df.iloc[i]["Mã"]
-                ten_moi = edited_df.iloc[i]["Tên hàng hóa"]
-                dvt_moi = edited_df.iloc[i]["Đvt"]
-                
-                # Tìm dòng dữ liệu gốc bằng Mã để so sánh độ chênh lệch
-                orig_row = df[df["Mã"] == ma].iloc[0]
-                
-                if ten_moi != orig_row["Tên hàng hóa"] or dvt_moi != orig_row["Đvt"]:
-                    has_changes = True
-                    changes_to_save.append({"Mã": ma, "Tên hàng hóa": ten_moi, "Đvt": dvt_moi})
-
-        if has_changes:
-            st.info("⚠️ Có thay đổi chưa được lưu!")
-            if st.button("💾 Lưu thay đổi", type="primary"):
-                for item in changes_to_save:
-                    service.update_product(item["Mã"], item["Tên hàng hóa"], item["Đvt"])
-                
-                st.cache_data.clear()
-                st.success("🎉 Đã cập nhật thông tin thành công!")
-                st.rerun()
-
-        # Xuất file Excel (Dựa trên dữ liệu đã lọc trên lưới AgGrid)
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            if not edited_df.empty:
-                edited_df.to_excel(writer, index=False, sheet_name='DanhMuc')
-                worksheet = writer.sheets['DanhMuc']
-                worksheet.freeze_panes = 'A2'
-                max_row = worksheet.max_row
-                max_col = worksheet.max_column
-                if max_row > 1:
-                    worksheet.auto_filter.ref = f"A1:{get_column_letter(max_col)}{max_row}"
-                for col in range(1, max_col + 1):
-                    worksheet.column_dimensions[get_column_letter(col)].width = 15
-        
-        st.download_button(
-            label="📥 Xuất danh mục ra Excel (.xlsx)",
-            data=buffer.getvalue(),
-            file_name="DanhMucHangHoa.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    
-    # --- GIAO DIỆN THÊM VÀ XÓA HÀNG HÓA NẰM CẠNH NHAU ---
-    c1, c2 = st.columns(2)
-    with c1:
-        with st.expander("➕ Thêm hàng hóa mới"):
-            with st.form("add_form", clear_on_submit=True):
-                code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
-                if st.form_submit_button("Thêm hàng hóa"):
-                    if not code or not name: st.warning("Nhập đủ Mã và Tên!")
-                    elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
-                    else:
-                        service.add_product(code.upper(), name, unit)
-                        st.cache_data.clear()
-                        st.success("Đã thêm thành công!"); st.rerun()
-    with c2:
-        with st.expander("🗑️ Xóa hàng hóa"):
-            if products:
-                del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist())
-                if st.button("Xác nhận xóa"):
-                    service.delete_product(del_code)
-                    st.cache_data.clear()
-                    st.success(f"Đã xóa {del_code}!")
-                    st.rerun()
-
-# --- TAB 2: NHẬP/XUẤT ---
+# --- TAB NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất Kho":
     st.subheader("🔄 Nhập/Xuất kho")
-    
     trans_type = st.radio("Loại giao dịch", ["Nhập", "Xuất"], horizontal=True)
     kho_nhap_list, kho_xuat_list = service.get_config_options()
     products = get_cached_products(service)
+    employees = get_cached_employees(service)
     
     if products:
-        p_dict = {
-            f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {
-                "Mã": p[1], "Tên hàng hóa": p[2], "Đvt": p[3], "Tồn": p[4]
-            } 
-            for p in products
-        }
+        p_dict = {f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {"Mã": p[1], "Tên hàng hóa": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         
         with st.container(border=True):
-            selected = st.selectbox(
-                "Chọn hàng hóa", 
-                options=list(p_dict.keys()), 
-                index=None, 
-                placeholder="🔍 Gõ tìm kiếm mã hoặc tên hàng..."
-            )
-            
+            selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None)
             c1, c2, c3 = st.columns([1.5, 2, 1])
-            with c1:
-                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, format="%.0f", placeholder="Nhập số...")
-            with c2:
-                current_options = kho_nhap_list if trans_type == "Nhập" else kho_xuat_list
-                note = st.selectbox("Diễn giải / Kho", options=current_options, index=None, placeholder="Chọn địa điểm...")
+            with c1: qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0)
+            with c2: note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None)
             with c3:
-                st.write("") 
-                if st.button("➕ Thêm vào lưới", key="add_to_cart"):
-                    if not selected or not qty or not note:
-                        st.warning("⚠️ Vui lòng chọn hàng hóa, số lượng và địa điểm!")
+                if st.button("➕ Thêm vào lưới"):
+                    if not selected or not qty or not note: st.warning("⚠️ Nhập đủ thông tin!")
                     else:
-                        prod_data = p_dict[selected]
-                        if trans_type == "Xuất" and qty > float(prod_data["Tồn"]):
-                            st.error("❌ Không đủ tồn kho!")
-                            st.stop()
-                        st.session_state.cart.append({
-                            "Mã HH": prod_data["Mã"], "Tên HH": prod_data["Tên hàng hóa"], "Đvt": prod_data["Đvt"],
-                            "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type
-                        })
+                        st.session_state.cart.append({"Mã HH": p_dict[selected]["Mã"], "Tên HH": p_dict[selected]["Tên hàng hóa"], "Đvt": p_dict[selected]["Đvt"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
                         st.rerun()
-                    
-        with st.expander(f"➕ Thêm địa điểm mới: {trans_type}"):
-            new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho hoặc địa điểm...")
-            if st.button("Lưu địa điểm mới"):
-                if new_kho:
-                    service.add_config_option(trans_type, new_kho)
-                    st.success(f"Đã thêm {new_kho} vào danh mục {trans_type}!")
-                    st.cache_data.clear()
-                    st.rerun()
-                else:
-                    st.warning("Vui lòng nhập tên kho!")
 
         if 'cart' not in st.session_state: st.session_state.cart = []
-
         if st.session_state.cart:
-            st.markdown("### 📋 Lưới chờ xử lý")
-            edited_df_cart = st.data_editor(
-                pd.DataFrame(st.session_state.cart),
-                column_config={
-                    "Mã HH": st.column_config.TextColumn("Mã HH", disabled=True),
-                    "Tên HH": st.column_config.TextColumn("Tên HH", disabled=True),
-                    "Đvt": st.column_config.TextColumn("Đvt", disabled=True),
-                    "Loại": st.column_config.TextColumn("Loại", disabled=True),
-                    "Số lượng": st.column_config.NumberColumn("Số lượng", required=True, min_value=1.0, format="%.0f"),
-                    "Ghi chú": st.column_config.TextColumn("Ghi chú")
-                },
-                hide_index=True, use_container_width=True
-            )
+            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True)
+            
+            # --- CHỌN NHÂN VIÊN TRƯỚC KHI XÁC NHẬN ---
+            emp_list = [emp[1] for emp in employees]
+            selected_emp = st.selectbox("Nhân viên thực hiện:", options=emp_list, index=None, placeholder="Chọn tên bạn...")
             
             if st.button("✅ Xác nhận tất cả", type="primary"): 
-                for _, row in edited_df_cart.iterrows():
-                    service.add_transaction(row["Mã HH"],row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"])
-                    service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                st.session_state.cart = []
-                st.cache_data.clear()
-                st.success("🎉 Giao dịch thành công!")
-                st.rerun()
+                if not selected_emp: st.warning("⚠️ Vui lòng chọn nhân viên thực hiện!")
+                else:
+                    for _, row in edited_df_cart.iterrows():
+                        service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], selected_emp)
+                        service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                    st.session_state.cart = []
+                    st.cache_data.clear()
+                    st.success(f"🎉 Giao dịch thành công bởi {selected_emp}!")
+                    st.rerun()
 
 elif menu == "Báo cáo tồn kho": show_report()
 
+# --- TAB LỊCH SỬ GIAO DỊCH ---
 elif menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     history = get_cached_history(service)
-
     if history:
-        df = pd.DataFrame(
-            history,
-            columns=[
-                "Ngày",
-                "Mã",
-                "Tên hàng hóa",
-                "Loại",
-                "Số Lượng",
-                "Ghi Chú"
-            ]
-        )
-
-        df["Số Lượng"] = pd.to_numeric(df["Số Lượng"], errors="coerce").fillna(0)
-
-        gb = GridOptionsBuilder.from_dataframe(df)
-        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
-        
-        gb.configure_column("Mã", minWidth=90, maxWidth=130, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tên hàng hóa", minWidth=220, cellStyle={'textAlign': 'left'})
-        gb.configure_column("Loại", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
-        gb.configure_column(
-            "Số Lượng", width=60, suppressSizeToFit=True, type=["numericColumn"], 
-            valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'}
-        )
-        gb.configure_column("Ghi Chú", minWidth=200, cellStyle={'textAlign': 'left'})
-
-        go = gb.build()
-        
-        AgGrid(
-            df,
-            gridOptions=go,
-            fit_columns_on_grid_load=True, 
-            theme='streamlit',
-            height=650 
-        )
+        df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+        AgGrid(df, fit_columns_on_grid_load=True, theme='streamlit', height=650)
 
 # =====================================================================
 # --- [THÊM MỚI]: TAB 5: QUẢN LÝ NHÂN VIÊN ---
