@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import io
+from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
@@ -16,14 +18,35 @@ def get_cached_employees(_svc): return _svc.get_employees()
 
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS TỐI ƯU GIAO DIỆN ---
+# --- CSS TỐI ƯU GIAO DIỆN KHÓA CỨNG TRÊN MOBILE ---
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem !important; padding-bottom: 0rem !important; }
+    .block-container { padding-top: 1rem !important; padding-bottom: 1rem !important; }
     div.stButton > button[kind="primary"] { background-color: #28a745 !important; color: white !important; }
-    div.stTextInput, div.stSelectbox, div.stNumberInput { margin-bottom: -15px !important; }
-    [data-testid="column"] { padding-right: 5px !important; }
-    [data-testid="column"]:has(button) { padding-left: 0px !important; display: flex; align-items: flex-end; }
+    h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
+    h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
+    div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
+    
+    /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
+    div[data-testid="stRadio"] { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        align-items: center !important; 
+        flex-wrap: nowrap !important; /* Cấm bẻ dòng */
+    }
+    div[data-testid="stRadio"] > label { 
+        margin-bottom: 0px !important; 
+        padding-bottom: 0px !important; 
+        font-weight: bold !important; 
+        font-size: 16px !important; 
+        white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
+        margin-right: 15px !important;
+    }
+    div[data-testid="stRadio"] > div { 
+        display: flex !important; 
+        flex-direction: row !important; 
+        flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -33,69 +56,68 @@ def get_data_service(): return DataService(mode="ONLINE")
 service = get_data_service()
 st.title("📦 Quản lý kho")
 
-# --- ĐĂNG NHẬP & TRẠNG THÁI ---
+# --- QUẢN LÝ TRẠNG THÁI ĐĂNG NHẬP & MENU (CHỐNG MẤT KHI BẤM F5) ---
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.current_menu = "Danh mục hàng"
+    if st.query_params.get("logged_in") == "true":
+        st.session_state.logged_in = True
+        st.session_state.user_name = st.query_params.get("user_name")
+        st.session_state.user_role = st.query_params.get("user_role")
+        st.session_state.current_menu = st.query_params.get("current_menu", "Danh mục hàng")
+    else:
+        st.session_state.logged_in = False
+        st.session_state.user_name = None
+        st.session_state.current_menu = "Danh mục hàng"
 
 if not st.session_state.logged_in:
     with st.container(border=True):
         st.subheader("🔒 Đăng nhập hệ thống")
-        user = st.text_input("Mã nhân viên:")
+        user = st.text_input("Mã nhân viên (Username):")
         pwd = st.text_input("Mật khẩu:", type="password") 
-        if st.button("Đăng nhập", type="primary"):
+        if st.button("Đăng nhập", type="primary", key="login_btn"):
             user_data = service.check_login(user, pwd)
             if user_data["status"]:
-                st.session_state.update({"logged_in": True, "user_name": user_data["name"], "user_role": user_data["role"]})
+                st.session_state.logged_in = True
+                st.session_state.user_name = user_data["name"]
+                st.session_state.user_role = user_data["role"]
+                
+                st.query_params["logged_in"] = "true"
+                st.query_params["user_name"] = user_data["name"]
+                st.query_params["user_role"] = user_data["role"]
+                st.query_params["current_menu"] = st.session_state.current_menu
                 st.rerun() 
-            else: st.error("❌ Mã NV hoặc mật khẩu không đúng!")
+            else: 
+                st.error("❌ Mã NV hoặc mật khẩu không đúng!")
     st.stop() 
 
-st.sidebar.write(f"👤 User: **{st.session_state.user_name}**")
-st.sidebar.write(f"💼 Quyền: **{st.session_state.user_role}**") 
-if st.sidebar.button("Đăng xuất"): st.session_state.logged_in = False; st.rerun()
+# --- THANH SIDEBAR ẨN (CHỈ CHỨA THÔNG TIN USER & ĐĂNG XUẤT) ---
+st.sidebar.write(f"👤 Người dùng: **{st.session_state.user_name}**")
+st.sidebar.write(f"💼 Chức vụ: **{st.session_state.user_role}**") 
+st.sidebar.markdown("---")
 
+if st.sidebar.button("Đăng xuất", key="logout_btn"):
+    st.session_state.logged_in = False
+    st.query_params.clear() 
+    st.rerun()
+
+# --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
 menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"]
-if st.session_state.get("user_role") == "Quản lý": menu_options.append("Quản lý nhân viên")
-menu = st.selectbox("Chức năng", options=menu_options, index=menu_options.index(st.session_state.current_menu), label_visibility="collapsed")
-st.session_state.current_menu = menu
+if st.session_state.get("user_role") == "Quản lý":
+    menu_options.append("Quản lý nhân viên")
 
-# --- TAB NHẬP/XUẤT KHO (ĐÃ TỐI ƯU GIAO DIỆN) ---
-if st.session_state.current_menu == "Nhập/Xuất Kho":
-    st.subheader("🔄 Nhập/Xuất kho")
-    trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True)
-    kho_nhap, kho_xuat = get_cached_config(service)
-    products = get_cached_products(service)
-    
-    if products:
-        p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
-        selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None)
-        
-        # CHIA CỘT GỌN GÀNG
-        col1, col2, col3 = st.columns([1, 2, 0.6])
-        with col1: qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0)
-        with col2: note = st.selectbox("Diễn giải / Kho", options=(kho_nhap if trans_type == "Nhập" else kho_xuat), index=None)
-        with col3:
-            st.write("###") # Căn chỉnh label
-            if st.button("➕ Thêm"):
-                if not selected or not qty or not note: st.warning("⚠️ Nhập đủ!")
-                else:
-                    if 'cart' not in st.session_state: st.session_state.cart = []
-                    st.session_state.cart.append({"Mã HH": p_dict[selected]["Mã"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
-                    st.rerun()
-        
-        # HIỂN THỊ TỒN KHO GẦN ĐIỄN GIẢI
-        if selected:
-            st.info(f"📦 Tồn hiện tại: **{float(p_dict[selected]['Tồn']):,.0f} {p_dict[selected]['Đvt']}**")
+if st.session_state.current_menu not in menu_options:
+    st.session_state.current_menu = menu_options[0]
 
-        if 'cart' in st.session_state and st.session_state.cart:
-            st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True)
-            if st.button("✅ Xác nhận tất cả", type="primary"):
-                for row in st.session_state.cart:
-                    service.add_transaction(row["Mã HH"], row["Ghi chú"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
-                    service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                st.session_state.cart = []
-                st.cache_data.clear(); st.success("Thành công!"); st.rerun()
+menu = st.selectbox(
+    "Chức năng", 
+    options=menu_options, 
+    index=menu_options.index(st.session_state.current_menu),
+    label_visibility="collapsed"
+)
+
+if menu != st.session_state.current_menu:
+    st.session_state.current_menu = menu
+    st.query_params["current_menu"] = menu 
+    st.rerun()
 
 # --- TAB 1: DANH MỤC HÀNG ---
 if st.session_state.current_menu == "Danh mục hàng":
@@ -144,26 +166,23 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         p_dict = {f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
-        # CHIA LẠI 4 CỘT TRỰC TIẾP: ÉP CHÚNG NẰM CẠNH NHAU
-        col_qty, col_note, col_stock, col_btn = st.columns([1.2, 1.2, 1.2, 0.5])
-        with col_qty: 
-            qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
-            
-        with col_note: 
+        c1, c2, c3 = st.columns([2, 2, 1])
+        with c1: 
+            sub_qty, sub_stock = st.columns([1, 1])
+            with sub_qty:
+                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
+            with sub_stock:
+                if selected:
+                    current_stock = float(p_dict[selected]['Tồn'])
+                    unit = p_dict[selected]['Đvt']
+                    st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+        with c2: 
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
-            
-        with col_stock:
-            if selected:
-                current_stock = float(p_dict[selected]['Tồn'])
-                unit = p_dict[selected]['Đvt']
-                st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-                
-        with col_btn:
+        with c3:
             st.write("")
             st.write("")
             if st.button("➕ Thêm vào lưới", key="add_to_cart_btn"):
-                if not selected or not qty or not note: 
-                    st.warning("⚠️ Nhập đủ thông tin!")
+                if not selected or not qty or not note: st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
                     st.session_state.cart.append({"Mã HH": p_dict[selected]["Mã"], "Tên HH": p_dict[selected]["Tên"], "Đvt": p_dict[selected]["Đvt"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
@@ -269,3 +288,4 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                 if st.button("Xác nhận xóa nhân viên", key="delete_emp_btn"):
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
+
