@@ -4,7 +4,7 @@ import io
 from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
-from datetime import date  # Thêm thư viện này để cấu hình ngày mặc định
+from datetime import date  
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 def export_to_excel(df):
@@ -25,8 +25,12 @@ def show_report():
     
     DEFAULT_START_DATE = date(2026, 1, 1)
     
-    # --- [CẢI TIẾN]: CHIA 3 CỘT ĐỂ ĐƯA NGÀY VÀ NÚT LỌC LÊN CÙNG 1 DÒNG ---
-    # Tỉ lệ [3, 3, 2] giúp 2 ô ngày rộng bằng nhau, cột chứa nút bấm nhỏ hơn một chút ở cuối
+    # Khởi tạo trạng thái nút bấm lọc trong session_state nếu chưa có
+    if "clicked_report_filter" not in st.session_state:
+        st.session_state.clicked_report_filter = False
+
+    # --- ÉP BUỘC CỐ ĐỊNH 3 THÀNH PHẦN TRÊN 1 DÒNG DUY NHẤT ---
+    # Chia dòng thành 3 cột với tỉ lệ kích thước tương ứng là 3 : 3 : 2
     col1, col2, col3 = st.columns([3, 3, 2])
     
     with col1:
@@ -36,20 +40,21 @@ def show_report():
         end_date = st.date_input("Đến ngày")
         
     with col3:
-        # Tinh chỉnh khoảng cách CSS để đẩy nút bấm tụt xuống bằng khít với hàng của ô chọn ngày
+        # Căn chỉnh CSS tinh tế để đẩy nút bấm xuống ngang hàng khít với 2 ô ngày
         st.markdown("""
             <style>
-            div[data-testid="stVerticalBlock"] > div:has(button[kind="primary"]) {
+            div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stVerticalBlock"] {
                 padding-top: 1.55rem !important;
             }
             </style>
         """, unsafe_allow_html=True)
         
-        # Đặt nút bấm vào cột số 3
-        click_filter = st.button("Lọc báo cáo", type="primary", use_container_width=True)
-    
-    # --- THỰC HIỆN LOGIC LỌC KHI NGƯỜI DÙNG BẤM NÚT ---
-    if click_filter:
+        # Tạo nút bấm Lọc báo cáo tràn đầy cột 3
+        if st.button("Lọc báo cáo", type="primary", use_container_width=True):
+            st.session_state.clicked_report_filter = True
+
+    # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
+    if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
             all_history = t_controller.get_transaction_history()
@@ -66,7 +71,7 @@ def show_report():
             for row in all_history:
                 row_copy = list(row)
                 while len(row_copy) < 7: 
-                    row_copy.append("") # Thêm ô rỗng cho các giao dịch cũ không có Số phiếu
+                    row_copy.append("") 
                 processed_history.append(row_copy)
 
             # Truyền processed_history vào DataFrame thay vì all_history
@@ -111,15 +116,14 @@ def show_report():
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            # --- CẤU HÌNH AGGRID VỚI BỘ LỌC 3 DẤU GẠCH NGANG ---
+            # --- CẤU HÌNH AGGRID VỚI BỘ LỌC CHUYÊN NGHIỆP ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
             
             gb.configure_column("Mã HH", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
-            gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
+            gb.configure_column("Tên hàng hóa", minWidth=200, cellStyle={'textAlign': 'left'})
             gb.configure_column("Đvt", minWidth=80, maxWidth=100, cellStyle={'textAlign': 'center'})
 
-            # Định dạng các cột số và thêm bộ lọc dạng số
             for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
                 gb.configure_column(
                     col_name,
@@ -132,6 +136,7 @@ def show_report():
             
             go = gb.build()
             
+            # Hiển thị bảng kết quả tính toán bên dưới thanh chọn ngày
             AgGrid(
                 df_report,
                 gridOptions=go,
@@ -140,6 +145,7 @@ def show_report():
                 height=650
             )
             
+            st.markdown("<br>", unsafe_allow_html=True)
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
                 data=export_to_excel(df_report),
