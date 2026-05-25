@@ -40,7 +40,7 @@ def show_report():
                 st.info("Chưa có giao dịch.")
                 return
 
-            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "product_name", "type", "qty", "note"])
+            df_h = pd.DataFrame(all_history, columns=["date", "product_id", "product_name", "type", "qty", "note", "voucher"])
             
             if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
                 df_h = df_h.iloc[1:].copy()

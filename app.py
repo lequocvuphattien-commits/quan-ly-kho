@@ -21,26 +21,39 @@ def get_cached_config(_svc):
     return _svc.get_config_options()
 
 # Cấu hình trang (Luôn để đầu tiên)
-st.set_page_config(page_title="Quản Lý Kho", layout="wide")
+st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
 # CSS tinh chỉnh màu sắc nút bấm và giao diện
 st.markdown("""
     <style>
     /* 1. KÉO NỘI DUNG LÊN SÁT CẠNH TRÊN MÀN HÌNH */
     .block-container {
-        padding-top: 1.5rem !important; /* Mặc định là khoảng 4-6rem, giảm xuống 1.5rem */
+        padding-top: 1rem !important;
         padding-bottom: 1rem !important;
     }
-     /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
+    
+    /* Làm nổi bật nút Xác nhận tất cả (Xanh lá) */
     div.stButton > button[kind="primary"] {
         background-color: #28a745 !important;
-        color: white !important;}    
-
-    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ TIÊU ĐỀ PHỤ LẠI VỚI NHAU */
+        color: white !important;
+    }    
+    
+    /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ MENU LẠI VỚI NHAU */
     h1 {
         padding-bottom: 0rem !important;
-        margin-bottom: 0rem !important; /* Cắt giảm khoảng trống dưới chữ Quản lý kho */
+        margin-bottom: 0rem !important; 
     }   
+    
+    /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
+    h3 {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
+    }
+    
+    /* Ép khoảng trống dưới menu nhỏ lại */
+    div[data-testid="stSelectbox"] {
+        margin-bottom: -1rem !important; 
+    }  
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,8 +62,12 @@ service = DataService(mode="ONLINE")
 
 st.title("📦 Quản lý kho")
 
-menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"])
-
+# Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi
+menu = st.selectbox(
+    "Chức năng", 
+    ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"],
+    label_visibility="collapsed" # Ẩn chữ "Chức năng" để tiết kiệm tối đa diện tích màn hình điện thoại
+)
 # --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
@@ -60,8 +77,8 @@ if menu == "Danh mục hàng":
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
-        # --- [THAY ĐỔI]: SỬ DỤNG DATA_EDITOR ĐỂ SỬA TRỰC TIẾP TRÊN BẢNG ---
-        st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa, sau đó bấm nút Lưu.*")
+        # --- SỬ DỤNG DATA_EDITOR ĐỂ SỬA TRỰC TIẾP TRÊN BẢNG ---
+        st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa.*")
         edited_df = st.data_editor(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
             column_config={
@@ -71,20 +88,25 @@ if menu == "Danh mục hàng":
             hide_index=True, use_container_width=True
         )
 
-        # Xử lý khi bấm Lưu thay đổi
-        if st.button("💾 Lưu thay đổi", type="primary"):
-            has_changes = False
-            for i in range(len(edited_df)):
-                if edited_df.iloc[i]["Tên"] != df.iloc[i]["Tên"] or edited_df.iloc[i]["Đvt"] != df.iloc[i]["Đvt"]:
+        # --- [THAY ĐỔI]: KIỂM TRA SỰ KHÁC BIỆT ĐỂ ẨN/HIỆN NÚT LƯU ---
+        has_changes = False
+        changes_to_save = [] # Lưu lại vị trí các dòng bị sửa để update cho nhanh
+        
+        for i in range(len(edited_df)):
+            if edited_df.iloc[i]["Tên"] != df.iloc[i]["Tên"] or edited_df.iloc[i]["Đvt"] != df.iloc[i]["Đvt"]:
+                has_changes = True
+                changes_to_save.append(i)
+
+        # CHỈ hiển thị nút Lưu nếu có sự thay đổi
+        if has_changes:
+            st.info("⚠️ Có thay đổi chưa được lưu!")
+            if st.button("💾 Lưu thay đổi", type="primary"):
+                for i in changes_to_save:
                     service.update_product(edited_df.iloc[i]["Mã"], edited_df.iloc[i]["Tên"], edited_df.iloc[i]["Đvt"])
-                    has_changes = True
-            
-            if has_changes:
+                
                 st.cache_data.clear()
                 st.success("🎉 Đã cập nhật thông tin thành công!")
                 st.rerun()
-            else:
-                st.info("Không có thay đổi nào để lưu.")
 
         # Xuất file Excel
         buffer = io.BytesIO()
@@ -107,7 +129,7 @@ if menu == "Danh mục hàng":
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     
-    # --- [THAY ĐỔI]: GIAO DIỆN THÊM VÀ XÓA HÀNG HÓA NẰM CẠNH NHAU ---
+    # --- GIAO DIỆN THÊM VÀ XÓA HÀNG HÓA NẰM CẠNH NHAU ---
     c1, c2 = st.columns(2)
     with c1:
         with st.expander("➕ Thêm hàng hóa mới"):
