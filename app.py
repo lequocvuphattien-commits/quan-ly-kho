@@ -61,7 +61,7 @@ if menu == "Danh mục hàng":
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
 
         # --- [THAY ĐỔI]: SỬ DỤNG DATA_EDITOR ĐỂ SỬA TRỰC TIẾP TRÊN BẢNG ---
-        #st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa, sau đó bấm nút Lưu.*")
+        st.markdown("💡 *Mẹo: Bạn có thể click đúp vào cột **Tên** hoặc **Đvt** để sửa, sau đó bấm nút Lưu.*")
         edited_df = st.data_editor(
             df[["Mã", "Tên", "Đvt", "Tồn"]],
             column_config={
