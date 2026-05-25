@@ -40,7 +40,7 @@ st.markdown("""
     
     /* 2. KÉO GẦN TIÊU ĐỀ CHÍNH VÀ MENU LẠI VỚI NHAU */
     h1 {
-        padding-bottom: 0.5rem !important;
+        padding-bottom: 0rem !important;
         margin-bottom: 0rem !important; 
     }   
     
