@@ -299,7 +299,7 @@ elif menu == "Lịch sử giao dịch":
             columns=[
                 "Ngày",
                 "Mã",
-                "Tên Hàng Hóa",
+                "Tên hàng hóa",
                 "Loại",
                 "Số Lượng",
                 "Ghi Chú"
@@ -312,7 +312,7 @@ elif menu == "Lịch sử giao dịch":
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
         
         gb.configure_column("Mã", minWidth=90, maxWidth=130, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tên Hàng Hóa", minWidth=220, cellStyle={'textAlign': 'left'})
+        gb.configure_column("Tên hàng hóa", minWidth=220, cellStyle={'textAlign': 'left'})
         gb.configure_column("Loại", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
         gb.configure_column(
             "Số Lượng", width=60, suppressSizeToFit=True, type=["numericColumn"], 
