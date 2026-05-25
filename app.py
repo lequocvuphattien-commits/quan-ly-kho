@@ -149,7 +149,7 @@ elif menu == "Quản lý nhân viên":
     employees = get_cached_employees(service)
     
     if employees:
-        df_emp = pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "Số điện thoại", "Chức vụ"])
+        df_emp = pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "Số điện thoại", "Chức vụ", "Mật khẩu"])
         
         # Cấu hình AgGrid cho phép Sửa trực tiếp (Trừ Mã NV)
         gb = GridOptionsBuilder.from_dataframe(df_emp)
@@ -159,7 +159,7 @@ elif menu == "Quản lý nhân viên":
         gb.configure_column("Tên NV", minWidth=150, editable=True, cellStyle={'textAlign': 'left', 'backgroundColor': '#f0f8ff'}) 
         gb.configure_column("Số điện thoại", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         gb.configure_column("Chức vụ", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
-        
+        gb.configure_column("Mật khẩu", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         go = gb.build()
         
         grid_response = AgGrid(
