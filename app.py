@@ -184,7 +184,7 @@ elif menu == "Nhập/Xuất Kho":
                     
         # 3. Đưa phần Thêm kho vào đây (đã có trans_type)
         with st.expander(f"➕ Thêm địa điểm mới: {trans_type}"):
-            new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho ...")
+            new_kho = st.text_input("Tên địa điểm mới", placeholder="Ví dụ: Kho hoặc địa điểm...")
             if st.button("Lưu địa điểm mới"):
                 if new_kho:
                     service.add_config_option(trans_type, new_kho)
