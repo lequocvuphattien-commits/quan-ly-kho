@@ -43,7 +43,7 @@ def show_report():
         [data-testid="stHorizontalBlock"] > div {
             min-width: 0px !important; 
         }
-        /* Đẩy nút "Lọc báo cáo" thụt xuống ngang hàng với ô nhập ngày */
+        /* Đẩy nút "Báo cáo" thụt xuống ngang hàng với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
             padding-top: 1.75rem !important; 
         }
@@ -64,7 +64,7 @@ def show_report():
         end_date = st.date_input("Đến ngày")
         
     with col3:
-        if st.button("Lọc báo cáo", type="primary", use_container_width=True):
+        if st.button("Báo cáo", type="primary", use_container_width=True):
             st.session_state.clicked_report_filter = True
 
     # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
@@ -132,7 +132,7 @@ def show_report():
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
             
             gb.configure_column("Mã HH", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
-            gb.configure_column("Tên hàng hóa", minWidth=200, cellStyle={'textAlign': 'left'})
+            gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
             gb.configure_column("Đvt", minWidth=80, maxWidth=100, cellStyle={'textAlign': 'center'})
 
             for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
