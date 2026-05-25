@@ -168,7 +168,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
         # Sắp xếp 4 cột trên cùng 1 hàng: Số lượng - Tồn - Diễn giải - Nút Thêm
-        c1, c2, c3, c4 = st.columns([1, 1.2, 2, 0.6])
+        c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
         
         with c1: 
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
@@ -178,7 +178,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             if selected:
                 current_stock = float(p_dict[selected]['Tồn'])
                 unit = p_dict[selected]['Đvt']
-                st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='margin-top: 18px; font-weight: bold; color: #28a745;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
             else:
                 st.write("") # Giữ khoảng cách
                 
