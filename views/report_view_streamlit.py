@@ -45,7 +45,7 @@ def show_report():
         }
         /* Đẩy nút "Báo cáo" thụt xuống ngang hàng với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
-            padding-top: 1.75rem !important; 
+            padding-top: 0rem !important; 
         }
         /* Làm nhỏ chữ ở tiêu đề ô ngày một chút để tránh bị tràn trên màn hình nhỏ */
         [data-testid="stHorizontalBlock"] label {
