@@ -88,7 +88,7 @@ if menu == "Danh mục hàng":
             hide_index=True, use_container_width=True
         )
 
-        # --- [THAY ĐỔI]: KIỂM TRA SỰ KHÁC BIỆT ĐỂ ẨN/HIỆN NÚT LƯU ---
+        # --- KIỂM TRA SỰ KHÁC BIỆT ĐỂ ẨN/HIỆN NÚT LƯU ---
         has_changes = False
         changes_to_save = [] # Lưu lại vị trí các dòng bị sửa để update cho nhanh
         
@@ -145,12 +145,42 @@ if menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist())
+                # 1. TẠO TÙY CHỌN HIỂN THỊ ĐẦY ĐỦ THÔNG TIN: "Mã-Tên (Tồn Đvt)"
+                del_options = {
+                    f"{row['Mã']}-{row['Tên']} ({float(row['Tồn']):,.0f} {row['Đvt']})": row['Mã']
+                    for _, row in df.iterrows()
+                }
+                
+                selected_del_label = st.selectbox(
+                    "Chọn mã hàng cần xóa", 
+                    options=list(del_options.keys()), 
+                    index=None, 
+                    placeholder="Chọn hàng hóa cần xóa..."
+                )
+                
                 if st.button("Xác nhận xóa"):
-                    service.delete_product(del_code)
-                    st.cache_data.clear()
-                    st.success(f"Đã xóa {del_code}!")
-                    st.rerun()
+                    if selected_del_label:
+                        del_code = del_options[selected_del_label]
+                        
+                        # 2. KIỂM TRA ĐIỀU KIỆN RÀNG BUỘC LỊCH SỬ GIAO DỊCH
+                        history_data = get_cached_history(service)
+                        has_history = False
+                        
+                        if history_data:
+                            # Tạo DataFrame tạm thời từ lịch sử để đối chiếu mã hàng
+                            df_history = pd.DataFrame(history_data, columns=["Ngày", "Mã", "Tên Hàng Hóa", "Loại", "Số Lượng", "Ghi Chú"])
+                            # Kiểm tra xem mã hàng cần xóa đã từng xuất hiện trong cột "Mã" của Lịch sử chưa
+                            has_history = del_code.upper() in df_history["Mã"].astype(str).str.strip().str.upper().values
+                        
+                        if has_history:
+                            st.error(f"❌ Không thể xóa mã hàng '{del_code}' vì sản phẩm này đã có lịch sử Nhập/Xuất kho! Việc xóa sẽ làm sai lệch các phép tính toán tồn kho.")
+                        else:
+                            service.delete_product(del_code)
+                            st.cache_data.clear()
+                            st.success(f"🎉 Đã xóa thành công hàng hóa {del_code}!")
+                            st.rerun()
+                    else:
+                        st.warning("Vui lòng chọn một hàng hóa trong danh sách trước khi xóa!")
 
 # --- TAB 2: NHẬP/XUẤT ---
 elif menu == "Nhập/Xuất Kho":
@@ -243,13 +273,10 @@ elif menu == "Nhập/Xuất Kho":
 elif menu == "Báo cáo tồn kho": show_report() # Gọi hàm hiển thị báo cáo tồn kho
 
 elif menu == "Lịch sử giao dịch":
-
     st.header("Lịch sử giao dịch")
-
     history = get_cached_history(service)
 
     if history:
-
         # Tạo DataFrame
         df = pd.DataFrame(
             history,
@@ -328,12 +355,7 @@ elif menu == "Lịch sử giao dịch":
         AgGrid(
             df,
             gridOptions=go,
-            
-            # Tự động co giãn các cột để lấp đầy chiều rộng màn hình
             fit_columns_on_grid_load=True, 
-            
             theme='streamlit',
-            
-            # Tăng chiều cao khung hiển thị (mặc định là 400, tăng lên 650)
             height=650 
         )
