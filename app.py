@@ -47,9 +47,6 @@ st.markdown("""
 # Khởi tạo dịch vụ
 service = DataService(mode="ONLINE")
 
-#st.title("📦 Quản lý kho")
-
-#menu = st.sidebar.selectbox("Menu", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"])
 st.title("📦 Quản lý kho")
 
 # Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi
@@ -58,8 +55,6 @@ menu = st.selectbox(
     ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"],
     label_visibility="collapsed" # Ẩn chữ "Chức năng" để tiết kiệm tối đa diện tích màn hình điện thoại
 )
-st.markdown("---") # Kẻ một đường gạch ngang phân cách Menu và Nội dung bên dưới cho đẹp mắt
-
 # --- TAB 1: DANH MỤC HÀNG ---
 if menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
