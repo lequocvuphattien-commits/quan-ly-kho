@@ -36,15 +36,15 @@ service = get_data_service()
 st.title("📦 Quản lý kho")
 
 # --- ĐĂNG NHẬP ---
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if not st.session_state.logged_in:
-    with st.container(border=True):
-        st.subheader("🔒 Đăng nhập hệ thống")
-        pwd = st.text_input("Mật khẩu:", type="password") 
-        if st.button("Đăng nhập", type="primary"):
-            if pwd == "123": st.session_state.logged_in = True; st.rerun() 
-            else: st.error("❌ Mật khẩu không đúng!")
-    st.stop() 
+#if "logged_in" not in st.session_state: st.session_state.logged_in = False
+#if not st.session_state.logged_in:
+    #with st.container(border=True):
+        #st.subheader("🔒 Đăng nhập hệ thống")
+        #pwd = st.text_input("Mật khẩu:", type="password") 
+        #if st.button("Đăng nhập", type="primary"):
+            #if pwd == "123": st.session_state.logged_in = True; st.rerun() 
+            #else: st.error("❌ Mật khẩu không đúng!")
+    #st.stop() 
 
 menu = st.selectbox("Chức năng", ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"], label_visibility="collapsed")
 
