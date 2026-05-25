@@ -167,8 +167,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
         # CHIA LẠI 4 CỘT TRỰC TIẾP: ÉP CHÚNG NẰM CẠNH NHAU
-        col_qty, col_note, col_stock, col_btn = st.columns([1.2, 2.2, 1.2, 1.8])
-        
+        col_qty, col_note, col_stock, col_btn = st.columns([1.2, 1.2, 1.2, 1.2])
         with col_qty: 
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
             
