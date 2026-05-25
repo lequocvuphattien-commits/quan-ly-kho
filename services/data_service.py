@@ -40,7 +40,7 @@ class DataService:
         # Ép múi giờ về Việt Nam (UTC+7)
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
         # Đảm bảo thứ tự: Date, ID, Tên, Loại, Số lượng, Ghi chú
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), note], voucher_number)
+        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), note, voucher_number])
 
     def get_config_options(self):
         """Đọc danh sách Kho Nhập (Cột A) và Kho Xuất (Cột B) từ sheet Config"""
