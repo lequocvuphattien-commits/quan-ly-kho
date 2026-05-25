@@ -166,23 +166,27 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         p_dict = {f"{p[1]} - {p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
-        c1, c2, c3 = st.columns([2, 2, 1])
-        with c1: 
-            sub_qty, sub_stock = st.columns([1, 1])
-            with sub_qty:
-                qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
-            with sub_stock:
-                if selected:
-                    current_stock = float(p_dict[selected]['Tồn'])
-                    unit = p_dict[selected]['Đvt']
-                    st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-        with c2: 
+        # CHIA LẠI 4 CỘT TRỰC TIẾP: ÉP CHÚNG NẰM CẠNH NHAU
+        col_qty, col_note, col_stock, col_btn = st.columns([1.2, 2.2, 1.2, 1.5])
+        
+        with col_qty: 
+            qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
+            
+        with col_note: 
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
-        with c3:
+            
+        with col_stock:
+            if selected:
+                current_stock = float(p_dict[selected]['Tồn'])
+                unit = p_dict[selected]['Đvt']
+                st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                
+        with col_btn:
             st.write("")
             st.write("")
             if st.button("➕ Thêm vào lưới", key="add_to_cart_btn"):
-                if not selected or not qty or not note: st.warning("⚠️ Nhập đủ thông tin!")
+                if not selected or not qty or not note: 
+                    st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
                     st.session_state.cart.append({"Mã HH": p_dict[selected]["Mã"], "Tên HH": p_dict[selected]["Tên"], "Đvt": p_dict[selected]["Đvt"], "Số lượng": float(qty), "Ghi chú": note, "Loại": trans_type})
