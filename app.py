@@ -47,7 +47,7 @@ st.markdown("""
     /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
     h3 {
         padding-top: 0rem !important;
-        margin-top: -1rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
+        margin-top: 0rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
     }
     
     /* Ép khoảng trống dưới menu nhỏ lại */
