@@ -36,7 +36,7 @@ st.markdown("""
     }
     div[data-testid="stRadio"] > label { 
         margin-bottom: 0px !important; 
-        padding-bottom: 0px !important; 
+        padding-bottom: -5px !important; 
         font-weight: bold !important; 
         font-size: 16px !important; 
         white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
@@ -46,12 +46,6 @@ st.markdown("""
         display: flex !important; 
         flex-direction: row !important; 
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
-    }
-    /* Ép cột chứa nút bấm dính sát vào bên trái */
-    [data-testid="column"]:has(button) {
-        display: flex;
-        align-items: flex-end; /* Căn đáy để nút thẳng hàng với ô chọn */
-        padding-left: 0px !important;
     }
     </style>
 """, unsafe_allow_html=True)
