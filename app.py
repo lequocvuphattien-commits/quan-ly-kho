@@ -38,9 +38,9 @@ st.markdown("""
         margin-bottom: 0px !important; 
         padding-bottom: 0px !important; 
         font-weight: bold !important; 
-        font-size: 16px !important; 
+        font-size: 13px !important; 
         white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
-        margin-right: 15px !important;
+        margin-right: 12px !important;
     }
     div[data-testid="stRadio"] > div { 
         display: flex !important; 
