@@ -51,7 +51,7 @@ st.markdown("""
     [data-testid="column"]:has(button) {
         display: flex;
         align-items: flex-end; /* Căn đáy để nút thẳng hàng với ô chọn */
-        padding-left: 5px !important;
+        padding-left: 0px !important;
     }
     </style>
 """, unsafe_allow_html=True)
