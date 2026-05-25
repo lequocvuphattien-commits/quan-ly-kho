@@ -178,10 +178,10 @@ elif menu == "Lịch sử giao dịch":
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
         
         # Cấu hình chi tiết từng cột
-        gb.configure_column("Ngày", minWidth=150, maxWidth=200)
-        gb.configure_column("Mã", minWidth=90, maxWidth=130)
-        gb.configure_column("Tên hàng hóa", minWidth=200)
-        gb.configure_column("Loại", minWidth=90, maxWidth=120)
+        gb.configure_column("Ngày", minWidth=100, maxWidth=150)
+        gb.configure_column("Mã", minWidth=60, maxWidth=100)
+        gb.configure_column("Tên hàng hóa", minWidth=150)
+        gb.configure_column("Loại", minWidth=60, maxWidth=100)
         
         # Định dạng số 31,000 cho cột Số Lượng
         gb.configure_column(
