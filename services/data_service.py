@@ -1,7 +1,6 @@
 import sys
 import os
 import uuid
-import uuid
 import pandas as pd
 import datetime
 
@@ -16,6 +15,8 @@ class DataService:
         self.sheet_transactions = self.provider.get_sheet("Transactions")
         self.sheet_products = self.provider.get_sheet("Products")
         self.sheet_config = self.provider.get_sheet("Config")
+        # --- [THÊM MỚI] KẾT NỐI VỚI SHEET NHÂN VIÊN ---
+        self.sheet_employees = self.provider.get_sheet("NhanVien")
 
     def get_history(self):
         """Lấy lịch sử giao dịch với 6 cột mới: date, product_id, product_name, type, qty, note"""
@@ -160,6 +161,7 @@ class DataService:
                 self.sheet_products.update_cell(i + 1, 4, new_unit) # Cột Đvt (D)
                 return True
         return False
+        
     # Xóa sản phẩm dựa trên Mã hàng (cột Mã HH - index 1)
     def delete_product(self, product_id):
         """Xóa hàng hóa dựa trên ID"""
@@ -192,4 +194,47 @@ class DataService:
                 return True
                 
         return False # Trả về False nếu không tìm thấy mã hàng
-    
+
+    # =================================================================
+    # --- [THÊM MỚI] CÁC HÀM XỬ LÝ DÀNH RIÊNG CHO QUẢN LÝ NHÂN VIÊN ---
+    # =================================================================
+    def get_employees(self):
+        """Lấy danh sách nhân viên từ sheet NhanVien"""
+        data = self.sheet_employees.get_all_values()
+        if len(data) > 1:
+            # Lấy dữ liệu từ dòng 2 trở đi, ép về mảng để phòng hụt cột
+            cleaned_data = [row[:4] for row in data[1:]] 
+            cleaned_data = [row + [""] * (4 - len(row)) for row in cleaned_data]
+            return cleaned_data
+        return []
+
+    def check_employee_exists(self, emp_code):
+        """Kiểm tra mã nhân viên đã tồn tại chưa"""
+        employees = self.get_employees()
+        return any(str(emp[0]).strip().lower() == str(emp_code).strip().lower() for emp in employees if len(emp) > 0)
+
+    def add_employee(self, emp_code, name, phone, role):
+        """Thêm nhân viên mới"""
+        # Cấu trúc: [Mã NV, Tên NV, Số điện thoại, Chức vụ]
+        self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role)])
+        return True
+
+    def update_employee(self, emp_code, new_name, new_phone, new_role):
+        """Cập nhật thông tin nhân viên (Sửa trực tiếp trên lưới)"""
+        data = self.sheet_employees.get_all_values()
+        for i, row in enumerate(data):
+            if i > 0 and len(row) > 0 and str(row[0]).strip().upper() == str(emp_code).strip().upper():
+                self.sheet_employees.update_cell(i + 1, 2, new_name)  # Cột B: Tên NV
+                self.sheet_employees.update_cell(i + 1, 3, new_phone) # Cột C: SĐT
+                self.sheet_employees.update_cell(i + 1, 4, new_role)  # Cột D: Chức vụ
+                return True
+        return False
+
+    def delete_employee(self, emp_code):
+        """Xóa nhân viên"""
+        data = self.sheet_employees.get_all_values()
+        for i, row in enumerate(data):
+            if i > 0 and len(row) > 0 and str(row[0]).strip().upper() == str(emp_code).strip().upper():
+                self.sheet_employees.delete_rows(i + 1)
+                return True
+        return False

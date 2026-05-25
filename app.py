@@ -21,6 +21,11 @@ def get_cached_history(_svc):
 def get_cached_config(_svc):
     return _svc.get_config_options()
 
+# --- [THÊM MỚI]: BỘ NHỚ ĐỆM CHO NHÂN VIÊN ---
+@st.cache_data(ttl=600, show_spinner=False)
+def get_cached_employees(_svc):
+    return _svc.get_employees()
+
 # Cấu hình trang (Luôn để đầu tiên)
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
@@ -91,10 +96,10 @@ if not st.session_state.logged_in:
     st.stop() 
 # ==========================================
 
-# Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi
+# Đưa menu ra màn hình chính, bỏ chữ "sidebar." đi. [THÊM MỚI]: Tab Quản lý nhân viên
 menu = st.selectbox(
     "Chức năng", 
-    ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"],
+    ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "Quản lý nhân viên"],
     label_visibility="collapsed" 
 )
 
@@ -106,9 +111,6 @@ if menu == "Danh mục hàng":
     if products:
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-
-        # --- [THAY ĐỔI MỚI]: CHUYỂN SANG DÙNG AGGRID ĐỂ CÓ BỘ LỌC CHUYÊN NGHIỆP ---
-        #st.markdown("💡 *Mẹo: Bấm vào biểu tượng 3 gạch trên tiêu đề cột để **Lọc**. Click đúp vào ô có nền xanh (Tên, Đvt) để **Sửa**.*")
         
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1) # Bật bộ lọc cho toàn bộ các cột
@@ -329,3 +331,93 @@ elif menu == "Lịch sử giao dịch":
             theme='streamlit',
             height=650 
         )
+
+# =====================================================================
+# --- [THÊM MỚI]: TAB 5: QUẢN LÝ NHÂN VIÊN ---
+# =====================================================================
+elif menu == "Quản lý nhân viên":
+    st.subheader("👥 Quản lý nhân viên")
+    employees = get_cached_employees(service)
+    
+    if employees:
+        df_emp = pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "Số điện thoại", "Chức vụ"])
+        
+        # Cấu hình AgGrid cho phép Sửa trực tiếp (Trừ Mã NV)
+        gb = GridOptionsBuilder.from_dataframe(df_emp)
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
+        
+        gb.configure_column("Mã NV", minWidth=80, editable=False, cellStyle={'textAlign': 'center'})
+        gb.configure_column("Tên NV", minWidth=150, editable=True, cellStyle={'textAlign': 'left', 'backgroundColor': '#f0f8ff'}) 
+        gb.configure_column("Số điện thoại", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Chức vụ", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
+        
+        go = gb.build()
+        
+        grid_response = AgGrid(
+            df_emp,
+            gridOptions=go,
+            fit_columns_on_grid_load=True,
+            theme='streamlit',
+            update_mode=GridUpdateMode.MODEL_CHANGED,
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+            height=400
+        )
+
+        edited_df_emp = pd.DataFrame(grid_response['data'])
+
+        # --- XỬ LÝ LƯU THAY ĐỔI NHÂN VIÊN TỪ AGGRID ---
+        has_changes = False
+        changes_to_save = [] 
+        
+        if not edited_df_emp.empty:
+            for i in range(len(edited_df_emp)):
+                ma = edited_df_emp.iloc[i]["Mã NV"]
+                ten_moi = edited_df_emp.iloc[i]["Tên NV"]
+                sdt_moi = edited_df_emp.iloc[i]["Số điện thoại"]
+                cv_moi = edited_df_emp.iloc[i]["Chức vụ"]
+                
+                orig_row = df_emp[df_emp["Mã NV"] == ma].iloc[0]
+                
+                if ten_moi != orig_row["Tên NV"] or sdt_moi != orig_row["Số điện thoại"] or cv_moi != orig_row["Chức vụ"]:
+                    has_changes = True
+                    changes_to_save.append({"Mã NV": ma, "Tên NV": ten_moi, "Số điện thoại": sdt_moi, "Chức vụ": cv_moi})
+
+        if has_changes:
+            st.info("⚠️ Có thay đổi chưa được lưu!")
+            if st.button("💾 Lưu thay đổi", type="primary"):
+                for item in changes_to_save:
+                    service.update_employee(item["Mã NV"], item["Tên NV"], item["Số điện thoại"], item["Chức vụ"])
+                
+                st.cache_data.clear()
+                st.success("🎉 Đã cập nhật thông tin nhân viên thành công!")
+                st.rerun()
+
+    # --- GIAO DIỆN THÊM VÀ XÓA NHÂN VIÊN NẰM CẠNH NHAU ---
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.expander("➕ Thêm nhân viên mới"):
+            with st.form("add_emp_form", clear_on_submit=True):
+                emp_code = st.text_input("Mã nhân viên (VD: NV01)")
+                emp_name = st.text_input("Tên nhân viên")
+                emp_phone = st.text_input("Số điện thoại")
+                emp_role = st.selectbox("Chức vụ", ["Nhân viên kho", "Quản lý", "Kế toán", "Tài xế", "Khác"])
+                
+                if st.form_submit_button("Thêm nhân viên"):
+                    if not emp_code or not emp_name: 
+                        st.warning("Vui lòng nhập đủ Mã và Tên nhân viên!")
+                    elif service.check_employee_exists(emp_code.upper()): 
+                        st.error("Mã nhân viên này đã tồn tại!")
+                    else:
+                        service.add_employee(emp_code.upper(), emp_name, emp_phone, emp_role)
+                        st.cache_data.clear()
+                        st.success("Đã thêm nhân viên thành công!")
+                        st.rerun()
+    with c2:
+        with st.expander("🗑️ Xóa nhân viên"):
+            if employees:
+                del_emp_code = st.selectbox("Chọn mã NV cần xóa", options=df_emp["Mã NV"].tolist())
+                if st.button("Xác nhận xóa nhân viên"):
+                    service.delete_employee(del_emp_code)
+                    st.cache_data.clear()
+                    st.success(f"Đã xóa nhân viên {del_emp_code}!")
+                    st.rerun()
