@@ -115,7 +115,7 @@ if menu == "Danh mục hàng":
         
         # Cấu hình chi tiết từng cột
         gb.configure_column("Mã", minWidth=50, editable=False, cellStyle={'textAlign': 'left'})
-        gb.configure_column("Tên", minWidth=200, editable=True, cellStyle={'textAlign': 'left'}) 
+        gb.configure_column("Tên", minWidth=150, editable=True, cellStyle={'textAlign': 'left'}) 
         gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'textAlign': 'left'})
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')", cellStyle={'textAlign': 'right'})
         
