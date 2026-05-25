@@ -245,9 +245,10 @@ class DataService:
     def check_login(self, username, password):
         """Kiểm tra đăng nhập dựa trên sheet NhanVien"""
         employees = self.get_employees() # Lấy danh sách nhân viên từ sheet
-        # Giả sử: Cột 0 là Mã NV, Cột 4 là Mật khẩu (Cột E)
+        # Giả sử: Cột 0 là Mã NV (Username), Cột 4 là Mật khẩu (Cột E)
+        # Hãy đảm bảo Google Sheet NhanVien của bạn có cột E chứa mật khẩu
         for emp in employees:
-            if len(emp) >= 5: # Đảm bảo dòng có đủ dữ liệu
+            if len(emp) >= 5: # Đảm bảo dòng có đủ dữ liệu (Mã, Tên, SĐT, Chức vụ, Mật khẩu)
                 if str(emp[0]).strip().upper() == username.strip().upper() and str(emp[4]).strip() == password:
-                    return {"status": True, "name": emp[1]} # Trả về Tên nhân viên
+                    return {"status": True, "name": emp[1]} # Trả về Tên nhân viên nếu đúng
         return {"status": False, "name": None}
