@@ -46,7 +46,7 @@ st.markdown("""
     
     /* 3. KÉO NỘI DUNG (SUBHEADER) LÊN SÁT MENU */
     h3 {
-        padding-top: -1rem !important;
+        padding-top: 0rem !important;
         margin-top: 0rem !important; /* Lực hút kéo phần nội dung bên dưới trồi lên */
     }
     
