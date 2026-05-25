@@ -4,7 +4,7 @@ import io
 from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
-from datetime import date  # Thêm thư viện này để cấu hình ngày mặc định
+from datetime import date  
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
 
 def export_to_excel(df):
@@ -40,7 +40,7 @@ def show_report():
                 st.info("Chưa có giao dịch.")
                 return
 
-            # --- [THÊM MỚI] ĐỒNG BỘ DỮ LIỆU CŨ VÀ MỚI ĐỂ LUÔN ĐẠT 7 CỘT ---
+            # --- ĐỒNG BỘ DỮ LIỆU CŨ VÀ MỚI ĐỂ LUÔN ĐẠT 7 CỘT ---
             processed_history = []
             for row in all_history:
                 row_copy = list(row)
@@ -90,25 +90,26 @@ def show_report():
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            # --- CẤU HÌNH AGGRID ---
+            # --- CẤU HÌNH AGGRID VỚI BỘ LỌC 3 DẤU GẠCH NGANG ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
-            gb.configure_default_column(sortable=True, filter=True, floatingFilter=True, resizable=True)
             
-            # Cấu hình độ rộng chi tiết
-            gb.configure_column("Mã HH", width=80, suppressSizeToFit=True)
-            gb.configure_column("Tên hàng hóa", width=150, minWidth=150)
-            gb.configure_column("Đvt", width=80, suppressSizeToFit=True, cellStyle={'textAlign': 'center'})
+            # Bật filter=True để có biểu tượng 3 gạch, flex=1 để bảng tự động co giãn tràn màn hình cho đẹp
+            gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
+            
+            # Cấu hình độ rộng chi tiết và căn lề cho các cột chữ
+            gb.configure_column("Mã HH", minWidth=90, maxWidth=120, cellStyle={'textAlign': 'center'})
+            gb.configure_column("Tên hàng hóa", minWidth=200, cellStyle={'textAlign': 'left'})
+            gb.configure_column("Đvt", minWidth=80, maxWidth=100, cellStyle={'textAlign': 'center'})
 
-            # Định dạng các cột số
+            # Định dạng các cột số và thêm bộ lọc dạng số
             for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
                 gb.configure_column(
                     col_name,
-                    width=80, suppressSizeToFit=True,
+                    minWidth=90, maxWidth=130,
                     type=["numericColumn"],
-                    filter='agNumberColumnFilter',
-                    valueFormatter="Number(x).toLocaleString('en-US')",
-                    headerClass='ag-right-aligned-header',
-                    cellClass='ag-right-aligned-cell'
+                    filter='agNumberColumnFilter', # Cho phép lọc số (Lớn hơn, nhỏ hơn, bằng...)
+                    valueFormatter="Number(x).toLocaleString('en-US')", # Dấu phẩy ngăn cách hàng nghìn
+                    cellStyle={'textAlign': 'right'}
                 )
             
             go = gb.build()
