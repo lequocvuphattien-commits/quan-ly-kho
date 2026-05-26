@@ -195,7 +195,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             if selected:
                 current_stock = float(p_dict[selected]['Tồn'])
                 unit = p_dict[selected]['Đvt']
-                # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
 
                 st.markdown(f"<div style='margin-top: 0px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
 
@@ -204,7 +203,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 
         with c3: 
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
-            
+            st.markdown("<div style='margin-top: 0px; font-size: 12px; color: #6c757d;'>Chọn diễn giải hoặc kho liên quan</div>", unsafe_allow_html=True) 
         with c4:
             st.write("") # Căn chỉnh label
             st.write("") 
