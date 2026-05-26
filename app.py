@@ -26,6 +26,16 @@ st.markdown("""
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
     div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
+            
+    .stock-container {
+        display: flex !important;
+        justify-content: flex-end !important; /* Đẩy nội dung sang phải */
+        align-items: center !important;
+        margin-top: 0px !important;
+        font-weight: bold !important;
+        color: #28a745 !important;
+        white-space: nowrap !important;
+    }
     
     /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
     div[data-testid="stRadio"] { 
@@ -33,13 +43,12 @@ st.markdown("""
         flex-direction: row !important; 
         align-items: center !important; 
         flex-wrap: nowrap !important; /* Cấm bẻ dòng */
-        margin-bottom: -20px !important; /* KÉO Ô CHỌN HÀNG HÓA LÊN SÁT GẦN DÒNG NÀY */
     }
     div[data-testid="stRadio"] > label { 
         margin-bottom: 0px !important; 
         padding-bottom: 0px !important; 
         font-weight: bold !important; 
-        font-size: 16px !important; 
+        font-size: 6px !important; 
         white-space: nowrap !important; /* Cấm chữ bị rớt xuống dưới */
         margin-right: 15px !important;
     }
@@ -48,22 +57,32 @@ st.markdown("""
         flex-direction: row !important; 
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
     }
-    
+    /* Thêm đoạn này vào phần <style> ở đầu file */
     [data-testid="column"] {
         padding-left: 0px !important;
         padding-right: 0px !important;
     }
 
-    /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định và kéo sát hàng dưới lên */
+    /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định */
     div[data-testid="stHorizontalBlock"] {
         gap: 10px !important;
-        margin-bottom: -25px !important; /* Triệt tiêu khoảng trống phía dưới hàng ô nhập */
     }        
+    /* Bỏ khoảng trống thừa của AgGrid và các thành phần */
+    .ag-header-cell-menu-button { display: none !important; }
+    div[data-testid="stHorizontalBlock"] { gap: 5px !important; }
+    div.stButton { margin-top: 0px !important; }
     
-    /* ẨN TOÀN BỘ THANH CÔNG CỤ CỦA AGGRID VÀ ÉP LƯỚI LÊN TRÊN SÁT NÚT BẤM */
-    .ag-header-cell-menu-button, .ag-menu, .ag-header-icon, .ag-floating-filter { display: none !important; }
-    div[data-testid="stAgGrid"] { margin-top: -35px !important; } /* Kéo lưới chờ sát lên trên */
+    /* Ép cột Tồn và Diễn giải nằm ngang trên điện thoại */
+    .mobile-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; }
+            
+    /* Ẩn hoàn toàn menu AgGrid */
+    .ag-header-cell-menu-button { display: none !important; }
     
+    /* Ẩn thanh công cụ phía trên nếu có */
+    .ag-menu { display: none !important; }
+    
+    /* Thu hẹp khoảng cách lưới lên trên */
+    div[data-testid="stAgGrid"] { margin-top: -40px !important; }        
     </style>
 """, unsafe_allow_html=True)
 
@@ -183,16 +202,26 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
         selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
         
-        c1, p_space, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
+        # Chia 4 cột để gom nhóm: [Số lượng] [Tồn] [Diễn giải] [Nút Thêm]
+        # Điều chỉnh tỷ lệ các số trong [0.8, 1, 1.5, 0.5] để thu hẹp khoảng cách
+        c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
         
         with c1: 
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
             
-        with p_space:
+        with c2:
+            # Hiển thị Tồn ngay ngang hàng với Số lượng
             if selected:
                 current_stock = float(p_dict[selected]['Tồn'])
                 unit = p_dict[selected]['Đvt']
-                st.markdown(f"<div style='margin-top: -10px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
+
+                #st.markdown(f"<div style='margin-top: 0px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+                st.markdown(f"""
+                    <div class='stock-container'>
+                        Tồn: {current_stock:,.0f} {unit}
+                    </div>
+                """, unsafe_allow_html=True)
             else:
                 st.write("") 
                 
@@ -200,12 +229,11 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
             
         with c4:
-            st.write("") 
-            st.write("") 
-            
+            st.write("") # Căn chỉnh label
+
             if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
                 if not selected or not qty or not note: 
-                    st.warning("⚠️ Nhập đủ!")
+                    st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
                     st.session_state.cart.append({
@@ -218,34 +246,11 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     })
                     st.rerun()
 
-        # --- LƯỚI CHỜ ĐƯỢC TỐI ƯU KHÍT KHOẢNG TRỐNG ---
+        # Phần hiển thị giỏ hàng và nút xác nhận
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
-            
-            # 1. Cấu hình để ẩn menu và các công cụ mặc định
-            gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
-            
-            # Ép AgGrid không hiển thị menu cột và các nút điều khiển rườm rà
-            gb.configure_grid_options(
-                suppressMenuHide=True, 
-                suppressColumnMenu=True, 
-                enableCellTextSelection=True
-            )
-            grid_opts = gb.build()
-            
-            # 2. Hiển thị AgGrid tinh gọn sát lên phía trên
-            grid_response = AgGrid(
-                pd.DataFrame(st.session_state.cart), 
-                gridOptions=grid_opts, 
-                height=200, 
-                theme='streamlit',
-                allow_unsafe_jscode=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                key="cart_grid"
-            )
-            # Lấy data từ lưới chuyển sang DataFrame để lưu
-            edited_df_cart = pd.DataFrame(grid_response['data'])
-            
+            #st.divider()
+            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
             if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
                 for _, row in edited_df_cart.iterrows():
                     service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
@@ -265,7 +270,7 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     history = get_cached_history(service)
     if history:
         if len(history[0]) == 5:
-            df = pd.DataFrame(history, columns=["Danny", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
+            df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
         elif len(history[0]) == 7:
             df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
         else:
