@@ -254,18 +254,28 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.rerun()
 
         # Phần hiển thị giỏ hàng và nút xác nhận
-        if 'cart' not in st.session_state: st.session_state.cart = []
-        if st.session_state.cart:
-            #st.divider()
-            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
-            if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
-                for _, row in edited_df_cart.iterrows():
-                    service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
-                    service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                st.session_state.cart = []
-                st.cache_data.clear()
-                st.success(f"🎉 Giao dịch thành công!")
-                st.rerun()
+            if 'cart' not in st.session_state: st.session_state.cart = []
+            if st.session_state.cart:
+                # Lưới của bạn giữ nguyên
+                edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
+                
+                # --- THÊM 2 NÚT BẤM CÙNG DÒNG Ở ĐÂY ---
+                col_xac_nhan, col_huy = st.columns(2)
+                
+                with col_xac_nhan:
+                    if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
+                        for _, row in edited_df_cart.iterrows():
+                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                            service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                        st.session_state.cart = []
+                        st.cache_data.clear()
+                        st.success(f"🎉 Giao dịch thành công!")
+                        st.rerun()
+                
+                with col_huy:
+                    if st.button("❌ Hủy hàng chờ", use_container_width=True, key="clear_cart_btn"):
+                        st.session_state.cart = []
+                        st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho": 
