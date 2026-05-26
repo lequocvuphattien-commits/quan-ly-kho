@@ -46,7 +46,17 @@ st.markdown("""
         display: flex !important; 
         flex-direction: row !important; 
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
-    }
+}
+    div[data-testid="stNumberInput"] input {
+    font-size: 22px !important;
+    font-weight: bold !important;}
+
+    div.stButton > button {
+        height: 42px !important;
+        padding: 0px !important;}
+
+    div[data-testid="stDataEditor"] {
+        margin-top: -10px !important;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -177,8 +187,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     display:flex;
                     justify-content:space-between;
                     align-items:center;
-                    margin-top:5px;
-                    margin-bottom:2px;
                 ">
 
                     <div style="
