@@ -38,7 +38,6 @@ def confirm_delete_history_dialog(selected_rows, service):
     st.warning(f"⚠️ Bạn có chắc muốn xóa **{len(selected_rows)}** giao dịch đã chọn không?")
     st.info("Hành động này sẽ tự động HOÀN TÁC (cộng/trừ ngược) số lượng tồn kho tương ứng.")
     
-    # Tạo một container trống để hiển thị thông báo lỗi tràn viền (nếu có)
     msg_container = st.container()
     
     col_yes, col_no = st.columns(2)
@@ -46,53 +45,55 @@ def confirm_delete_history_dialog(selected_rows, service):
         if st.button("✅ Xác nhận xóa"):
             
             # ==========================================
-            # BƯỚC 1: KIỂM TRA RÀNG BUỘC TỒN KHO ÂM
+            # BƯỚC 1: KIỂM TRA RÀNG BUỘC (SIÊU CHUẨN XÁC)
             # ==========================================
-            products = get_cached_products(service)
-            # Tạo từ điển {Mã HH: Tồn kho hiện tại}
-            stock_dict = {p[1]: float(p[4]) for p in products} if products else {}
+            # Lấy dữ liệu trực tiếp từ DB, BỎ QUA CACHE để có tồn kho mới nhất
+            products = service.get_products()
             
-            # Tính tổng số lượng thay đổi cho từng mã hàng định xóa
+            # Ép kiểu chuỗi và loại bỏ khoảng trắng ở 2 đầu để so sánh khớp 100%
+            stock_dict = {str(p[1]).strip(): float(p[4]) for p in products} if products else {}
+            
             stock_changes = {}
             for index, row in selected_rows.iterrows():
-                p_code = row["Mã HH"]
-                qty = float(row["Số Lượng"]) if "Số Lượng" in row else float(row.get("qty", 0))
-                t_type = row["Loại"]
+                # Tự động nhận diện tên cột là "Mã HH" hay "Mã"
+                p_code = str(row.get("Mã HH", row.get("Mã", ""))).strip()
+                qty = float(row.get("Số Lượng", row.get("qty", 0)))
                 
-                # Nếu xóa phiếu "Nhập" -> tồn kho sẽ bị trừ đi.
-                # Nếu xóa phiếu "Xuất" -> tồn kho sẽ được cộng lại.
-                change = -qty if t_type == "Nhập" else qty
+                # Ép về chữ thường và xóa khoảng trắng (Ví dụ: " Nhập " -> "nhập")
+                t_type = str(row.get("Loại", "")).strip().lower()
+                
+                # Lọc chính xác: Nếu xóa phiếu Nhập -> trừ tồn. Xóa phiếu Xuất -> cộng tồn
+                change = -qty if t_type == "nhập" else qty
                 stock_changes[p_code] = stock_changes.get(p_code, 0) + change
             
-            # Kiểm tra xem có mã nào rơi vào tình trạng âm không
             invalid_products = []
             for p_code, change in stock_changes.items():
                 current_stock = stock_dict.get(p_code, 0)
+                # Kiểm tra nghiêm ngặt
                 if current_stock + change < 0:
-                    invalid_products.append(f"• **{p_code}** (Tồn hiện tại: {current_stock:,.0f} -> Sẽ bị âm: {current_stock + change:,.0f})")
+                    invalid_products.append(f"• **{p_code}** (Tồn hiện tại: {current_stock:,.0f} ➔ Sau khi xóa sẽ thành: {current_stock + change:,.0f})")
             
             # ==========================================
             # BƯỚC 2: PHÂN NHÁNH XỬ LÝ
             # ==========================================
             if invalid_products:
-                # NẾU LỖI: Bắn thông báo lên msg_container và NGỪNG XÓA
                 with msg_container:
-                    st.error("🚫 **TỪ CHỐI XÓA: Dẫn đến tồn kho bị ÂM!**")
+                    st.error("🚫 **TỪ CHỐI XÓA: Giao dịch này sẽ làm tồn kho bị ÂM!**")
                     for msg in invalid_products:
                         st.write(msg)
             else:
-                # NẾU AN TOÀN: Thực hiện xóa như bình thường
                 for index, row in selected_rows.iterrows():
-                    p_code = row["Mã HH"]
-                    qty = float(row["Số Lượng"]) if "Số Lượng" in row else float(row.get("qty", 0))
-                    t_type = row["Loại"]
+                    p_code = str(row.get("Mã HH", row.get("Mã", ""))).strip()
+                    qty = float(row.get("Số Lượng", row.get("qty", 0)))
+                    # Giữ nguyên giá trị Loại gốc để truyền vào sheet
+                    t_type_original = row.get("Loại", "")
                     
-                    service.delete_transaction(index, p_code, qty, t_type)
+                    service.delete_transaction(index, p_code, qty, t_type_original)
                     
                 st.cache_data.clear()
                 st.success("🎉 Đã xóa và hoàn tác tồn kho thành công!")
                 st.rerun()
-            
+                
     with col_no:
         if st.button("❌ Hủy bỏ"):
             st.rerun()
