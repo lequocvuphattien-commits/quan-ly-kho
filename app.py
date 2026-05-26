@@ -66,13 +66,6 @@ def get_data_service(): return DataService(mode="ONLINE")
 service = get_data_service()
 st.title("📦 Quản lý kho")
 
-st.markdown(
-    """
-    <h1 style='color:red'>TEST OK</h1>
-    """,
-    unsafe_allow_html=True
-)
-
 # --- QUẢN LÝ TRẠNG THÁI ĐĂNG NHẬP & MENU (CHỐNG MẤT KHI BẤM F5) ---
 if "logged_in" not in st.session_state:
     if st.query_params.get("logged_in") == "true":
@@ -194,8 +187,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     display:flex;
                     justify-content:space-between;
                     align-items:center;
-                    margin-top:5px;
-                    margin-bottom:2px;
                 ">
 
                     <div style="
