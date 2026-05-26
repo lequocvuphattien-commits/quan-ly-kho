@@ -2,13 +2,15 @@ import streamlit as st
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.drawing.image import Image as OpenpyxlImage  # Thêm thư viện xử lý ảnh
+import os
 from io import BytesIO
 import datetime
 
 # --- 1. HÀM TẠO FILE EXCEL NGẦM ---
 def export_phieu_xuat_excel(export_data, selected_date):
     """
-    Hàm xuất dữ liệu giỏ hàng ra file Excel - TỐI ƯU HOÀN HẢO ĐỂ IN KHỔ A4 DỌC
+    Hàm xuất dữ liệu giỏ hàng ra file Excel - CÓ LOGO CÔNG TY & TỐI ƯU IN KHỔ A4 DỌC
     """
     template_path = "phieu_mau.xlsx"
     try:
@@ -16,6 +18,13 @@ def export_phieu_xuat_excel(export_data, selected_date):
     except FileNotFoundError:
         wb = openpyxl.Workbook()
         ws = wb.active
+        ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
+        ws.merge_cells('A4:F4')
+        ws['A4'] = "PHIẾU XUẤT KHO"
+        ws['A4'].font = openpyxl.styles.Font(name="Arial", size=16, bold=True)
+        ws['A4'].alignment = openpyxl.styles.Alignment(horizontal="center")
+    
+    ws = wb.active
     
     # ----------------=======================================----------------
     # CẤU HÌNH TRANG IN PHẢI CÓ ĐỂ IN VỪA KHÍT KHỔ A4
@@ -54,31 +63,47 @@ def export_phieu_xuat_excel(export_data, selected_date):
         bottom=Side(style='thin', color='B0B0B0')
     )
     
-    # --- THÔNG TIN CÔNG TY & TIÊU ĐỀ PHIẾU ---
-    ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
-    ws['A1'].font = Font(name="Arial", size=11, bold=True)
+    # --- XỬ LÝ CHÈN LOGO CÔNG TY TỰ ĐỘNG ---
+    logo_path = "logo.png"
+    if os.path.exists(logo_path):
+        img = OpenpyxlImage(logo_path)
+        # Ép độ rộng/chiều cao logo cố định khoảng tầm này để cân đối (Bạn có thể sửa số lại nếu muốn)
+        img.width = 85
+        img.height = 85
+        # Chèn ảnh đè lên vị trí góc ô A1
+        ws.add_image(img, 'A1')
+        
+    # Nới rộng chiều cao 3 dòng đầu để chứa logo không bị đè chữ
+    ws.row_dimensions[1].height = 28
+    ws.row_dimensions[2].height = 18
+    ws.row_dimensions[3].height = 18
     
-    ws['A2'] = "Địa chỉ: Lô B3, đường số 2, Cụm CN Mỹ Hiệp, Xã Mỹ Hiệp, Tỉnh Đồng Tháp"
-    ws['A2'].font = Font(name="Arial", size=10, italic=True)
+    # Dịch thông tin chữ sang cột B để nhường không gian cột A cho logo
+    ws['B1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
+    ws['B1'].font = Font(name="Arial", size=11, bold=True)
     
-    ws['A3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
-    ws['A3'].font = Font(name="Arial", size=10, italic=True)
+    ws['B2'] = "Địa chỉ: Lô B3, đường số 2, Cụm CN Mỹ Hiệp, Xã Mỹ Hiệp, Tỉnh Đồng Tháp"
+    ws['B2'].font = Font(name="Arial", size=10, italic=True)
+    
+    ws['B3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
+    ws['B3'].font = Font(name="Arial", size=10, italic=True)
 
-    ws.merge_cells('A4:F4')
-    ws['A4'] = "PHIẾU XUẤT KHO"
-    ws['A4'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
-    ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[4].height = 30
-    
-    # --- GHI NGÀY IN PHIẾU (MERGE A5:F5) ---
-    date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
+    # Tiêu đề phiếu nằm ở dòng 5 (Đẩy dịch xuống 1 dòng so với trước cho thoáng)
     ws.merge_cells('A5:F5')
-    ws['A5'] = date_str
-    ws['A5'].font = font_italic
+    ws['A5'] = "PHIẾU XUẤT KHO"
+    ws['A5'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
     ws['A5'].alignment = Alignment(horizontal="center", vertical="center")
-    ws.row_dimensions[5].height = 20
+    ws.row_dimensions[5].height = 32
+    
+    # --- GHI NGÀY IN PHIẾU (MERGE A6:F6) ---
+    date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
+    ws.merge_cells('A6:F6')
+    ws['A6'] = date_str
+    ws['A6'].font = font_italic
+    ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[6].height = 20
        
-    # Thiết lập độ rộng dòng tiêu đề bảng (Dòng số 8) thoáng hơn
+    # Thiết lập độ rộng dòng tiêu đề bảng (Đẩy sang Dòng số 8)
     ws.row_dimensions[8].height = 26
     
     headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải", "Ghi Chú"]
@@ -107,7 +132,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws[f"E{current_row}"] = item.get("Ghi chú", "")
         ws[f"F{current_row}"] = "" 
         
-        # Cấu hình căn lề kết hợp thuộc tính wrap_text=True (tự động xuống dòng khi chữ quá dài)
+        # Cấu hình căn lề kết hợp thuộc tính wrap_text=True
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"B{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         ws[f"C{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
@@ -145,12 +170,11 @@ def export_phieu_xuat_excel(export_data, selected_date):
     ws[f"E{sign_title_row}"].font = font_bold
     ws[f"E{sign_title_row}"].alignment = Alignment(horizontal="right", vertical="center")
     
-    # Đã bỏ dòng "(Ký, họ tên)" theo yêu cầu
     # --- KẾT THÚC PHẦN CHỮ KÝ ---
         
-    # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4 (Tổng số khoảng ~85-90 là chuẩn đẹp)
-    ws.column_dimensions['A'].width = 6   # STT
-    ws.column_dimensions['B'].width = 32  # Tên hàng hóa rộng để hạn chế xuống dòng nhiều
+    # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4
+    ws.column_dimensions['A'].width = 7   # STT (Nới nhẹ cột A một chút để cân đối với logo)
+    ws.column_dimensions['B'].width = 32  # Tên hàng hóa
     ws.column_dimensions['C'].width = 10  # Đvt
     ws.column_dimensions['D'].width = 14  # Số lượng
     ws.column_dimensions['E'].width = 24  # Diễn giải
@@ -172,7 +196,6 @@ def show_print_export_view(service):
     
     # 2. Nút Tạo Phiếu
     if st.button("🔄 Tạo Phiếu Xuất", type="primary"):
-        # Lấy trực tiếp dữ liệu mới nhất (không dùng cache để đảm bảo cập nhật liên tục)
         st.cache_data.clear() 
         history = service.get_history()
         products = service.get_products()
@@ -181,50 +204,36 @@ def show_print_export_view(service):
             st.error("Kho dữ liệu trống!")
             return
             
-        # Tạo từ điển map Mã hàng -> Đơn vị tính
         dvt_dict = {}
         if products:
-            dvt_dict = {str(p[1]): str(p[3]) for p in products} # p[1] là Mã, p[3] là Đvt
+            dvt_dict = {str(p[1]): str(p[3]) for p in products}
             
-        # Chuyển lịch sử thành DataFrame để lọc
         if len(history[0]) >= 7:
             df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
         else:
             df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
-            df["Tên hàng hóa"] = df["Mã HH"] # Tránh lỗi nếu sheet cũ chưa có cột Tên
+            df["Tên hàng hóa"] = df["Mã HH"]
             
-        # ========================================================
-        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX THEO CHỮ "XUẤT" VIẾT HOA VÀ ĐỊNH DẠNG NGÀY
-        # ========================================================
-        
-        # 1. Chuẩn hóa: Ép kiểu chuỗi, xóa khoảng trắng 2 đầu và đưa về chữ IN HOA
         df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
-        
-        # 2. Xử lý cột Ngày: Pandas cắt bỏ giờ phút, chỉ lấy ngày gọn gàng
         df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
         
-        # 3. Lọc dữ liệu: So sánh khớp Ngày và Loại là chữ "XUẤT" in hoa
         filtered_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
-        
-        # ========================================================
         
         if filtered_df.empty:
             st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
         else:
-            # Ráp dữ liệu thành List để ném vào hàm Excel
             export_data = []
             for _, row in filtered_df.iterrows():
                 ma_hh = str(row.get("Mã HH", ""))
                 export_data.append({
                     "Tên HH": row.get("Tên hàng hóa", ma_hh),
-                    "Đvt": dvt_dict.get(ma_hh, ""), # Lấy Đvt từ data sản phẩm
+                    "Đvt": dvt_dict.get(ma_hh, ""),
                     "Số lượng": row.get("Số Lượng", 0),
                     "Ghi chú": row.get("Ghi Chú", "")
                 })
             
             st.success(f"✅ Đã tìm thấy **{len(export_data)}** dòng hàng hóa xuất kho trong ngày này!")
             
-            # 4. Tạo file và hiển thị nút tải
             excel_data = export_phieu_xuat_excel(export_data, selected_date)
             
             st.download_button(
@@ -236,6 +245,5 @@ def show_print_export_view(service):
                 use_container_width=True
             )
             
-            # Hiển thị trước xem đã lấy đúng dữ liệu chưa
             with st.expander("👀 Bấm vào đây để xem trước danh sách hàng hóa sẽ in"):
                 st.dataframe(pd.DataFrame(export_data), use_container_width=True, hide_index=True)
