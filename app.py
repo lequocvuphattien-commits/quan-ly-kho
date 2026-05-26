@@ -368,7 +368,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho":
-    st.header("Báo cáo tồn kho")
     show_report()
 # --- TAB 4: IN PHIẾU XUẤT ---
 elif st.session_state.current_menu == "In phiếu xuất":
