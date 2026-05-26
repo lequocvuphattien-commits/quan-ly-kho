@@ -187,6 +187,14 @@ if st.session_state.current_menu == "Danh mục hàng":
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
                 del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist(), key="delete_product_select")
+                # SỬ DỤNG POPOVER ĐỂ HỎI LẠI TRƯỚC KHI XÓA
+                with st.popover("🗑️ Xóa hàng này"):
+                    st.write(f"Bạn có chắc chắn muốn xóa **{del_code}** không?")
+                    if st.button("Xác nhận xóa", key="confirm_delete_btn"):
+                        service.delete_product(del_code)
+                        st.cache_data.clear()
+                        st.success(f"Đã xóa {del_code}!")
+                        st.rerun()
                 if st.button("Xác nhận xóa", key="delete_product_btn"):
                     service.delete_product(del_code)
                     st.cache_data.clear(); st.success(f"Đã xóa {del_code}!"); st.rerun()
