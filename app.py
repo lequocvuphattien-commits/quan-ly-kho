@@ -26,17 +26,6 @@ st.markdown("""
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
     div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
-            
-    .stock-container {
-        display: flex !important;
-        justify-content: flex-end !important; /* Đẩy nội dung sang phải */
-        align-items: center !important;
-        margin-top: 25px !important;
-        font-weight: bold !important;
-        color: #28a745 !important;
-        white-space: nowrap !important;
-    }
-</styl
     
     /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
     div[data-testid="stRadio"] { 
