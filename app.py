@@ -74,6 +74,15 @@ st.markdown("""
     
     /* Ép cột Tồn và Diễn giải nằm ngang trên điện thoại */
     .mobile-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 10px; }
+            
+    /* Ẩn hoàn toàn menu AgGrid */
+    .ag-header-cell-menu-button { display: none !important; }
+    
+    /* Ẩn thanh công cụ phía trên nếu có */
+    .ag-menu { display: none !important; }
+    
+    /* Thu hẹp khoảng cách lưới lên trên */
+    div[data-testid="stAgGrid"] { margin-top: -10px !important; }        
     </style>
 """, unsafe_allow_html=True)
 
@@ -221,11 +230,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             
         with c4:
             st.write("") # Căn chỉnh label
-            #st.write("") 
-            
+
             if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
                 if not selected or not qty or not note: 
-                    st.warning("⚠️ Nhập đủ!")
+                    st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
                     st.session_state.cart.append({
