@@ -31,7 +31,7 @@ st.markdown("""
         display: flex !important;
         justify-content: flex-end !important; /* Đẩy nội dung sang phải */
         align-items: center !important;
-        margin-top: 25px !important;
+        margin-top: 10px !important;
         font-weight: bold !important;
         color: #28a745 !important;
         white-space: nowrap !important;
