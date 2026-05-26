@@ -18,13 +18,6 @@ def export_phieu_xuat_excel(export_data, selected_date):
     except FileNotFoundError:
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
-        ws.merge_cells('A4:F4')
-        ws['A4'] = "PHIẾU XUẤT KHO"
-        ws['A4'].font = openpyxl.styles.Font(name="Arial", size=16, bold=True)
-        ws['A4'].alignment = openpyxl.styles.Alignment(horizontal="center")
-    
-    ws = wb.active
     
     # ----------------=======================================----------------
     # CẤU HÌNH TRANG IN PHẢI CÓ ĐỂ IN VỪA KHÍT KHỔ A4
@@ -71,7 +64,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
         img.width = 85
         img.height = 85
         # Chèn ảnh đè lên vị trí góc ô A1
-        ws.add_image(img, 'A1')
+        ws.add_image(img, 'E1')
         
     # Nới rộng chiều cao 3 dòng đầu để chứa logo không bị đè chữ
     ws.row_dimensions[1].height = 28
