@@ -61,10 +61,10 @@ def export_phieu_xuat_excel(export_data, selected_date):
     if os.path.exists(logo_path):
         img = OpenpyxlImage(logo_path)
         # Ép độ rộng/chiều cao logo cố định khoảng tầm này để cân đối (Bạn có thể sửa số lại nếu muốn)
-        img.width = 115
+        img.width = 145
         img.height = 85
         # Chèn ảnh đè lên vị trí góc ô A1
-        ws.add_image(img, 'F1')
+        ws.add_image(img, 'E1')
         
     # Nới rộng chiều cao 3 dòng đầu để chứa logo không bị đè chữ
     ws.row_dimensions[1].height = 18
@@ -83,17 +83,17 @@ def export_phieu_xuat_excel(export_data, selected_date):
 
     # Tiêu đề phiếu nằm ở dòng 5 (Đẩy dịch xuống 1 dòng so với trước cho thoáng)
     #ws.merge_cells('A5:F5')
-    ws['A5'] = "PHIẾU XUẤT KHO"
-    ws['A5'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
-    ws['A5'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['C5'] = "PHIẾU XUẤT KHO"
+    ws['C5'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
+    ws['C5'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[5].height = 32
     
     # --- GHI NGÀY IN PHIẾU (MERGE A6:F6) ---
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
     #ws.merge_cells('A6:F6')
-    ws['A6'] = date_str
-    ws['A6'].font = font_italic
-    ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['C6'] = date_str
+    ws['C6'].font = font_italic
+    ws['C6'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[6].height = 20
        
     # Thiết lập độ rộng dòng tiêu đề bảng (Đẩy sang Dòng số 8)
@@ -116,7 +116,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
         current_row = start_row + i
         
         # Thiết lập chiều cao dòng dữ liệu rộng rãi, dễ đọc khi in ra giấy
-        ws.row_dimensions[current_row].height = 22
+        ws.row_dimensions[current_row].height = 20
         
         ws[f"A{current_row}"] = i + 1
         ws[f"B{current_row}"] = item.get("Tên HH", "")
@@ -129,7 +129,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"B{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         ws[f"C{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
-        ws[f"D{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
+        ws[f"D{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"D{current_row}"].number_format = '#,##0' 
         ws[f"E{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         ws[f"F{current_row}"].alignment = Alignment(horizontal="left", vertical="center")
