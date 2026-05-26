@@ -4,7 +4,6 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from io import BytesIO
 import datetime
-from views.print_export_view import show_print_export_view
 
 # --- 1. HÀM TẠO FILE EXCEL NGẦM ---
 def export_phieu_xuat_excel(cart_data, selected_date):
