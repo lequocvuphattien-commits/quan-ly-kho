@@ -49,8 +49,8 @@ st.markdown("""
     }
     /* Thêm đoạn này vào phần <style> ở đầu file */
     [data-testid="column"] {
-        padding-left: 2px !important;
-        padding-right: 2px !important;
+        padding-left: 0px !important;
+        padding-right: 0px !important;
     }
 
     /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định */
