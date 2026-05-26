@@ -63,9 +63,10 @@ def export_phieu_xuat_excel(export_data, selected_date):
     
     # Ghi ngày in phiếu ở dòng 5
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
-    ws['C5'] = date_str
-    ws['C5'].font = font_italic
-    ws['C5'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A5:F5')
+    ws['A5'] = date_str
+    ws['A5'].font = font_italic
+    ws['A5'].alignment = Alignment(horizontal="center", vertical="center")
        
     # Thiết lập độ rộng dòng tiêu đề bảng (Dòng số 8) thoáng hơn
     ws.row_dimensions[8].height = 26
