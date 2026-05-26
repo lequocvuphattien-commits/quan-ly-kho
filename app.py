@@ -7,12 +7,6 @@ from views.print_export_view import show_print_export_view
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
-import pandas as pd
-import openpyxl
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from io import BytesIO
-import datetime
-
 # --- BỘ NHỚ ĐỆM ---
 @st.cache_data(ttl=600, show_spinner=False)
 def get_cached_products(_svc): return _svc.get_products()
