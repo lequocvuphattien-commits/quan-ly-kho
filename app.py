@@ -246,35 +246,11 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     })
                     st.rerun()
 
-        # --- PHẦN ĐOẠN ĐƯỢC CẬP NHẬT ĐỂ ẨN ĐI THANH CÔNG CỤ CỦA LƯỚI CHỜ ---
+        # Phần hiển thị giỏ hàng và nút xác nhận
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
             st.divider()
-            
-            # 1. Cấu hình để ẩn menu và các công cụ mặc định
-            gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
-            
-            # Ép AgGrid không hiển thị menu cột và các nút điều khiển rườm rà
-            gb.configure_grid_options(
-                suppressMenuHide=True, 
-                suppressColumnMenu=True, 
-                enableCellTextSelection=True
-            )
-            grid_opts = gb.build()
-            
-            # 2. Hiển thị AgGrid tinh gọn sát lên phía trên
-            grid_response = AgGrid(
-                pd.DataFrame(st.session_state.cart), 
-                gridOptions=grid_opts, 
-                height=200, 
-                theme='streamlit',
-                allow_unsafe_jscode=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                key="cart_grid"
-            )
-            # Lấy data từ lưới chuyển sang DataFrame để lưu
-            edited_df_cart = pd.DataFrame(grid_response['data'])
-            
+            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
             if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
                 for _, row in edited_df_cart.iterrows():
                     service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
@@ -372,7 +348,3 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                 if st.button("Xác nhận xóa nhân viên", key="delete_emp_btn"):
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
-
-
-
-
