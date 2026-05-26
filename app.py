@@ -6,7 +6,7 @@ from services.data_service import DataService
 from views.print_export_view import show_print_export_view
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
-
+from views.print_export_view import show_print_export_view
 import pandas as pd
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
