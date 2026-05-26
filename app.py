@@ -186,7 +186,7 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                # 1. Tạo DataFrame và danh sách chọn
+                # 1. Chuẩn bị dữ liệu
                 df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
                 df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
                 product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
@@ -195,30 +195,31 @@ if st.session_state.current_menu == "Danh mục hàng":
                 del_code = product_map[selected_product]
 
                 # 2. Popover xác nhận xóa
+                # Khi bấm vào Yes/No, chúng ta dùng st.rerun() để đóng popover và làm mới trang
                 with st.popover("🗑️ Xóa hàng này"):
                     st.warning(f"Bạn có chắc muốn xóa:\n\n{selected_product} ?")
                     col_yes, col_no = st.columns(2)
                     
                     with col_yes:
                         if st.button("✅ Yes", use_container_width=True, key="confirm_delete_btn"):
-                            # Logic kiểm tra
+                            # Kiểm tra tồn kho
                             product_row = df[df["Mã"] == del_code]
                             current_stock = float(product_row.iloc[0]["Tồn"]) if not product_row.empty else 0
                             
                             if current_stock != 0:
                                 st.error(f"Không thể xóa vì tồn kho còn: {current_stock}")
-                                # Không dùng rerun ở đây để người dùng kịp đọc lỗi
+                                # Dừng lại để người dùng đọc lỗi, không rerun ngay
                             else:
                                 service.delete_product(del_code)
                                 st.cache_data.clear()
                                 st.success(f"Đã xóa {del_code}!")
-                                # Lệnh này làm sạch giao diện và đóng popover
+                                # CHUYỂN TAB VÀ ĐÓNG POPOVER BẰNG CÁCH TẢI LẠI TRANG
                                 st.session_state.current_menu = "Danh mục hàng"
-                                st.rerun()
+                                st.rerun() 
 
                     with col_no:
                         if st.button("❌ No", use_container_width=True, key="cancel_delete_btn"):
-                            # Chuyển về menu và rerun để đóng popover ngay lập tức
+                            # CHỈ CẦN RERUN LÀ POPOVER SẼ TỰ ĐÓNG
                             st.session_state.current_menu = "Danh mục hàng"
                             st.rerun()
 
