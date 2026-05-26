@@ -31,7 +31,7 @@ st.markdown("""
         display: flex !important;
         justify-content: flex-end !important; /* Đẩy nội dung sang phải */
         align-items: center !important;
-        margin-top: 10px !important;
+        margin-top: 25px !important;
         font-weight: bold !important;
         color: #28a745 !important;
         white-space: nowrap !important;
@@ -208,7 +208,11 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
 
                 st.markdown(f"<div style='margin-top: 0px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-        
+                st.markdown(f"""
+                    <div class='stock-container'>
+                        Tồn: {current_stock:,.0f} {unit}
+                    </div>
+                """, unsafe_allow_html=True)
             else:
                 st.write("") 
                 
