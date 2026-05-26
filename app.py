@@ -26,6 +26,11 @@ st.markdown("""
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
     div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
+            
+    /* Giảm khoảng cách input */
+div[data-baseweb="input"] {
+    margin-top: -12px !important;
+}
     
     /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
     div[data-testid="stRadio"] { 
