@@ -160,7 +160,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
     
     # 3. Hợp nhất ô E và F ở dòng ký tên
     # Giả sử current_row là dòng cuối cùng của bảng dữ liệu
-    sign_row = current_row + 3 
+    sign_row = current_row + 2 
     
     ws.merge_cells(f'E{sign_row}:F{sign_row}')
     
@@ -168,7 +168,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
     ws[f'E{sign_row}'] = "Người Lập"
     ws[f'E{sign_row}'].alignment = Alignment(horizontal="center", vertical="center")
     ws[f"E{sign_title_row}"].font = font_bold
-    ws[f"E{sign_title_row}"].alignment = Alignment(horizontal="right", vertical="center")
+    #ws[f"E{sign_title_row}"].alignment = Alignment(horizontal="right", vertical="center")
     
     # --- KẾT THÚC PHẦN CHỮ KÝ ---
         
