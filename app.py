@@ -47,6 +47,17 @@ st.markdown("""
         flex-direction: row !important; 
         flex-wrap: nowrap !important; /* Cấm các nút Nhập/Xuất xếp chồng lên nhau */
     }
+    /* Thêm đoạn này vào phần <style> ở đầu file */
+    [data-testid="column"] {
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+
+    /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định */
+    div[data-testid="stHorizontalBlock"] {
+        gap: 5px !important;
+    }        
+    
     </style>
 """, unsafe_allow_html=True)
 
