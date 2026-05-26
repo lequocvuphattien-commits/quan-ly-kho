@@ -244,8 +244,9 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
                         "Ghi chú": note, 
-                        "Loại": trans_type
-                    })
+                        "Loại": trans_type})
+                    # --- THÊM DÒNG NÀY VÀO ĐỂ LÀM TRỐNG Ô SỐ LƯỢNG ---
+                    st.session_state["qty_input_field"] = None
                     st.rerun()
 
         # Phần hiển thị giỏ hàng và nút xác nhận
