@@ -179,7 +179,9 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 current_stock = float(p_dict[selected]['Tồn'])
                 unit = p_dict[selected]['Đvt']
                 # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
-                st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+
+                st.markdown(f"<div style='margin-top: 5px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+
             else:
                 st.write("") 
                 
