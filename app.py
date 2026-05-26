@@ -25,7 +25,7 @@ st.markdown("""
     div.stButton > button[kind="primary"] { background-color: #28a745 !important; color: white !important; }
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
-    div[data-testid="stSelectbox"] { margin-bottom: -5rem !important; }
+    div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
             
     .stock-container {
         display: flex !important;
