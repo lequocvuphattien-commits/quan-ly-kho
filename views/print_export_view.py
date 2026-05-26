@@ -7,6 +7,9 @@ import datetime
 
 # --- 1. HÀM TẠO FILE EXCEL NGẦM ---
 def export_phieu_xuat_excel(export_data, selected_date):
+    """
+    Hàm xuất dữ liệu giỏ hàng ra file Excel - TỐI ƯU HOÀN HẢO ĐỂ IN KHỔ A4 DỌC
+    """
     template_path = "phieu_mau.xlsx"
     try:
         wb = openpyxl.load_workbook(template_path)
@@ -20,26 +23,52 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws['A4'].alignment = openpyxl.styles.Alignment(horizontal="center")
     
     ws = wb.active
-    ws.views.sheetView[0].showGridLines = False 
     
+    # ----------------=======================================----------------
+    # CẤU HÌNH TRANG IN PHẢI CÓ ĐỂ IN VỪA KHÍT KHỔ A4
+    # ----------------=======================================----------------
+    ws.views.sheetView[0].showGridLines = False  # Ẩn đường lưới mờ của Excel để phiếu sạch sẽ
+    
+    # 1. Khai báo kích thước giấy A4 và hướng dọc (Portrait)
+    ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+    ws.page_setup.paperSize = ws.PAPERSIZE_A4
+    
+    # 2. Cấu hình tự động ép vừa khít chiều ngang trang giấy A4
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.page_setup.fitToWidth = 1   # Ép toàn bộ các cột nằm trọn chiều ngang 1 trang
+    ws.page_setup.fitToHeight = 0  # Chiều dọc tự do giãn ra trang sau nếu nhiều hàng
+    
+    # 3. Cài đặt khoảng cách lề (Margins) đơn vị Inches chuẩn in ấn
+    ws.page_margins.left = 0.5
+    ws.page_margins.right = 0.5
+    ws.page_margins.top = 0.6
+    ws.page_margins.bottom = 0.6
+    # ----------------=======================================----------------
+
+    # Định nghĩa Font và Phong cách chuyên nghiệp hơn
     font_regular = Font(name="Arial", size=11)
     font_bold = Font(name="Arial", size=11, bold=True)
     font_italic = Font(name="Arial", size=11, italic=True)
     font_header = Font(name="Arial", size=11, bold=True, color="FFFFFF")
     
-    fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") 
-    fill_zebra = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")  
+    fill_header = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") # Xanh navy sang trọng
+    fill_zebra = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")  # Màu sọc nhẹ tinh tế
+    
     thin_border = Border(
-        left=Side(style='thin', color='A0A0A0'),
-        right=Side(style='thin', color='A0A0A0'),
-        top=Side(style='thin', color='A0A0A0'),
-        bottom=Side(style='thin', color='A0A0A0')
+        left=Side(style='thin', color='B0B0B0'),
+        right=Side(style='thin', color='B0B0B0'),
+        top=Side(style='thin', color='B0B0B0'),
+        bottom=Side(style='thin', color='B0B0B0')
     )
     
+    # Ghi ngày in phiếu ở dòng 5
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
     ws['C5'] = date_str
     ws['C5'].font = font_italic
     ws['C5'].alignment = Alignment(horizontal="center")
+    
+    # Thiết lập độ rộng dòng tiêu đề bảng (Dòng số 8) thoáng hơn
+    ws.row_dimensions[8].height = 26
     
     headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải", "Ghi Chú"]
     cols = ["A", "B", "C", "D", "E", "F"]
@@ -52,9 +81,14 @@ def export_phieu_xuat_excel(export_data, selected_date):
         cell.alignment = Alignment(horizontal="center", vertical="center")
         cell.border = thin_border
     
+    # Đổ dữ liệu hàng hóa từ dòng số 9
     start_row = 9
     for i, item in enumerate(export_data):
         current_row = start_row + i
+        
+        # Thiết lập chiều cao dòng dữ liệu rộng rãi, dễ đọc khi in ra giấy
+        ws.row_dimensions[current_row].height = 22
+        
         ws[f"A{current_row}"] = i + 1
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
@@ -62,13 +96,14 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws[f"E{current_row}"] = item.get("Ghi chú", "")
         ws[f"F{current_row}"] = "" 
         
-        ws[f"A{current_row}"].alignment = Alignment(horizontal="center")
-        ws[f"B{current_row}"].alignment = Alignment(horizontal="left")
-        ws[f"C{current_row}"].alignment = Alignment(horizontal="center")
-        ws[f"D{current_row}"].alignment = Alignment(horizontal="right")
+        # Cấu hình căn lề kết hợp thuộc tính wrap_text=True (tự động xuống dòng khi chữ quá dài)
+        ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
+        ws[f"B{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        ws[f"C{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
+        ws[f"D{current_row}"].alignment = Alignment(horizontal="right", vertical="center")
         ws[f"D{current_row}"].number_format = '#,##0' 
-        ws[f"E{current_row}"].alignment = Alignment(horizontal="left")
-        ws[f"F{current_row}"].alignment = Alignment(horizontal="left")
+        ws[f"E{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        ws[f"F{current_row}"].alignment = Alignment(horizontal="left", vertical="center")
         
         for col_letter in cols:
             cell = ws[f"{col_letter}{current_row}"]
@@ -77,9 +112,13 @@ def export_phieu_xuat_excel(export_data, selected_date):
             if i % 2 == 1:
                 cell.fill = fill_zebra
                 
+    # Phần chữ ký tự động đẩy xuống dưới
     last_data_row = start_row + len(export_data) - 1
     sign_title_row = last_data_row + 2
     sign_name_row = sign_title_row + 4
+    
+    # Thiết lập chiều cao cho dòng chữ ký thoáng đãng để người dùng ký tay thoải mái
+    ws.row_dimensions[sign_title_row].height = 20
     
     ws.merge_cells(f'B{sign_title_row}:C{sign_title_row}')
     ws[f"B{sign_title_row}"] = "Người lập phiếu"
@@ -88,17 +127,18 @@ def export_phieu_xuat_excel(export_data, selected_date):
     
     for col_letter in ["B", "E"]:
         ws[f"{col_letter}{sign_title_row}"].font = font_bold
-        ws[f"{col_letter}{sign_title_row}"].alignment = Alignment(horizontal="center")
+        ws[f"{col_letter}{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"{col_letter}{sign_name_row}"] = "(Ký, họ tên)"
         ws[f"{col_letter}{sign_name_row}"].font = font_italic
-        ws[f"{col_letter}{sign_name_row}"].alignment = Alignment(horizontal="center")
+        ws[f"{col_letter}{sign_name_row}"].alignment = Alignment(horizontal="center", vertical="center")
         
-    ws.column_dimensions['A'].width = 8
-    ws.column_dimensions['B'].width = 35
-    ws.column_dimensions['C'].width = 12
-    ws.column_dimensions['D'].width = 15
-    ws.column_dimensions['E'].width = 25
-    ws.column_dimensions['F'].width = 25
+    # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4 (Tổng số khoảng ~85-90 là chuẩn đẹp)
+    ws.column_dimensions['A'].width = 6   # STT
+    ws.column_dimensions['B'].width = 32  # Tên hàng hóa rộng để hạn chế xuống dòng nhiều
+    ws.column_dimensions['C'].width = 10  # Đvt
+    ws.column_dimensions['D'].width = 14  # Số lượng
+    ws.column_dimensions['E'].width = 24  # Diễn giải
+    ws.column_dimensions['F'].width = 12  # Ghi chú
         
     output = BytesIO()
     wb.save(output)
