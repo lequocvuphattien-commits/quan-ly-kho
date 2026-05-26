@@ -112,25 +112,30 @@ def export_phieu_xuat_excel(export_data, selected_date):
             if i % 2 == 1:
                 cell.fill = fill_zebra
                 
-    # Phần chữ ký tự động đẩy xuống dưới
+    # --- PHẦN XỬ LÝ CHỮ KÝ ĐÃ TÙY CHỈNH ---
     last_data_row = start_row + len(export_data) - 1
     sign_title_row = last_data_row + 2
-    sign_name_row = sign_title_row + 4
     
-    # Thiết lập chiều cao cho dòng chữ ký thoáng đãng để người dùng ký tay thoải mái
-    ws.row_dimensions[sign_title_row].height = 20
+    # Thiết lập chiều cao cho dòng chức danh
+    ws.row_dimensions[sign_title_row].height = 25
     
-    ws.merge_cells(f'B{sign_title_row}:C{sign_title_row}')
-    ws[f"B{sign_title_row}"] = "Người lập phiếu"
-    ws.merge_cells(f'E{sign_title_row}:F{sign_title_row}')
-    ws[f"E{sign_title_row}"] = "Kế toán / Giám đốc"
+    # 1. Kế Toán (Cột B) - Căn trái
+    ws[f"B{sign_title_row}"] = "Kế Toán"
+    ws[f"B{sign_title_row}"].font = font_bold
+    ws[f"B{sign_title_row}"].alignment = Alignment(horizontal="left", vertical="center")
     
-    for col_letter in ["B", "E"]:
-        ws[f"{col_letter}{sign_title_row}"].font = font_bold
-        ws[f"{col_letter}{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
-        ws[f"{col_letter}{sign_name_row}"] = "(Ký, họ tên)"
-        ws[f"{col_letter}{sign_name_row}"].font = font_italic
-        ws[f"{col_letter}{sign_name_row}"].alignment = Alignment(horizontal="center", vertical="center")
+    # 2. Thủ Kho (Cột C) - Căn giữa
+    ws[f"C{sign_title_row}"] = "Thủ Kho"
+    ws[f"C{sign_title_row}"].font = font_bold
+    ws[f"C{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
+    
+    # 3. Người Lập Phiếu (Cột E) - Căn phải
+    ws[f"E{sign_title_row}"] = "Người Lập Phiếu"
+    ws[f"E{sign_title_row}"].font = font_bold
+    ws[f"E{sign_title_row}"].alignment = Alignment(horizontal="right", vertical="center")
+    
+    # Lưu ý: Đã bỏ dòng "(Ký, họ tên)" theo yêu cầu của bạn
+    # --- KẾT THÚC PHẦN CHỮ KÝ ---
         
     # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4 (Tổng số khoảng ~85-90 là chuẩn đẹp)
     ws.column_dimensions['A'].width = 6   # STT
