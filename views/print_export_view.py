@@ -167,11 +167,11 @@ def export_phieu_xuat_excel(export_data, selected_date):
         
     # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4
     ws.column_dimensions['A'].width = 7   # STT (Nới nhẹ cột A một chút để cân đối với logo)
-    ws.column_dimensions['B'].width = 32  # Tên hàng hóa
+    ws.column_dimensions['B'].width = 35  # Tên hàng hóa
     ws.column_dimensions['C'].width = 10  # Đvt
     ws.column_dimensions['D'].width = 14  # Số lượng
-    ws.column_dimensions['E'].width = 24  # Diễn giải
-    ws.column_dimensions['F'].width = 12  # Ghi chú
+    ws.column_dimensions['E'].width = 16  # Diễn giải
+    ws.column_dimensions['F'].width = 17  # Ghi chú
         
     output = BytesIO()
     wb.save(output)
