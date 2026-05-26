@@ -288,6 +288,7 @@ if st.session_state.current_menu == "Danh mục hàng":
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
+    show_print_export_view(service)  # Hiển thị giao diện tạo & in phiếu xuất kho ở đầu tab Nhập/Xuất
     st.subheader("🔄 Nhập/Xuất kho")
     
     trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
