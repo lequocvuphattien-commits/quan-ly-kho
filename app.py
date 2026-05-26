@@ -210,7 +210,7 @@ if not st.session_state.logged_in:
                 st.query_params["user_name"] = user_data["name"]
                 st.query_params["user_role"] = user_data["role"]
                 st.query_params["current_menu"] = "Danh mục hàng"
-                
+                st.session_state.force_close_sidebar = True
                 # 4. Giải phóng giao diện, dẹp màn hình đăng nhập cũ ngay lập tức
                 st.rerun() 
             else: 
