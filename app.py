@@ -33,6 +33,34 @@ def confirm_delete(product_name, del_code, service):
 
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
+@st.dialog("Xác nhận xóa lịch sử")
+def confirm_delete_history_dialog(selected_rows, service):
+    st.warning(f"⚠️ Bạn có chắc muốn xóa **{len(selected_rows)}** giao dịch đã chọn không?")
+    st.error("Hành động này sẽ tự động HOÀN TÁC (cộng/trừ ngược) số lượng tồn kho tương ứng!")
+    
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("✅ Xác nhận xóa"):
+            # Duyệt qua các dòng được chọn để xóa ngược xuôi
+            for index, row in selected_rows.iterrows():
+                # Lấy các thông tin cần thiết từ dòng hiện tại
+                p_code = row["Mã HH"]
+                # Lấy tên cột chính xác theo Sheet (Số Lượng hoặc qty)
+                qty = float(row["Số Lượng"]) if "Số Lượng" in row else float(row.get("qty", 0))
+                t_type = row["Loại"]
+                
+                # Gọi hàm xóa trong services/data_service.py đã thêm ở bước trước
+                # index chính là vị trí dòng của DataFrame (cần map chính xác với hàng trong sheet)
+                service.delete_transaction(index, p_code, qty, t_type)
+                
+            st.cache_data.clear() # Xóa bộ nhớ đệm để tải lại dữ liệu mới nhất
+            st.success("🎉 Đã xóa và hoàn tác tồn kho thành công!")
+            st.rerun()
+            
+    with col_no:
+        if st.button("❌ Hủy bỏ"):
+            st.rerun()
+
 # --- CSS TỐI ƯU GIAO DIỆN KHÓA CỨNG TRÊN MOBILE ---
 st.markdown("""
     <style>
@@ -304,23 +332,50 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
 elif st.session_state.current_menu == "Báo cáo tồn kho": 
     show_report()
 
-# --- TAB 4: LỊCH SỬ GIAO DỊCH ---
+# --- TAB 4: LẠCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
+    
+    # Chỉ cho phép Quản lý thực hiện xóa/sửa lịch sử để an toàn dữ liệu
+    is_admin = st.session_state.get("user_role") == "Quản lý"
+    
     history = get_cached_history(service)
     if history:
+        # 1. Tạo DataFrame từ dữ liệu lịch sử
+        # Đoạn này tự động khớp số lượng cột tùy theo cấu trúc dữ liệu trả về từ Sheet của bạn
         if len(history[0]) == 5:
-            df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
-        elif len(history[0]) == 7:
-            df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+            cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
         else:
-            df = pd.DataFrame(history, columns=["Ngày", "Mã", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
             
-        gb = GridOptionsBuilder.from_dataframe(df)
-        gb.configure_default_column(filter=True)
-        if "Số Lượng" in df.columns:
-            gb.configure_column("Số Lượng", type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
-        AgGrid(df, gridOptions=gb.build(), theme='streamlit', height=650, key="history_grid")
+        df = pd.DataFrame(history, columns=cols)
+        
+        # 2. Thêm cột checkbox chọn dòng ở đầu bảng (chỉ hiện nếu là Quản lý)
+        if is_admin:
+            df.insert(0, "Chọn", False)
+            
+        # 3. Hiển thị bảng bằng st.data_editor (cho phép tích chọn)
+        edited_df = st.data_editor(
+            df, 
+            key="history_editor", 
+            use_container_width=True,
+            hide_index=True,
+            disabled=[col for col in df.columns if col != "Chọn"] # Khóa các cột khác, chỉ cho chọn checkbox
+        )
+        
+        # 4. Xử lý nút bấm Xóa dành riêng cho Quản lý
+        if is_admin:
+            # Lọc ra các dòng được người dùng tích chọn ở cột "Chọn"
+            selected_rows = edited_df[edited_df["Chọn"] == True]
+            
+            if not selected_rows.empty:
+                # Nếu có chọn dòng, hiện nút xóa
+                if st.button("🗑️ Xóa các giao dịch đã chọn", type="primary", use_container_width=True):
+                    # Gọi hàm Dialog hỏi lại để chắc chắn
+                    confirm_delete_history_dialog(selected_rows, service)
+            else:
+                # Nếu chưa chọn dòng nào, hiện nút mờ hướng dẫn
+                st.button("💡 Hãy tích chọn dòng ở bảng trên để xóa", disabled=True, use_container_width=True)
 
 # --- TAB 5: QUẢN LÝ NHÂN VIÊN ---
 elif st.session_state.current_menu == "Quản lý nhân viên":

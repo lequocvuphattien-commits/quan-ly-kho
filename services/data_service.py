@@ -134,3 +134,20 @@ class DataService:
                         "role": str(emp[3]).strip() # Phải có dòng này để trả về 'role'
                     }
         return {"status": False, "name": None, "role": None}
+    
+    def delete_transaction(self, row_index, product_code, quantity, trans_type):
+        """
+        Xóa giao dịch và hoàn tác số lượng tồn kho
+        """
+        # 1. Xóa dòng trong sheet Transactions
+        # Lưu ý: row_index lấy từ st.data_editor thường là index của DataFrame, 
+        # nên khi map vào Google Sheet phải cộng thêm 2 (1 cho header, 1 vì index bắt đầu từ 0)
+        self.sheet_transactions.delete_rows(row_index + 2) 
+        
+        # 2. Hoàn tác tồn kho
+        # Nếu đã nhập kho (Nhập), giờ xóa đi thì phải trừ tồn (tồn giảm)
+        # Nếu đã xuất kho (Xuất), giờ xóa đi thì phải cộng lại tồn (tồn tăng)
+        change = -quantity if trans_type == "Nhập" else quantity
+        
+        # Gọi lại hàm update_stock đã có sẵn của bạn để đồng bộ
+        self.update_stock(product_code, change, "Nhập")
