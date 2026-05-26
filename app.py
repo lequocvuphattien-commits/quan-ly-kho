@@ -225,7 +225,7 @@ if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
-menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", " In phiếu xuất kho "]
+menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất"]
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
 
@@ -373,14 +373,16 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
-elif st.session_state.current_menu == "Báo cáo tồn kho": 
+elif st.session_state.current_menu == "Báo cáo tồn kho":
+    st.header("Báo cáo tồn kho")
 
-# --- TAB 3: IN PHIẾU XUẤT ---
+# --- TAB 4: IN PHIẾU XUẤT ---
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
+
     show_report()
 
-# --- TAB 4: LẠCH SỬ GIAO DỊCH ---
+# --- TAB 5: LẠCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     
