@@ -204,7 +204,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             st.write("") 
             st.markdown("""
                 <style>
-                div.stButton > button { width: 100%; padding: 0.5rem; }
+                div.stButton > button { width: 100%; padding: -5rem; }
                 </style>
             """, unsafe_allow_html=True)
             
