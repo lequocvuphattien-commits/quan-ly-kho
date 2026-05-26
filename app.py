@@ -155,185 +155,55 @@ if st.session_state.current_menu == "Danh mục hàng":
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
-
     st.subheader("🔄 Nhập/Xuất kho")
-
-    trans_type = st.radio(
-        "Loại:",
-        ["Nhập", "Xuất"],
-        horizontal=True,
-        key="trans_type"
-    )
-
+    
+    trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
+    
     kho_nhap_list, kho_xuat_list = get_cached_config(service)
     products = get_cached_products(service)
-
+    
     if products:
-
-        p_dict = {
-            f"{p[1]} - {p[2]}": {
-                "Mã": p[1],
-                "Tên": p[2],
-                "Đvt": p[3],
-                "Tồn": p[4]
-            }
-            for p in products
-        }
-
-        selected = st.selectbox(
-            "Chọn hàng hóa",
-            options=list(p_dict.keys()),
-            index=None,
-            key="product_select_field"
-        )
-
-        # =========================
-        # HEADER SỐ LƯỢNG + TỒN
-        # =========================
-
-        if selected:
-
-            current_stock = float(p_dict[selected]["Tồn"])
-            unit = p_dict[selected]["Đvt"]
-
-            st.markdown(
-                f"""
-                <div style="
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    width:100%;
-                    margin-top:10px;
-                    margin-bottom:8px;
-                ">
-
-                    <div style="
-                        font-size:20px;
-                        font-weight:700;
-                    ">
-                        Số lượng
-                    </div>
-
-                    <div style="
-                        color:#28a745;
-                        font-size:18px;
-                        font-weight:bold;
-                        white-space:nowrap;
-                    ">
-                        🟢 Tồn: 8,880 cái
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # =========================
-        # Ô NHẬP SỐ LƯỢNG
-        # =========================
-
-        qty = st.number_input(
-            "",
-            min_value=1.0,
-            value=None,
-            step=1.0,
-            key="qty_input_field",
-            label_visibility="collapsed"
-        )
-
-        # =========================
-        # DIỄN GIẢI / KHO
-        # =========================
-
-        note = st.selectbox(
-            "Diễn giải / Kho",
-            options=(
-                kho_nhap_list
-                if trans_type == "Nhập"
-                else kho_xuat_list
-            ),
-            index=None,
-            key="note_select_field"
-        )
-
-        # =========================
-        # BUTTON THÊM
-        # =========================
-
-        if st.button(
-            "➕ Thêm hàng chờ",
-            key="add_to_cart_btn",
-            use_container_width=True
-        ):
-
-            if not selected or not qty or not note:
-
-                st.warning("⚠️ Nhập đủ!")
-
+        p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
+        selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
+        
+        # Chia 4 cột để gom nhóm: [Số lượng] [Tồn] [Diễn giải] [Nút Thêm]
+        # Điều chỉnh tỷ lệ các số trong [0.8, 1, 1.5, 0.5] để thu hẹp khoảng cách
+        c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
+        
+        with c1: 
+            qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, key="qty_input_field")
+            
+        with c2:
+            # Hiển thị Tồn ngay ngang hàng với Số lượng
+            if selected:
+                current_stock = float(p_dict[selected]['Tồn'])
+                unit = p_dict[selected]['Đvt']
+                # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
+                st.markdown(f"<div style='margin-top: 28px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
             else:
+                st.write("") 
+                
+        with c3: 
+            note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
+            
+        with c4:
+            st.write("") # Căn chỉnh label
+            st.write("") 
+            if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
+                if not selected or not qty or not note: 
+                    st.warning("⚠️ Nhập đủ!")
+                else:
+                    if 'cart' not in st.session_state: st.session_state.cart = []
+                    st.session_state.cart.append({
+                        "Mã HH": p_dict[selected]["Mã"], 
+                        "Tên HH": p_dict[selected]["Tên"], 
+                        "Đvt": p_dict[selected]["Đvt"], 
+                        "Số lượng": float(qty), 
+                        "Ghi chú": note, 
+                        "Loại": trans_type
+                    })
+                    st.rerun()
 
-                if "cart" not in st.session_state:
-                    st.session_state.cart = []
-
-                st.session_state.cart.append({
-                    "Mã HH": p_dict[selected]["Mã"],
-                    "Tên HH": p_dict[selected]["Tên"],
-                    "Đvt": p_dict[selected]["Đvt"],
-                    "Số lượng": float(qty),
-                    "Ghi chú": note,
-                    "Loại": trans_type
-                })
-
-                st.rerun()
-
-        # =========================
-        # GIỎ HÀNG
-        # =========================
-
-        if "cart" not in st.session_state:
-            st.session_state.cart = []
-
-        if st.session_state.cart:
-
-            st.divider()
-
-            edited_df_cart = st.data_editor(
-                pd.DataFrame(st.session_state.cart),
-                use_container_width=True,
-                hide_index=True,
-                key="cart_editor"
-            )
-
-            if st.button(
-                "✅ Xác nhận tất cả",
-                type="primary",
-                key="confirm_cart_btn"
-            ):
-
-                for _, row in edited_df_cart.iterrows():
-
-                    service.add_transaction(
-                        row["Mã HH"],
-                        row["Tên HH"],
-                        row["Số lượng"],
-                        row["Loại"],
-                        row["Ghi chú"],
-                        st.session_state.user_name
-                    )
-
-                    service.update_stock(
-                        row["Mã HH"],
-                        row["Số lượng"],
-                        row["Loại"]
-                    )
-
-                st.session_state.cart = []
-
-                st.cache_data.clear()
-
-                st.success("🎉 Giao dịch thành công!")
-
-                st.rerun()
         # Phần hiển thị giỏ hàng và nút xác nhận
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
