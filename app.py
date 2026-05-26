@@ -220,7 +220,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         font-weight:bold;
                         white-space:nowrap;
                     ">
-                        🟢 Tồn: {current_stock:,.0f} {unit}
+                        🟢 Tồn: 8,880 cái
                     </div>
 
                 </div>
