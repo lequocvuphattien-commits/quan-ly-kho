@@ -195,9 +195,6 @@ if st.session_state.current_menu == "Danh mục hàng":
                         st.cache_data.clear()
                         st.success(f"Đã xóa {del_code}!")
                         st.rerun()
-                if st.button("Xác nhận xóa", key="delete_product_btn"):
-                    service.delete_product(del_code)
-                    st.cache_data.clear(); st.success(f"Đã xóa {del_code}!"); st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
