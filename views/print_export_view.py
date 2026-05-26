@@ -137,12 +137,20 @@ def show_print_export_view(service):
             df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
             df["Tên hàng hóa"] = df["Mã HH"] # Tránh lỗi nếu sheet cũ chưa có cột Tên
             
-        # Xử lý cột ngày (Chuyển string ngày trong lịch sử thành kiểu date để so sánh)
-        # Sử dụng errors='coerce' để bỏ qua các dòng rác/lỗi ngày tháng
-        df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], format='mixed', dayfirst=True, errors='coerce').dt.date
+        # ========================================================
+        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX ĐỂ CHỐNG LỖI ĐỊNH DẠNG NGÀY
+        # ========================================================
         
-        # 3. Lọc dữ liệu: Điều kiện Ngày == ngày chọn VÀ Loại == "Xuất"
-        filtered_df = df[(df['Loại'] == 'Xuất') & (df['Ngày_chuẩn'] == selected_date)]
+        # 1. Chuẩn hóa cột Loại (Đưa về chữ thường "XUẤT" và xóa khoảng trắng thừa)
+        df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
+        
+        # 2. Xử lý cột Ngày: Pandas tự động đọc mọi định dạng và tách lấy phần Ngày
+        df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
+        
+        # 3. Lọc dữ liệu: So sánh khớp Ngày và Loại
+        filtered_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
+        
+        # ========================================================
         
         if filtered_df.empty:
             st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
