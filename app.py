@@ -254,19 +254,28 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.rerun()
 
         # --- PHẦN HIỂN THỊ GIỎ HÀNG VÀ 2 NÚT BẤM CÙNG DÒNG ---
-            if 'cart' not in st.session_state: st.session_state.cart = []
-            if st.session_state.cart:
-                # 1. Cấu hình lưới
+            if 'cart' in st.session_state and st.session_state.cart:
+                # 1. Khai báo GridOptionsBuilder trước
                 gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
-                gb.configure_grid_options(suppressMenuHide=True, suppressColumnMenu=True, enableCellTextSelection=True)
+                
+                # 2. Cấu hình các tùy chọn cho lưới
+                gb.configure_grid_options(
+                    suppressMenuHide=True, 
+                    suppressColumnMenu=True, 
+                    enableCellTextSelection=True
+                )
+                
+                # 3. PHẢI CÓ DÒNG NÀY: Khai báo biến grid_opts trước khi dùng
                 grid_opts = gb.build()
                 
-                # 2. Hiển thị lưới
+                # 4. Sử dụng biến grid_opts trong hàm AgGrid
                 grid_response = AgGrid(
                     pd.DataFrame(st.session_state.cart), 
-                    gridOptions=grid_opts, 
+                    gridOptions=grid_opts,  # <--- Biến này phải được định nghĩa ở bước 3
                     height=200, 
                     theme='streamlit',
+                    allow_unsafe_jscode=True,
+                    update_mode=GridUpdateMode.MODEL_CHANGED,
                     key="cart_grid"
                 )
                 edited_df_cart = pd.DataFrame(grid_response['data'])
