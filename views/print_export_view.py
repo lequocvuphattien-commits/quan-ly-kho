@@ -222,18 +222,34 @@ def show_print_export_view(service):
         if filtered_df.empty:
             st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
         else:
-            export_data = []
+           # --- ĐOẠN CODE MỚI: GỘP DÒNG TRÙNG TÊN & GHI CHÚ ---
+            
+            # 1. Tạo danh sách dữ liệu thô từ filtered_df
+            raw_data = []
             for _, row in filtered_df.iterrows():
                 ma_hh = str(row.get("Mã HH", ""))
-                export_data.append({
+                raw_data.append({
                     "Tên HH": row.get("Tên hàng hóa", ma_hh),
                     "Đvt": dvt_dict.get(ma_hh, ""),
-                    "Số lượng": row.get("Số Lượng", 0),
-                    "Ghi chú": row.get("Ghi Chú", "")
+                    "Số lượng": float(row.get("Số Lượng", 0)),
+                    "Ghi chú": str(row.get("Ghi Chú", ""))
                 })
             
-            st.success(f"✅ Đã tìm thấy **{len(export_data)}** dòng hàng hóa xuất kho trong ngày này!")
+            # 2. Chuyển thành DataFrame để tính toán
+            df_export = pd.DataFrame(raw_data)
             
+            # 3. Gom nhóm (groupby) theo Tên HH, Đvt và Ghi chú
+            # Sau đó cộng tổng (sum) cột "Số lượng"
+            df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Ghi chú'], as_index=False)['Số lượng'].sum()
+            
+            # Chuyển ngược lại thành định dạng list để hàm export_phieu_xuat_excel sử dụng
+            export_data = df_grouped.to_dict('records')
+            
+            # --- KẾT THÚC ĐOẠN XỬ LÝ ---
+            
+            st.success(f"✅ Đã gộp thành công thành **{len(export_data)}** dòng hàng hóa!")
+            
+            # 4. Tạo file và hiển thị nút tải
             excel_data = export_phieu_xuat_excel(export_data, selected_date)
             
             st.download_button(
