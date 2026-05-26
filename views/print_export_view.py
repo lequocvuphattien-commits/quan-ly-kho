@@ -138,16 +138,16 @@ def show_print_export_view(service):
             df["Tên hàng hóa"] = df["Mã HH"] # Tránh lỗi nếu sheet cũ chưa có cột Tên
             
         # ========================================================
-        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX ĐỂ CHỐNG LỖI ĐỊNH DẠNG NGÀY
+        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX THEO CHỮ "XUẤT" VIẾT HOA
         # ========================================================
         
-        # 1. Chuẩn hóa cột Loại (Đưa về chữ thường "XUẤT" và xóa khoảng trắng thừa)
+        # 1. Chuẩn hóa: Ép kiểu chuỗi, xóa khoảng trắng 2 đầu và đưa về chữ IN HOA
         df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
         
-        # 2. Xử lý cột Ngày: Pandas tự động đọc mọi định dạng và tách lấy phần Ngày
+        # 2. Xử lý cột Ngày: Pandas cắt bỏ giờ phút, chỉ lấy ngày
         df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
         
-        # 3. Lọc dữ liệu: So sánh khớp Ngày và Loại
+        # 3. Lọc dữ liệu: So sánh khớp Ngày và Loại là chữ "XUẤT" in hoa
         filtered_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
         
         # ========================================================
