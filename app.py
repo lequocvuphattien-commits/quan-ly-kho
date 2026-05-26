@@ -55,7 +55,7 @@ st.markdown("""
 
     /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định */
     div[data-testid="stHorizontalBlock"] {
-        gap: 5px !important;
+        gap: 10px !important;
     }        
     
     </style>
