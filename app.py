@@ -29,7 +29,7 @@ st.markdown("""
             
     /* Giảm khoảng cách input */
 div[data-baseweb="input"] {
-    margin-top: -12px !important;
+    margin-top: -22px !important;
 }
     
     /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
