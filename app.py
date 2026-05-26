@@ -187,25 +187,36 @@ if "logged_in" not in st.session_state:
         st.session_state.user_name = None
         st.session_state.current_menu = "Danh mục hàng"
 
+# --- KHÓA MÀN HÌNH ĐĂNG NHẬP NẾU CHƯA LOGGED_IN ---
 if not st.session_state.logged_in:
     with st.container(border=True):
         st.subheader("🔒 Đăng nhập hệ thống")
         user = st.text_input("Mã nhân viên (Username):")
         pwd = st.text_input("Mật khẩu:", type="password") 
+        
         if st.button("Đăng nhập", type="primary", key="login_btn"):
             user_data = service.check_login(user, pwd)
             if user_data["status"]:
+                # 1. Kích hoạt trạng thái đăng nhập thành công
                 st.session_state.logged_in = True
                 st.session_state.user_name = user_data["name"]
                 st.session_state.user_role = user_data["role"]
                 
+                # 2. ÉP BUỘC nhảy thẳng vào chức năng Danh mục hàng ngay lập tức
+                st.session_state.current_menu = "Danh mục hàng"
+                
+                # 3. Lưu tham số vào URL trình duyệt để giữ trạng thái khi F5
                 st.query_params["logged_in"] = "true"
                 st.query_params["user_name"] = user_data["name"]
                 st.query_params["user_role"] = user_data["role"]
-                st.query_params["current_menu"] = st.session_state.current_menu
+                st.query_params["current_menu"] = "Danh mục hàng"
+                
+                # 4. Giải phóng giao diện, dẹp màn hình đăng nhập cũ ngay lập tức
                 st.rerun() 
             else: 
                 st.error("❌ Mã NV hoặc mật khẩu không đúng!")
+                
+    # Lệnh chặn này giữ người dùng ở lại form đăng nhập cho đến khi đăng nhập thành công
     st.stop() 
 
 # --- THANH SIDEBAR ẨN (CHỈ CHỨA THÔNG TIN USER & ĐĂNG XUẤT) ---
