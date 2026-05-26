@@ -16,7 +16,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
     except FileNotFoundError:
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws['A1'] = "CÔNG TY QUẢN LÝ KHO ĐÔNG THÁP"
+        ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
         ws.merge_cells('A4:F4')
         ws['A4'] = "PHIẾU XUẤT KHO"
         ws['A4'].font = openpyxl.styles.Font(name="Arial", size=16, bold=True)
