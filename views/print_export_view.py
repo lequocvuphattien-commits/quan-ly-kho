@@ -61,28 +61,28 @@ def export_phieu_xuat_excel(export_data, selected_date):
     if os.path.exists(logo_path):
         img = OpenpyxlImage(logo_path)
         # Ép độ rộng/chiều cao logo cố định khoảng tầm này để cân đối (Bạn có thể sửa số lại nếu muốn)
-        img.width = 85
+        img.width = 115
         img.height = 85
         # Chèn ảnh đè lên vị trí góc ô A1
-        ws.add_image(img, 'E1')
+        ws.add_image(img, 'F1')
         
     # Nới rộng chiều cao 3 dòng đầu để chứa logo không bị đè chữ
-    ws.row_dimensions[1].height = 28
+    ws.row_dimensions[1].height = 18
     ws.row_dimensions[2].height = 18
     ws.row_dimensions[3].height = 18
     
     # Dịch thông tin chữ sang cột B để nhường không gian cột A cho logo
-    ws['B1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
-    ws['B1'].font = Font(name="Arial", size=11, bold=True)
+    ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
+    ws['A1'].font = Font(name="Arial", size=11, bold=True)
     
-    ws['B2'] = "Địa chỉ: Lô B3, đường số 2, Cụm CN Mỹ Hiệp, Xã Mỹ Hiệp, Tỉnh Đồng Tháp"
-    ws['B2'].font = Font(name="Arial", size=10, italic=True)
+    ws['A2'] = "Địa chỉ: Lô B3, đường số 2, Cụm CN Mỹ Hiệp, Xã Mỹ Hiệp, Tỉnh Đồng Tháp"
+    ws['A2'].font = Font(name="Arial", size=10, italic=True)
     
-    ws['B3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
-    ws['B3'].font = Font(name="Arial", size=10, italic=True)
+    ws['A3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
+    ws['A3'].font = Font(name="Arial", size=10, italic=True)
 
     # Tiêu đề phiếu nằm ở dòng 5 (Đẩy dịch xuống 1 dòng so với trước cho thoáng)
-    ws.merge_cells('A5:F5')
+    #ws.merge_cells('A5:F5')
     ws['A5'] = "PHIẾU XUẤT KHO"
     ws['A5'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
     ws['A5'].alignment = Alignment(horizontal="center", vertical="center")
@@ -90,7 +90,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
     
     # --- GHI NGÀY IN PHIẾU (MERGE A6:F6) ---
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
-    ws.merge_cells('A6:F6')
+    #ws.merge_cells('A6:F6')
     ws['A6'] = date_str
     ws['A6'].font = font_italic
     ws['A6'].alignment = Alignment(horizontal="center", vertical="center")
