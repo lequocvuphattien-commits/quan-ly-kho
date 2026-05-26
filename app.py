@@ -202,11 +202,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         with c4:
             st.write("") # Căn chỉnh label
             st.write("") 
-            st.markdown("""
-                <style>
-                div.stButton > button { width: 100%; padding: -5rem; }
-                </style>
-            """, unsafe_allow_html=True)
             
             if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
                 if not selected or not qty or not note: 
