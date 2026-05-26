@@ -43,7 +43,7 @@ st.markdown("""
         flex-direction: row !important; 
         align-items: center !important; 
         flex-wrap: nowrap !important;
-        margin-bottom: -15px !important; /* Cấm bẻ dòng */
+        margin-bottom: -20px !important; /* Cấm bẻ dòng */
     }
     div[data-testid="stRadio"] > label { 
         margin-bottom: 0px !important; 
