@@ -253,19 +253,41 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.session_state.qty_key += 1
                     st.rerun()
 
-        # Phần hiển thị giỏ hàng và nút xác nhận
-        if 'cart' not in st.session_state: st.session_state.cart = []
-        if st.session_state.cart:
-            #st.divider()
-            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
-            if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
-                for _, row in edited_df_cart.iterrows():
-                    service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
-                    service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                st.session_state.cart = []
-                st.cache_data.clear()
-                st.success(f"🎉 Giao dịch thành công!")
-                st.rerun()
+        # --- PHẦN HIỂN THỊ GIỎ HÀNG VÀ 2 NÚT BẤM CÙNG DÒNG ---
+            if 'cart' not in st.session_state: st.session_state.cart = []
+            if st.session_state.cart:
+                # 1. Cấu hình lưới
+                gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
+                gb.configure_grid_options(suppressMenuHide=True, suppressColumnMenu=True, enableCellTextSelection=True)
+                grid_opts = gb.build()
+                
+                # 2. Hiển thị lưới
+                grid_response = AgGrid(
+                    pd.DataFrame(st.session_state.cart), 
+                    gridOptions=grid_opts, 
+                    height=200, 
+                    theme='streamlit',
+                    key="cart_grid"
+                )
+                edited_df_cart = pd.DataFrame(grid_response['data'])
+                
+                # 3. Chia 2 cột để chứa 2 nút: Xác nhận & Hủy
+                btn_col1, btn_col2 = st.columns(2)
+                
+                with btn_col1:
+                    if st.button("✅ Xác nhận", type="primary", use_container_width=True): 
+                        for _, row in edited_df_cart.iterrows():
+                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                            service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                        st.session_state.cart = []
+                        st.cache_data.clear()
+                        st.success("🎉 Giao dịch thành công!")
+                        st.rerun()
+                
+                with btn_col2:
+                    if st.button("❌ Hủy bỏ", use_container_width=True):
+                        st.session_state.cart = []
+                        st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho": 
