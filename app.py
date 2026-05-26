@@ -188,14 +188,29 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 st.markdown(
                     f"""
                     <div style="
-                        text-align: right;
-                        color: #28a745;
-                        font-size: 16px;
-                        font-weight: bold;
-                        margin-top: 8px;
-                        white-space: nowrap;
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        width:100%;
+                        margin-bottom:-10px;
                     ">
-                        🟢 Tồn: {current_stock:,.0f} {unit}
+                    
+                        <div style="
+                            font-size:22px;
+                            font-weight:700;
+                        ">
+                            Số lượng
+                        </div>
+
+                        <div style="
+                            color:#28a745;
+                            font-size:18px;
+                            font-weight:bold;
+                            white-space:nowrap;
+                        ">
+                            🟢 Tồn: {current_stock:,.0f} {unit}
+                        </div>
+
                     </div>
                     """,
                     unsafe_allow_html=True
