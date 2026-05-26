@@ -255,7 +255,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
 
         # Phần hiển thị giỏ hàng
         if 'cart' in st.session_state and st.session_state.cart:
-            st.divider()
+            #st.divider()
             edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True)
             if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
                 for _, row in edited_df_cart.iterrows():
@@ -265,6 +265,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 st.cache_data.clear()
                 st.success(f"🎉 Giao dịch thành công!")
                 st.rerun()
+
         # Phần hiển thị giỏ hàng và nút xác nhận
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
