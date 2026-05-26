@@ -31,7 +31,7 @@ st.markdown("""
         display: flex !important;
         justify-content: flex-end !important; /* Đẩy nội dung sang phải */
         align-items: center !important;
-        margin-top: 2px !important;
+        margin-top: 0px !important;
         font-weight: bold !important;
         color: #28a745 !important;
         white-space: nowrap !important;
@@ -221,7 +221,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             
         with c4:
             st.write("") # Căn chỉnh label
-            st.write("") 
+            #st.write("") 
             
             if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
                 if not selected or not qty or not note: 
