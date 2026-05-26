@@ -185,80 +185,170 @@ if st.session_state.current_menu == "Danh mục hàng":
                         st.cache_data.clear(); st.success("Đã thêm thành công!"); st.rerun()
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
+
             if products:
+
+                # =========================================
+                # TẠO DATAFRAME
+                # =========================================
+                df = pd.DataFrame(
+                    products,
+                    columns=[
+                        "ID",
+                        "Mã",
+                        "Tên hàng hóa",
+                        "Đvt",
+                        "Tồn"
+                    ]
+                )
+
+                # =========================================
+                # CHUYỂN TỒN KHO SANG NUMBER
+                # =========================================
+                df["Tồn"] = pd.to_numeric(
+                    df["Tồn"],
+                    errors="coerce"
+                ).fillna(0)
+
+                # =========================================
+                # TẠO DANH SÁCH HIỂN THỊ
+                # =========================================
                 product_map = {
                     f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"]
-                    for _, row in df.iterrows()}
+                    for _, row in df.iterrows()
+                }
 
+                # =========================================
+                # SELECTBOX
+                # =========================================
                 selected_product = st.selectbox(
                     "Chọn hàng cần xóa",
                     options=list(product_map.keys()),
-                    key="delete_product_select")
+                    key="delete_product_select"
+                )
 
+                # =========================================
+                # LẤY MÃ HÀNG
+                # =========================================
                 del_code = product_map[selected_product]
 
-                # SỬ DỤNG POPOVER ĐỂ HỎI LẠI TRƯỚC KHI XÓA
-                
+                # =========================================
+                # POPOVER XÁC NHẬN
+                # =========================================
                 with st.popover("🗑️ Xóa hàng này"):
 
-                    st.warning(f"Bạn có chắc muốn xóa: {selected_product} ?")
+                    st.warning(
+                        f"Bạn có chắc muốn xóa:\n\n{selected_product} ?"
+                    )
+
                     col_yes, col_no = st.columns(2)
+
+                    # =====================================
+                    # NÚT YES
+                    # =====================================
                     with col_yes:
+
                         if st.button(
                             "✅ Yes",
                             use_container_width=True,
                             key="confirm_delete_btn"
                         ):
-                            # =========================
+
+                            # =============================
                             # KIỂM TRA TỒN KHO
-                            # =========================
-                            product_row = df[df["Mã"] == del_code]
+                            # =============================
+                            product_row = df[
+                                df["Mã"] == del_code
+                            ]
+
                             current_stock = 0
+
                             if not product_row.empty:
-                                current_stock = float(product_row.iloc[0]["Tồn"])
-                            # =========================
-                            # KIỂM TRA PHÁT SINH
-                            # =========================
-                            history = get_cached_history(service)
-                            has_transaction = False
-                            if history:
-                                history_df = pd.DataFrame(
-                                    history,
-                                    columns=[
-                                        "Ngày",
-                                        "Mã",
-                                        "Tên Hàng Hóa",
-                                        "Loại",
-                                        "Số Lượng",
-                                        "Ghi Chú"
-                                    ]
+
+                                current_stock = float(
+                                    product_row.iloc[0]["Tồn"]
                                 )
-                                has_transaction = (
-                                    history_df["Mã"] == del_code
-                                ).any()
-                            # =========================
+
+                            # =============================
+                            # KIỂM TRA PHÁT SINH
+                            # =============================
+                            history = get_cached_history(service)
+
+                            has_transaction = False
+
+                            if history:
+
+                                try:
+
+                                    # =====================
+                                    # CHUYỂN SANG DATAFRAME
+                                    # =====================
+                                    history_df = pd.DataFrame(history)
+
+                                    # =====================
+                                    # KIỂM TRA CỘT MÃ
+                                    # =====================
+                                    if (
+                                        not history_df.empty
+                                        and "Mã" in history_df.columns
+                                    ):
+
+                                        has_transaction = (
+                                            history_df["Mã"]
+                                            .astype(str)
+                                            == str(del_code)
+                                        ).any()
+
+                                except Exception as e:
+
+                                    st.error(
+                                        f"Lỗi kiểm tra lịch sử: {e}"
+                                    )
+
+                            # =============================
                             # ĐIỀU KIỆN XÓA
-                            # =========================
+                            # =============================
                             if current_stock != 0:
+
                                 st.error(
                                     f"Không thể xóa vì tồn kho còn: {current_stock}"
                                 )
+
                             elif has_transaction:
+
                                 st.error(
                                     "Không thể xóa vì đã phát sinh nhập/xuất."
                                 )
+
                             else:
+
+                                # =========================
+                                # THỰC HIỆN XÓA
+                                # =========================
                                 service.delete_product(del_code)
+
                                 st.cache_data.clear()
-                                st.success(f"Đã xóa {del_code}!")
+
+                                st.success(
+                                    f"Đã xóa {del_code}!"
+                                )
+
                                 st.rerun()
+
+                    # =====================================
+                    # NÚT NO
+                    # =====================================
                     with col_no:
+
                         if st.button(
                             "❌ No",
                             use_container_width=True,
                             key="cancel_delete_btn"
                         ):
-                            st.info("Đã hủy thao tác xóa.")
+
+                            st.info(
+                                "Đã hủy thao tác xóa."
+                            )
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
