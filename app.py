@@ -169,6 +169,28 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- SCRIPT TỰ ĐỘNG ĐÓNG SIDEBAR TRÊN MOBILE ---
+if st.session_state.get("force_close_sidebar", False):
+    st.components.v1.html(
+        """
+        <script>
+            // Tìm nút X (đóng sidebar) trên giao diện mobile của Streamlit và mô phỏng thao tác bấm
+            var closeBtn = window.parent.document.querySelector('[data-testid="stSidebarCollapseButton"]');
+            if (closeBtn) {
+                closeBtn.click();
+            } else {
+                // Dự phòng cho các phiên bản Streamlit cũ hơn
+                var altBtn = window.parent.document.querySelector('button[aria-label="Close"]');
+                if (altBtn) altBtn.click();
+            }
+        </script>
+        """,
+        height=0,
+        width=0
+    )
+    # Tắt cờ đi để script không bị chạy lại vào các thao tác sau
+    st.session_state.force_close_sidebar = False
+
 @st.cache_resource(show_spinner=False)
 def get_data_service(): return DataService(mode="ONLINE")
 
