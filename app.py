@@ -186,7 +186,6 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                #del_code = st.selectbox("Chọn mã hàng cần xóa", options=df["Mã"].tolist(), key="delete_product_select")
                 product_map = {
                     f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"]
                     for _, row in df.iterrows()}
@@ -199,13 +198,28 @@ if st.session_state.current_menu == "Danh mục hàng":
                 del_code = product_map[selected_product]
 
                 # SỬ DỤNG POPOVER ĐỂ HỎI LẠI TRƯỚC KHI XÓA
+                
                 with st.popover("🗑️ Xóa hàng này"):
-                    st.write(f"Bạn có chắc chắn muốn xóa **{del_code}** không?")
-                    if st.button("Xác nhận xóa", key="confirm_delete_btn"):
-                        service.delete_product(del_code)
-                        st.cache_data.clear()
-                        st.success(f"Đã xóa {del_code}!")
-                        st.rerun()
+                    st.warning(f"Bạn có chắc muốn xóa: {selected_product} ?")
+                    col_yes, col_no = st.columns(2)
+                    with col_yes:
+                        if st.button(
+                            "✅ Yes",
+                            use_container_width=True,
+                            key="confirm_delete_btn"
+                        ):
+                            service.delete_product(del_code)
+                            st.cache_data.clear()
+                            st.success(f"Đã xóa {del_code}!")
+                            st.rerun()
+                    with col_no:
+                        if st.button(
+                            "❌ No",
+                            use_container_width=True,
+                            key="cancel_delete_btn"
+                        ):
+
+                            st.info("Đã hủy thao tác xóa.")
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
