@@ -36,26 +36,62 @@ st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_s
 @st.dialog("Xác nhận xóa lịch sử")
 def confirm_delete_history_dialog(selected_rows, service):
     st.warning(f"⚠️ Bạn có chắc muốn xóa **{len(selected_rows)}** giao dịch đã chọn không?")
-    st.error("Hành động này sẽ tự động HOÀN TÁC (cộng/trừ ngược) số lượng tồn kho tương ứng!")
+    st.info("Hành động này sẽ tự động HOÀN TÁC (cộng/trừ ngược) số lượng tồn kho tương ứng.")
+    
+    # Tạo một container trống để hiển thị thông báo lỗi tràn viền (nếu có)
+    msg_container = st.container()
     
     col_yes, col_no = st.columns(2)
     with col_yes:
         if st.button("✅ Xác nhận xóa"):
-            # Duyệt qua các dòng được chọn để xóa ngược xuôi
+            
+            # ==========================================
+            # BƯỚC 1: KIỂM TRA RÀNG BUỘC TỒN KHO ÂM
+            # ==========================================
+            products = get_cached_products(service)
+            # Tạo từ điển {Mã HH: Tồn kho hiện tại}
+            stock_dict = {p[1]: float(p[4]) for p in products} if products else {}
+            
+            # Tính tổng số lượng thay đổi cho từng mã hàng định xóa
+            stock_changes = {}
             for index, row in selected_rows.iterrows():
-                # Lấy các thông tin cần thiết từ dòng hiện tại
                 p_code = row["Mã HH"]
-                # Lấy tên cột chính xác theo Sheet (Số Lượng hoặc qty)
                 qty = float(row["Số Lượng"]) if "Số Lượng" in row else float(row.get("qty", 0))
                 t_type = row["Loại"]
                 
-                # Gọi hàm xóa trong services/data_service.py đã thêm ở bước trước
-                # index chính là vị trí dòng của DataFrame (cần map chính xác với hàng trong sheet)
-                service.delete_transaction(index, p_code, qty, t_type)
-                
-            st.cache_data.clear() # Xóa bộ nhớ đệm để tải lại dữ liệu mới nhất
-            st.success("🎉 Đã xóa và hoàn tác tồn kho thành công!")
-            st.rerun()
+                # Nếu xóa phiếu "Nhập" -> tồn kho sẽ bị trừ đi.
+                # Nếu xóa phiếu "Xuất" -> tồn kho sẽ được cộng lại.
+                change = -qty if t_type == "Nhập" else qty
+                stock_changes[p_code] = stock_changes.get(p_code, 0) + change
+            
+            # Kiểm tra xem có mã nào rơi vào tình trạng âm không
+            invalid_products = []
+            for p_code, change in stock_changes.items():
+                current_stock = stock_dict.get(p_code, 0)
+                if current_stock + change < 0:
+                    invalid_products.append(f"• **{p_code}** (Tồn hiện tại: {current_stock:,.0f} -> Sẽ bị âm: {current_stock + change:,.0f})")
+            
+            # ==========================================
+            # BƯỚC 2: PHÂN NHÁNH XỬ LÝ
+            # ==========================================
+            if invalid_products:
+                # NẾU LỖI: Bắn thông báo lên msg_container và NGỪNG XÓA
+                with msg_container:
+                    st.error("🚫 **TỪ CHỐI XÓA: Dẫn đến tồn kho bị ÂM!**")
+                    for msg in invalid_products:
+                        st.write(msg)
+            else:
+                # NẾU AN TOÀN: Thực hiện xóa như bình thường
+                for index, row in selected_rows.iterrows():
+                    p_code = row["Mã HH"]
+                    qty = float(row["Số Lượng"]) if "Số Lượng" in row else float(row.get("qty", 0))
+                    t_type = row["Loại"]
+                    
+                    service.delete_transaction(index, p_code, qty, t_type)
+                    
+                st.cache_data.clear()
+                st.success("🎉 Đã xóa và hoàn tác tồn kho thành công!")
+                st.rerun()
             
     with col_no:
         if st.button("❌ Hủy bỏ"):
