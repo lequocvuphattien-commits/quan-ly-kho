@@ -16,6 +16,21 @@ def get_cached_config(_svc): return _svc.get_config_options()
 @st.cache_data(ttl=600, show_spinner=False)
 def get_cached_employees(_svc): return _svc.get_employees()
 
+# --- ĐẶT HÀM DIALOG Ở ĐÂY (TRƯỚC KHI KHỞI TẠO SERVICE) ---
+@st.dialog("Xác nhận xóa")
+def confirm_delete(product_name, del_code, service):
+    st.warning(f"Bạn có chắc muốn xóa: {product_name}?")
+    col_yes, col_no = st.columns(2)
+    with col_yes:
+        if st.button("✅ Yes"):
+            service.delete_product(del_code)
+            st.cache_data.clear()
+            st.success("Đã xóa!")
+            st.rerun() 
+    with col_no:
+        if st.button("❌ No"):
+            st.rerun()
+
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
 # --- CSS TỐI ƯU GIAO DIỆN KHÓA CỨNG TRÊN MOBILE ---
@@ -188,40 +203,16 @@ if st.session_state.current_menu == "Danh mục hàng":
             if products:
                 # 1. Chuẩn bị dữ liệu
                 df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
-                df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
                 product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
                 
+                # 2. Chọn sản phẩm
                 selected_product = st.selectbox("Chọn hàng cần xóa", options=list(product_map.keys()), key="delete_product_select")
                 del_code = product_map[selected_product]
 
-                # 2. Popover xác nhận xóa
-                # Khi bấm vào Yes/No, chúng ta dùng st.rerun() để đóng popover và làm mới trang
-                with st.popover("🗑️ Xóa hàng này"):
-                    st.warning(f"Bạn có chắc muốn xóa:\n\n{selected_product} ?")
-                    col_yes, col_no = st.columns(2)
-                    
-                    with col_yes:
-                        if st.button("✅ Yes", use_container_width=True, key="confirm_delete_btn"):
-                            # Kiểm tra tồn kho
-                            product_row = df[df["Mã"] == del_code]
-                            current_stock = float(product_row.iloc[0]["Tồn"]) if not product_row.empty else 0
-                            
-                            if current_stock != 0:
-                                st.error(f"Không thể xóa vì tồn kho còn: {current_stock}")
-                                # Dừng lại để người dùng đọc lỗi, không rerun ngay
-                            else:
-                                service.delete_product(del_code)
-                                st.cache_data.clear()
-                                st.success(f"Đã xóa {del_code}!")
-                                # CHUYỂN TAB VÀ ĐÓNG POPOVER BẰNG CÁCH TẢI LẠI TRANG
-                                st.session_state.current_menu = "Danh mục hàng"
-                                st.rerun() 
-
-                    with col_no:
-                        if st.button("❌ No", use_container_width=True, key="cancel_delete_btn"):
-                            # CHỈ CẦN RERUN LÀ POPOVER SẼ TỰ ĐÓNG
-                            st.session_state.current_menu = "Danh mục hàng"
-                            st.rerun()
+                # 3. Nút xóa kích hoạt Dialog
+                if st.button("🗑️ Xóa hàng này", use_container_width=True):
+                    # Gọi dialog
+                    confirm_delete(selected_product, del_code, service)
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
