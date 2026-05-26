@@ -3,8 +3,15 @@ import pandas as pd
 import io
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
+from views.print_export_view import show_print_export_view
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
+
+import pandas as pd
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from io import BytesIO
+import datetime
 
 # --- BỘ NHỚ ĐỆM ---
 @st.cache_data(ttl=600, show_spinner=False)
@@ -218,7 +225,7 @@ if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
-menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch"]
+menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", " In phiếu xuất kho "]
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
 
@@ -367,6 +374,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho": 
+
+# --- TAB 3: IN PHIẾU XUẤT ---
+elif st.session_state.current_menu == "In phiếu xuất":
+    show_print_export_view(service)
     show_report()
 
 # --- TAB 4: LẠCH SỬ GIAO DỊCH ---
