@@ -53,14 +53,15 @@ st.markdown("""
         padding-right: 0px !important;
     }
 
-    /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định */
+    /* Ép các cột sát nhau hơn bằng cách giảm margin mặc định và kéo sát hàng dưới lên */
     div[data-testid="stHorizontalBlock"] {
         gap: 10px !important;
+        margin-bottom: -25px !important; /* Triệt tiêu khoảng trống phía dưới hàng ô nhập */
     }        
     
-    /* ẨN TOÀN BỘ THANH CÔNG CỤ, MẮT XEM, TẢI VỀ, TÌM KIẾM CỦA AGGRID */
+    /* ẨN TOÀN BỘ THANH CÔNG CỤ CỦA AGGRID VÀ ÉP LƯỚI LÊN TRÊN SÁT NÚT BẤM */
     .ag-header-cell-menu-button, .ag-menu, .ag-header-icon, .ag-floating-filter { display: none !important; }
-    div[data-testid="stAgGrid"] { margin-top: -15px !important; }
+    div[data-testid="stAgGrid"] { margin-top: -35px !important; } /* Kéo lưới chờ sát lên trên */
     
     </style>
 """, unsafe_allow_html=True)
@@ -216,10 +217,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     })
                     st.rerun()
 
-        # --- PHẦN ĐOẠN ĐƯỢC CẬP NHẬT ĐỂ ẨN ĐI THANH CÔNG CỤ CỦA LƯỚI CHỜ ---
+        # --- LƯỚI CHỜ ĐƯỢC TỐI ƯU KHÍT KHOẢNG TRỐNG ---
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
-            st.divider()
+            # Đã xóa st.divider() ở đây để triệt tiêu khoảng cách trống
             
             # 1. Cấu hình để ẩn menu và các công cụ mặc định
             gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
