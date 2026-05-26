@@ -186,41 +186,40 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                # 1. Tạo DataFrame từ sản phẩm
+                # 1. Tạo DataFrame và danh sách chọn
                 df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
                 df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-                
-                # 2. Tạo danh sách chọn
                 product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
+                
                 selected_product = st.selectbox("Chọn hàng cần xóa", options=list(product_map.keys()), key="delete_product_select")
                 del_code = product_map[selected_product]
 
-                # 3. Popover xác nhận xóa
+                # 2. Popover xác nhận xóa
                 with st.popover("🗑️ Xóa hàng này"):
-                    # Kiểm tra xem có đang cần xác nhận không
                     st.warning(f"Bạn có chắc muốn xóa:\n\n{selected_product} ?")
                     col_yes, col_no = st.columns(2)
                     
                     with col_yes:
                         if st.button("✅ Yes", use_container_width=True, key="confirm_delete_btn"):
-                            # ... logic kiểm tra tồn kho ...
+                            # Logic kiểm tra
                             product_row = df[df["Mã"] == del_code]
                             current_stock = float(product_row.iloc[0]["Tồn"]) if not product_row.empty else 0
                             
                             if current_stock != 0:
                                 st.error(f"Không thể xóa vì tồn kho còn: {current_stock}")
+                                # Không dùng rerun ở đây để người dùng kịp đọc lỗi
                             else:
                                 service.delete_product(del_code)
                                 st.cache_data.clear()
                                 st.success(f"Đã xóa {del_code}!")
-                                
-                                # CẬP NHẬT TRẠNG THÁI ĐỂ ĐÓNG VÀ CHUYỂN TAB
+                                # Lệnh này làm sạch giao diện và đóng popover
                                 st.session_state.current_menu = "Danh mục hàng"
-                                st.rerun() # Lệnh này sẽ đóng popover và tải lại trang
+                                st.rerun()
 
                     with col_no:
                         if st.button("❌ No", use_container_width=True, key="cancel_delete_btn"):
-                            # Khi bấm No, chỉ cần rerun để đóng popover
+                            # Chuyển về menu và rerun để đóng popover ngay lập tức
+                            st.session_state.current_menu = "Danh mục hàng"
                             st.rerun()
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
