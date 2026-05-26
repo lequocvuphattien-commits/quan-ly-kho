@@ -30,7 +30,7 @@ st.markdown("""
     .stock-container {
         display: flex !important;
         justify-content: flex-end !important; /* Đẩy nội dung sang phải */
-        align-items: center !important;
+        align-items: right !important;
         margin-top: 25px !important;
         font-weight: bold !important;
         color: #28a745 !important;
