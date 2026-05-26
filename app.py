@@ -246,11 +246,35 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     })
                     st.rerun()
 
-        # Phần hiển thị giỏ hàng và nút xác nhận
+        # --- PHẦN ĐOẠN ĐƯỢC CẬP NHẬT ĐỂ ẨN ĐI THANH CÔNG CỤ CỦA LƯỚI CHỜ ---
         if 'cart' not in st.session_state: st.session_state.cart = []
         if st.session_state.cart:
             st.divider()
-            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
+            
+            # 1. Cấu hình để ẩn menu và các công cụ mặc định
+            gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
+            
+            # Ép AgGrid không hiển thị menu cột và các nút điều khiển rườm rà
+            gb.configure_grid_options(
+                suppressMenuHide=True, 
+                suppressColumnMenu=True, 
+                enableCellTextSelection=True
+            )
+            grid_opts = gb.build()
+            
+            # 2. Hiển thị AgGrid tinh gọn sát lên phía trên
+            grid_response = AgGrid(
+                pd.DataFrame(st.session_state.cart), 
+                gridOptions=grid_opts, 
+                height=200, 
+                theme='streamlit',
+                allow_unsafe_jscode=True,
+                update_mode=GridUpdateMode.MODEL_CHANGED,
+                key="cart_grid"
+            )
+            # Lấy data từ lưới chuyển sang DataFrame để lưu
+            edited_df_cart = pd.DataFrame(grid_response['data'])
+            
             if st.button("✅ Xác nhận tất cả", type="primary", key="confirm_cart_btn"): 
                 for _, row in edited_df_cart.iterrows():
                     service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
