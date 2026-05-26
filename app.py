@@ -203,7 +203,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 
         with c3: 
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
-            st.markdown("<div style='margin-top: 0px; font-size: 12px; color: #6c757d;'>Chọn diễn giải hoặc kho liên quan</div>", unsafe_allow_html=True) 
+            st.markdown("<div style='margin-top: 0px; font-size: 12px; color: #28a745;'>Chọn diễn giải hoặc kho liên quan</div>", unsafe_allow_html=True) 
         with c4:
             st.write("") # Căn chỉnh label
             st.write("") 
