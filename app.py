@@ -187,6 +187,8 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     display:flex;
                     justify-content:space-between;
                     align-items:center;
+                    margin-top:5px;
+                    margin-bottom:2px;
                 ">
 
                     <div style="
@@ -209,7 +211,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 """,
                 unsafe_allow_html=True
             )
-
         # =========================
         # INPUT DÒNG CHÍNH
         # =========================
