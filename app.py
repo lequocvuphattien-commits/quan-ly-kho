@@ -254,28 +254,37 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.rerun()
 
         # --- PHẦN HIỂN THỊ GIỎ HÀNG VÀ 2 NÚT BẤM CÙNG DÒNG ---
-            if 'cart' in st.session_state and st.session_state.cart:
-                # 1. Khai báo GridOptionsBuilder trước
+            if 'cart' not in st.session_state: st.session_state.cart = []
+            if st.session_state.cart:
+                
+                # 1. Khởi tạo GridOptionsBuilder
                 gb = GridOptionsBuilder.from_dataframe(pd.DataFrame(st.session_state.cart))
                 
-                # 2. Cấu hình các tùy chọn cho lưới
+                # 2. Cấu hình độ rộng cho từng cột
+                # Mã HH: 60px, Tên HH: linh hoạt (flex 2), Đvt: 40px, Số lượng: 60px, Ghi chú: linh hoạt (flex 1)
+                gb.configure_column("Mã HH", width=60)
+                gb.configure_column("Tên HH", flex=2, minWidth=100)
+                gb.configure_column("Đvt", width=40)
+                gb.configure_column("Số lượng", width=60)
+                gb.configure_column("Ghi chú", flex=1, minWidth=80)
+                gb.configure_column("Loại", width=50)
+
+                # 3. Ẩn menu và các công cụ mặc định
                 gb.configure_grid_options(
                     suppressMenuHide=True, 
                     suppressColumnMenu=True, 
-                    enableCellTextSelection=True
+                    enableCellTextSelection=True,
+                    domLayout='normal' # Giúp lưới hiển thị tốt hơn trên mobile
                 )
-                
-                # 3. PHẢI CÓ DÒNG NÀY: Khai báo biến grid_opts trước khi dùng
                 grid_opts = gb.build()
                 
-                # 4. Sử dụng biến grid_opts trong hàm AgGrid
+                # 4. Hiển thị AgGrid
                 grid_response = AgGrid(
                     pd.DataFrame(st.session_state.cart), 
-                    gridOptions=grid_opts,  # <--- Biến này phải được định nghĩa ở bước 3
+                    gridOptions=grid_opts, 
                     height=200, 
                     theme='streamlit',
-                    allow_unsafe_jscode=True,
-                    update_mode=GridUpdateMode.MODEL_CHANGED,
+                    fit_columns_on_grid_load=True, # Tự động dàn đều cột
                     key="cart_grid"
                 )
                 edited_df_cart = pd.DataFrame(grid_response['data'])
