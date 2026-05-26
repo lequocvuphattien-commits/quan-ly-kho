@@ -61,12 +61,29 @@ def export_phieu_xuat_excel(export_data, selected_date):
         bottom=Side(style='thin', color='B0B0B0')
     )
     
-    # Ghi ngày in phiếu ở dòng 5
+    # --- THÔNG TIN CÔNG TY & TIÊU ĐỀ PHIẾU ---
+    ws['A1'] = "CÔNG TY TNHH THỦY SẢN PHÁT TIẾN"
+    ws['A1'].font = Font(name="Arial", size=11, bold=True)
+    
+    ws['A2'] = "Địa chỉ: Lô B3, đường số 2, Cụm CN Mỹ Hiệp, Xã Mỹ Hiệp, Tỉnh Đồng Tháp"
+    ws['A2'].font = Font(name="Arial", size=10, italic=True)
+    
+    ws['A3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
+    ws['A3'].font = Font(name="Arial", size=10, italic=True)
+
+    ws.merge_cells('A4:F4')
+    ws['A4'] = "PHIẾU XUẤT KHO"
+    ws['A4'].font = Font(name="Arial", size=16, bold=True, color="1F4E78")
+    ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[4].height = 30
+    
+    # --- GHI NGÀY IN PHIẾU (MERGE A5:F5) ---
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
     ws.merge_cells('A5:F5')
     ws['A5'] = date_str
     ws['A5'].font = font_italic
     ws['A5'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[5].height = 20
        
     # Thiết lập độ rộng dòng tiêu đề bảng (Dòng số 8) thoáng hơn
     ws.row_dimensions[8].height = 26
@@ -113,11 +130,11 @@ def export_phieu_xuat_excel(export_data, selected_date):
             if i % 2 == 1:
                 cell.fill = fill_zebra
                 
-    # --- PHẦN XỬ LÝ CHỮ KÝ ĐÃ TÙY CHỈNH ---
+    # --- PHẦN XỬ LÝ CHỮ KÝ ĐÃ TÙY CHỈNH THEO CỘT VÀ VỊ TRÍ ---
     last_data_row = start_row + len(export_data) - 1
     sign_title_row = last_data_row + 2
     
-    # Thiết lập chiều cao cho dòng chức danh
+    # Thiết lập chiều cao cho dòng chức danh ký tên
     ws.row_dimensions[sign_title_row].height = 25
     
     # 1. Kế Toán (Cột B) - Căn trái
@@ -135,7 +152,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
     ws[f"E{sign_title_row}"].font = font_bold
     ws[f"E{sign_title_row}"].alignment = Alignment(horizontal="right", vertical="center")
     
-    # Lưu ý: Đã bỏ dòng "(Ký, họ tên)" theo yêu cầu của bạn
+    # Đã bỏ dòng "(Ký, họ tên)" theo yêu cầu
     # --- KẾT THÚC PHẦN CHỮ KÝ ---
         
     # Định tỷ lệ độ rộng cột tối ưu hoàn hảo cho khổ dọc A4 (Tổng số khoảng ~85-90 là chuẩn đẹp)
@@ -153,7 +170,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
 
 # --- 2. HÀM HIỂN THỊ GIAO DIỆN (VIEW) ---
 def show_print_export_view(service):
-    st.subheader("🖨️ In Phiếu Xuất Kho Từ Lịch Sử")
+    st.subheader("🖨️ In Phiếu Xuất Kho")
     
     st.markdown("Chọn một ngày để hệ thống tự động gom tất cả các mặt hàng đã **Xuất** trong ngày đó thành một phiếu in.")
     
@@ -184,13 +201,13 @@ def show_print_export_view(service):
             df["Tên hàng hóa"] = df["Mã HH"] # Tránh lỗi nếu sheet cũ chưa có cột Tên
             
         # ========================================================
-        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX THEO CHỮ "XUẤT" VIẾT HOA
+        # ĐÂY LÀ PHẦN CODE ĐÃ ĐƯỢC FIX THEO CHỮ "XUẤT" VIẾT HOA VÀ ĐỊNH DẠNG NGÀY
         # ========================================================
         
         # 1. Chuẩn hóa: Ép kiểu chuỗi, xóa khoảng trắng 2 đầu và đưa về chữ IN HOA
         df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
         
-        # 2. Xử lý cột Ngày: Pandas cắt bỏ giờ phút, chỉ lấy ngày
+        # 2. Xử lý cột Ngày: Pandas cắt bỏ giờ phút, chỉ lấy ngày gọn gàng
         df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
         
         # 3. Lọc dữ liệu: So sánh khớp Ngày và Loại là chữ "XUẤT" in hoa
