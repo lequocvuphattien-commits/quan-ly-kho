@@ -26,6 +26,16 @@ st.markdown("""
     h1 { padding-bottom: 0rem !important; margin-bottom: 0rem !important; }
     h3 { padding-top: 0rem !important; margin-top: 0rem !important; }
     div[data-testid="stSelectbox"] { margin-bottom: -1rem !important; }
+            
+    .stock-container {
+        display: flex !important;
+        justify-content: flex-end !important; /* Đẩy nội dung sang phải */
+        align-items: center !important;
+        margin-top: 25px !important;
+        font-weight: bold !important;
+        color: #28a745 !important;
+        white-space: nowrap !important;
+    }
     
     /* Ép chữ Loại và 2 nút Nhập/Xuất nằm ngang hàng tuyệt đối trên mọi màn hình (Cả PC lẫn Mobile) */
     div[data-testid="stRadio"] { 
@@ -195,15 +205,16 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             if selected:
                 current_stock = float(p_dict[selected]['Tồn'])
                 unit = p_dict[selected]['Đvt']
+                # CSS margin-top để đẩy chữ xuống khớp hàng với ô input
 
-                st.markdown(f"<div style='margin-top: 0px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
-
+                st.markdown(f"<div style='margin-top: -10px; font-weight: bold; color: #28a745; white-space: nowrap;'>Tồn: {current_stock:,.0f} {unit}</div>", unsafe_allow_html=True)
+        
             else:
                 st.write("") 
                 
         with c3: 
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
-            st.markdown("<div style='margin-top: 0px; font-size: 12px; color: #28a745;'>Chọn diễn giải hoặc kho liên quan</div>", unsafe_allow_html=True) 
+            
         with c4:
             st.write("") # Căn chỉnh label
             st.write("") 
