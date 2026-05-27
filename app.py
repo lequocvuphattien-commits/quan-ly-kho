@@ -459,7 +459,13 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         # Bây giờ mới chạy vòng lặp kiểm tra xuất kho
                         error_msgs = []
                         for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                            service.add_transaction(
+                                row["Mã HH"], 
+                                row["Tên HH"], 
+                                row["Số lượng"], 
+                                row["Loại"], 
+                                row.get("Diễn Giải", ""), 
+                                st.session_state.user_name)
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         st.session_state.cart = []
                         st.cache_data.clear()
