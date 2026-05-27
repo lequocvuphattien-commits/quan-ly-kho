@@ -278,13 +278,19 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+        cleaned_products = []
+        for p in products:
+            row = list(p)
+            while len(row) < 5: row.append("") # Bù thiếu
+            cleaned_products.append(row[:5])   # Cắt dư
+
+        df = pd.DataFrame(cleaned_products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
-        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
-        gb.configure_column("Đvt", minWidth=50, editable=True)
+        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
         grid_response = AgGrid(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, height=400)
     
@@ -396,7 +402,16 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         
                         # [LỚP BẢO VỆ 2]: Quét và kiểm tra chéo tồn kho thời gian thực trước khi lưu hẳn vào DB
                         db_products = service.get_products()
-                        stock_dict = {str(p[1]).strip(): float(p[4]) for p in db_products} if db_products else {}
+                        stock_dict = {}
+                    if products:
+                        for p in products:
+                            p_code = str(p[1]).strip()
+                            # Ép kiểu an toàn: nếu cột tồn (p[4]) trống hoặc không phải số thì trả về 0.0
+                            try:
+                                val = float(p[4]) if len(p) > 4 and p[4] else 0.0
+                            except (ValueError, TypeError):
+                                val = 0.0
+                            stock_dict[p_code] = val
                         
                         error_msgs = []
                         for _, row in edited_df_cart.iterrows():
@@ -584,3 +599,4 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                 file_name=f"Backup_Kho_{today_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
