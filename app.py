@@ -317,6 +317,7 @@ if st.session_state.current_menu == "Danh mục hàng":
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
                 # 1. Chuẩn bị dữ liệu
+                products_data = [row[:5] for row in products]
                 df = pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
                 product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
                 
