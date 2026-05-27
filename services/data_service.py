@@ -15,23 +15,37 @@ class DataService:
         self.sheet_employees = self.provider.get_sheet("NhanVien")
 
     def get_history(self):
-        """Lấy toàn bộ lịch sử và đảm bảo lấy đủ tất cả các cột mới"""
+        """Lấy toàn bộ lịch sử và tự động ánh xạ cột 'Số Lượng' từ Google Sheets"""
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
             # Lấy header từ dòng đầu tiên
             headers = data[0]
-            # Lấy toàn bộ dữ liệu từ dòng thứ 2 trở đi
+            # Tạo DataFrame từ dữ liệu
             df = pd.DataFrame(data[1:], columns=headers)
             
-            # Chuẩn hóa các cột quan trọng (Đảm bảo tên cột khớp với sheet)
-            df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
-            df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
-            # Kiểm tra và xử lý cột 'Diễn Giải' nếu có
-            if 'Diễn Giải' in df.columns:
-                df['Diễn Giải'] = df['Diễn Giải'].astype(str)
-                
-            return df # Trả về DataFrame để dễ xử lý hơn thay vì list
-        return pd.DataFrame() # Trả về DF rỗng nếu không có dữ liệu
+            # 1. Chuẩn hóa tên cột: Chuyển 'Số Lượng' (từ Sheets) thành 'qty' (để code cũ chạy được)
+            # Dùng .strip() để loại bỏ khoảng trắng ẩn nếu có
+            df.columns = [c.strip() for c in df.columns]
+            if 'Số Lượng' in df.columns:
+                df = df.rename(columns={'Số Lượng': 'qty'})
+            
+            # 2. Xử lý các cột khác tương tự
+            if 'Ghi chú' in df.columns:
+                df = df.rename(columns={'Ghi chú': 'Diễn Giải'})
+            
+            # 3. Ép kiểu dữ liệu an toàn
+            # Đảm bảo cột qty là số
+            if 'qty' in df.columns:
+                df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
+            else:
+                df['qty'] = 0.0 # Dự phòng nếu không tìm thấy cột
+            
+            # Đảm bảo các cột quan trọng tồn tại
+            if 'Mã HH' in df.columns:
+                df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
+            
+            return df
+        return pd.DataFrame()
     # Đã đồng bộ tên biến dvt (viết thường)
     def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
         """

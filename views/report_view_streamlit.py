@@ -137,13 +137,11 @@ def show_report():
                 gridOptions=go,
                 fit_columns_on_grid_load=True,
                 theme='streamlit',
-                height=650
-            )
+                height=650)
             
             st.markdown("<br>", unsafe_allow_html=True)
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
                 data=export_to_excel(df_report),
                 file_name="BaoCaoTonKho.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
