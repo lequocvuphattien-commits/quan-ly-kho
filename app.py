@@ -8,6 +8,8 @@ from views.print_export_view import show_print_export_view
 from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
+if "user_role" not in st.session_state:
+    st.session_state.user_role = None
 # --- BỘ NHỚ ĐỆM ---
 @st.cache_data(ttl=600, show_spinner=False)
 def get_cached_products(_svc): return _svc.get_products()
