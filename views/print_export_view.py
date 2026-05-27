@@ -91,16 +91,16 @@ def export_phieu_xuat_excel(export_data, selected_date):
     # --- GHI NGÀY IN PHIẾU (MERGE A6:F6) ---
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
     #ws.merge_cells('A6:F6')
-    ws['E16'] = date_str
-    ws['E16'].font = font_italic
-    ws['E16'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['C6'] = date_str
+    ws['C6'].font = font_italic
+    ws['C6'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[6].height = 20
        
     # Thiết lập độ rộng dòng tiêu đề bảng (Đẩy sang Dòng số 8)
     ws.row_dimensions[8].height = 26
     
-    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Ghi Chú"]
-    cols = ["A", "B", "C", "D", "E"]
+    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải", "Ghi Chú"]
+    cols = ["A", "B", "C", "D", "E", "F"]
     
     for col_letter, header_text in zip(cols, headers):
         cell = ws[f"{col_letter}8"]
@@ -131,7 +131,8 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws[f"C{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"D{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"D{current_row}"].number_format = '#,##0' 
-        ws[f"E{current_row}"].alignment = Alignment(horizontal="left", vertical="center")
+        ws[f"E{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        ws[f"F{current_row}"].alignment = Alignment(horizontal="left", vertical="center")
         
         for col_letter in cols:
             cell = ws[f"{col_letter}{current_row}"]
@@ -182,7 +183,6 @@ def export_phieu_xuat_excel(export_data, selected_date):
     output = BytesIO()
     wb.save(output)
     return output.getvalue()
-
 
 # --- 2. HÀM HIỂN THỊ GIAO DIỆN (VIEW) ---
 def show_print_export_view(service):
@@ -262,3 +262,4 @@ def show_print_export_view(service):
             
             with st.expander("👀 Bấm vào đây để xem trước danh sách hàng hóa sẽ in"):
                 st.dataframe(pd.DataFrame(export_data), use_container_width=True, hide_index=True)
+
