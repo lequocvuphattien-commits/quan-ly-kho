@@ -1,4 +1,5 @@
 from services.data_service import DataService
+from models.product_model import Product
 
 class ProductController:
     def __init__(self):
@@ -6,22 +7,27 @@ class ProductController:
         self.sheet = self.service.sheet_products
 
     def get_all_products(self):
-        data = self.sheet.get_all_values()
+        data = self.service.get_products() # Lấy từ DataService
         products = []
-        # Bỏ qua dòng tiêu đề
-        for row in data[1:]:
-            if len(row) >= 5:
-                # Dùng dict để tránh lỗi định nghĩa class lặp lại
-                product = {
-                    'id': row[0],
-                    'code': str(row[1]).strip(),
-                    'name': str(row[2]).strip(),
-                    'unit': str(row[3]).strip(),
-                    'stock': float(row[4]) if row[4] else 0.0
-                }
-                # Chuyển dict thành object để tương thích với logic cũ
-                product_obj = type('Product', (object,), product)
-                products.append(product_obj)
+        for row in data:
+            # Kiểm tra xem dòng có đủ cột không (ít nhất 5 cột: ID, Mã, Tên, Đvt, Tồn)
+            if len(row) < 5:
+                continue
+                
+            try:
+                # Ép kiểu an toàn: nếu cột 4 (Tồn) không phải số thì cho bằng 0.0
+                stock_val = float(row[4]) if row[4] and str(row[4]).strip() != "" else 0.0
+            except (ValueError, TypeError):
+                stock_val = 0.0
+                
+            # Tạo object Product (giả sử cấu trúc model của bạn là thế này)
+            products.append(Product(
+                id=row[0],
+                code=row[1],
+                name=row[2],
+                unit=row[3],
+                stock=stock_val
+            ))
         return products
 
     def add_product(self, code, name, unit):
