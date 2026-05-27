@@ -29,6 +29,7 @@ class HistoryView(ttk.Frame):
         for i, col in enumerate(cols):
             self.tree.heading(col, text=titles[i])
             self.tree.column(col, width=100, anchor="center")
+            self.tree.column("Qty", anchor="w")
         
         self.tree.tag_configure('nhap', foreground='green')
         self.tree.tag_configure('xuat', foreground='red')
