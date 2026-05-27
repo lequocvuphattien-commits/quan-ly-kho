@@ -14,8 +14,8 @@ class HistoryView(ttk.Frame):
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True, padx=10, pady=5)
         
-        # Cột nội bộ: Ngày, Tên Hàng, Loại, SL, Diễn Giải, ID
-        cols = ("Date", "Product", "Type", "Qty", "Note", "TransID")
+        # Cột nội bộ: Ngày, Tên Hàng, Loại, SL, Diễn Giải
+        cols = ("Date", "Product", "Type", "Qty", "Diễn Giải")
         self.tree = ttk.Treeview(container, columns=cols, show="headings")
         self.tree.column("TransID", width=0, stretch=False)
         
@@ -25,7 +25,7 @@ class HistoryView(ttk.Frame):
         scrollbar_x.pack(side="bottom", fill="x")
         
         # Tiêu đề hiển thị (Đã đổi Ghi Chú thành Diễn Giải)
-        titles = ["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Diễn Giải", "ID Giao Dịch"]
+        titles = ["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Diễn Giải"]
         for i, col in enumerate(cols):
             self.tree.heading(col, text=titles[i])
             self.tree.column(col, width=100, anchor="center")
