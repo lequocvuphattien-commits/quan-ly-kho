@@ -81,7 +81,6 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     # --- HEADER BẢNG DỮ LIỆU ---
     ws.row_dimensions[9].height = 26
     
-    # Đổi tiêu đề Ghi Chú thành Diễn Giải
     headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải"]
     cols = ["A", "B", "C", "D", "E"]
     
@@ -105,7 +104,6 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
-        # Lấy dữ liệu từ key "Diễn Giải"
         ws[f"E{current_row}"] = str(item.get("Diễn Giải", ""))
         
         # Cấu hình căn lề
@@ -184,23 +182,17 @@ def show_print_export_view(service):
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
-    # --- KHẮC PHỤC LỖI LỆCH SỐ LƯỢNG CỘT (VALUE ERROR) ---
+    # --- KHẮC PHỤC LỖI LỆCH SỐ LƯỢNG CỘT ---
     num_cols = len(history[0])
-    
-    # Định nghĩa danh sách các cột chuẩn theo đúng thứ tự Google Sheets của bạn
     base_cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
     
-    # Tự động căn chỉnh mảng tên cột cho khớp chính xác với số lượng cột từ Sheets
     if num_cols > len(base_cols):
-        # Nếu Sheet có nhiều cột hơn, tự sinh thêm "Cột phụ" để Pandas không báo lỗi
         cols = base_cols + [f"Cột_phụ_{i}" for i in range(len(base_cols), num_cols)]
     else:
-        # Lấy vừa đủ số tên cột cắt từ base_cols
         cols = base_cols[:num_cols]
         
     df = pd.DataFrame(history, columns=cols)
     
-    # Tạo sẵn cột Diễn Giải nếu chẳng may sheet bị thiếu để tránh lỗi
     if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
         
     df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
@@ -219,17 +211,14 @@ def show_print_export_view(service):
     
     clean_dg_list = []
     for dg in dien_giai_list:
-        # Nếu dòng nào trống hoặc bị NaN, gán mác là 'Không có diễn giải'
         if dg.lower() in ['nan', '']:
             clean_dg_list.append('Không có diễn giải')
         else:
             clean_dg_list.append(dg)
             
-    # Xóa các mục trùng lặp
     clean_dg_list = list(set(clean_dg_list))
     
     with col_dept:
-        # Tự động sinh danh sách chọn (Selectbox) dựa trên các Diễn Giải trong ngày
         department_name = st.selectbox("🏢 Chọn bộ phận đề nghị (Theo Diễn giải):", clean_dg_list)
         
     # Bước 3: Lọc dữ liệu lần 2 dựa trên Bộ phận được chọn
@@ -247,7 +236,6 @@ def show_print_export_view(service):
     for _, row in filtered_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
         
-        # Bắt chuẩn cột Diễn Giải
         dien_giai_val = str(row.get("Diễn Giải", "")).strip()
         if dien_giai_val.lower() == "nan": dien_giai_val = ""
             
@@ -255,7 +243,7 @@ def show_print_export_view(service):
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
             "Đvt": dvt_dict.get(ma_hh, ""),
             "Số lượng": float(row.get("Số Lượng", 0)),
-            "Diễn Giải": dien_giai_val # Cập nhật key thành Diễn Giải
+            "Diễn Giải": dien_giai_val
         })
     
     df_export = pd.DataFrame(raw_data)
@@ -263,17 +251,20 @@ def show_print_export_view(service):
     # Gom nhóm và cộng tổng theo Diễn Giải
     df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Diễn Giải'], dropna=False, as_index=False)['Số lượng'].sum()
     
-    # --- Yêu cầu Màn hình Chọn (Checkbox) ---
+    # --- ĐỔI THỨ TỰ CỘT TRÊN GIAO DIỆN (ĐƯA SỐ LƯỢNG LÊN TRƯỚC DIỄN GIẢI) ---
+    df_grouped = df_grouped[['Tên HH', 'Đvt', 'Số lượng', 'Diễn Giải']]
+    
+    # --- Thêm Màn hình Chọn (Checkbox) ---
     df_grouped.insert(0, 'Chọn', True)
     
     st.success(f"✅ Đã gom được **{len(df_grouped)}** mặt hàng xuất kho cho **{department_name}**. Nếu không muốn in dòng nào, bạn chỉ cần BỎ TÍCH:")
     
-    # Hiển thị bảng Checkbox
+    # Hiển thị bảng Checkbox với thứ tự cột đã được đổi mới
     edited_df = st.data_editor(
         df_grouped,
         use_container_width=True,
         hide_index=True,
-        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], # Khóa dữ liệu cột Diễn Giải
+        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], 
     )
     
     # Chỉ lấy những dòng được Tích chọn
@@ -285,15 +276,11 @@ def show_print_export_view(service):
         
     export_data = selected_df.drop(columns=['Chọn']).to_dict('records')
     
-    # Tinh chỉnh lại Tên bộ phận in ra Excel (Xóa chữ "Không có diễn giải" nếu trống)
     print_dept_name = department_name if department_name != 'Không có diễn giải' else ""
-    
     excel_data = export_phieu_xuat_excel(export_data, selected_date, print_dept_name)
     
-    # Đảm bảo tên file không chứa ký tự cấm (như dấu /)
     safe_dept_name = print_dept_name.replace("/", "-").replace("\\", "-")
     
-    # Nút bấm Download (màu nổi bật - primary)
     st.download_button(
         label=f"📥 TẢI FILE EXCEL PHIẾU XUẤT (In {len(export_data)} mặt hàng)",
         data=excel_data,
