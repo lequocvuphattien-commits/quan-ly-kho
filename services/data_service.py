@@ -17,9 +17,19 @@ class DataService:
     def get_history(self):
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
+            # Tạo DataFrame từ dữ liệu
             df = pd.DataFrame(data[1:], columns=data[0])
-            # Chuẩn hóa tên cột để tránh lỗi viết hoa/viết thường
+            
+            # 1. Làm sạch tên cột (tránh khoảng trắng thừa)
             df.columns = [str(col).strip() for col in df.columns]
+            
+            # 2. Ép kiểu cột "Ngày" (hoặc tên cột tương ứng trong sheet của bạn)
+            # Giả sử cột ngày có tên là 'Ngày'
+            if 'Ngày' in df.columns:
+                df['Ngày'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
+                # Sắp xếp mới nhất lên trên
+                df = df.sort_values(by='Ngày', ascending=False)
+            
             return df
         return pd.DataFrame()
     
@@ -48,7 +58,7 @@ class DataService:
                     break
 
             # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 8 cột)
-            # Cấu trúc: [Ngày tháng, Mã HH, Tên hàng hóa, Đvt, Loại, Số lượng, Diễn giải, Nhân Viên]
+            # Cấu trúc: [Ngày, Mã HH, Tên hàng hóa, Đvt, Loại, Số lượng, Diễn giải, Nhân Viên]
             now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name]
             
@@ -200,10 +210,10 @@ class DataService:
         df = self.get_history()
         if df.empty: return 0.0, 0.0, 0.0
         
-        # Sửa thành "Ngày tháng" thay vì "Ngày"
+        # Sửa thành "Ngày" thay vì "Ngày"
         # Sửa thành "Số lượng" thay vì "Số Lượng"
         try:
-            df['Ngày tháng'] = pd.to_datetime(df['Ngày tháng'], errors='coerce')
+            df['Ngày'] = pd.to_datetime(df['Ngày'], errors='coerce')
             df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
             df['Số lượng'] = pd.to_numeric(df['Số lượng'], errors='coerce').fillna(0)
             
@@ -212,13 +222,13 @@ class DataService:
             df_prod = df[df['Mã HH'] == target_id].copy()
             
             start = pd.to_datetime(start_date)
-            past_data = df_prod[df_prod['Ngày tháng'] < start]
+            past_data = df_prod[df_prod['Ngày'] < start]
             
             # Tính toán (IMPORT/EXPORT khớp với cột 'Loại' trong Sheet)
             ton_dau = (past_data[past_data['Loại'] == 'Nhập']['Số lượng'].sum() - 
                        past_data[past_data['Loại'] == 'Xuất']['Số lượng'].sum())
             
-            period_data = df_prod[(df_prod['Ngày tháng'] >= start) & (df_prod['Ngày tháng'] <= pd.to_datetime(end_date))]
+            period_data = df_prod[(df_prod['Ngày'] >= start) & (df_prod['Ngày'] <= pd.to_datetime(end_date))]
             nhap = period_data[period_data['Loại'] == 'Nhập']['Số lượng'].sum()
             xuat = period_data[period_data['Loại'] == 'Xuất']['Số lượng'].sum()
             
