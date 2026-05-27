@@ -81,7 +81,7 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     # --- HEADER BẢNG DỮ LIỆU ---
     ws.row_dimensions[9].height = 26
     
-    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Ghi Chú"]
+    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải"]
     cols = ["A", "B", "C", "D", "E"]
     
     for col_letter, header_text in zip(cols, headers):
@@ -104,7 +104,7 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
-        ws[f"E{current_row}"] = str(item.get("Ghi Chú", ""))
+        ws[f"E{current_row}"] = str(item.get("Diễn Giải", ""))
         
         # Cấu hình căn lề
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
@@ -156,7 +156,7 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws.column_dimensions['B'].width = 38  # Tên hàng hóa
     ws.column_dimensions['C'].width = 10  # Đvt
     ws.column_dimensions['D'].width = 14  # Số lượng
-    ws.column_dimensions['E'].width = 22  # Ghi Chú
+    ws.column_dimensions['E'].width = 22  # Diễn giải
         
     output = BytesIO()
     wb.save(output)
@@ -184,7 +184,7 @@ def show_print_export_view(service):
         
     # --- KHẮC PHỤC LỖI LỆCH SỐ LƯỢNG CỘT ---
     num_cols = len(history[0])
-    base_cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
+    base_cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
     
     if num_cols > len(base_cols):
         cols = base_cols + [f"Cột_phụ_{i}" for i in range(len(base_cols), num_cols)]
@@ -193,7 +193,7 @@ def show_print_export_view(service):
         
     df = pd.DataFrame(history, columns=cols)
     
-    if "Ghi Chú" not in df.columns: df["Ghi Chú"] = ""
+    if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
         
     df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
     df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
@@ -205,24 +205,24 @@ def show_print_export_view(service):
         st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
         return
         
-    # Bước 2: Quét tất cả các "Ghi Chú" có trong ngày đó để tạo danh sách (Selectbox)
-    dien_giai_raw = filtered_date_df["Ghi Chú"].astype(str).str.strip()
+    # Bước 2: Quét tất cả các "Diễn Giải" có trong ngày đó để tạo danh sách (Selectbox)
+    dien_giai_raw = filtered_date_df["Diễn Giải"].astype(str).str.strip()
     dien_giai_list = dien_giai_raw.unique().tolist()
     
     clean_dg_list = []
     for dg in dien_giai_list:
         if dg.lower() in ['nan', '']:
-            clean_dg_list.append('Không có Ghi Chú')
+            clean_dg_list.append('Không có diễn giải')
         else:
             clean_dg_list.append(dg)
             
     clean_dg_list = list(set(clean_dg_list))
     
     with col_dept:
-        department_name = st.selectbox("🏢 Chọn bộ phận đề nghị (Theo Ghi Chú):", clean_dg_list)
+        department_name = st.selectbox("🏢 Chọn bộ phận đề nghị (Theo Diễn giải):", clean_dg_list)
         
     # Bước 3: Lọc dữ liệu lần 2 dựa trên Bộ phận được chọn
-    if department_name == 'Không có Ghi Chú':
+    if department_name == 'Không có diễn giải':
         filtered_df = filtered_date_df[dien_giai_raw.isin(['', 'nan', 'NaN'])]
     else:
         filtered_df = filtered_date_df[dien_giai_raw == department_name]
@@ -236,23 +236,23 @@ def show_print_export_view(service):
     for _, row in filtered_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
         
-        dien_giai_val = str(row.get("Ghi Chú", "")).strip()
+        dien_giai_val = str(row.get("Diễn Giải", "")).strip()
         if dien_giai_val.lower() == "nan": dien_giai_val = ""
             
         raw_data.append({
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
             "Đvt": dvt_dict.get(ma_hh, ""),
             "Số lượng": float(row.get("Số Lượng", 0)),
-            "Ghi Chú": dien_giai_val
+            "Diễn Giải": dien_giai_val
         })
     
     df_export = pd.DataFrame(raw_data)
     
-    # Gom nhóm và cộng tổng theo Ghi Chú
-    df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Ghi Chú'], dropna=False, as_index=False)['Số lượng'].sum()
+    # Gom nhóm và cộng tổng theo Diễn Giải
+    df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Diễn Giải'], dropna=False, as_index=False)['Số lượng'].sum()
     
-    # --- ĐỔI THỨ TỰ CỘT TRÊN GIAO DIỆN (ĐƯA SỐ LƯỢNG LÊN TRƯỚC Ghi Chú) ---
-    df_grouped = df_grouped[['Tên HH', 'Đvt', 'Số lượng', 'Ghi Chú']]
+    # --- ĐỔI THỨ TỰ CỘT TRÊN GIAO DIỆN (ĐƯA SỐ LƯỢNG LÊN TRƯỚC DIỄN GIẢI) ---
+    df_grouped = df_grouped[['Tên HH', 'Đvt', 'Số lượng', 'Diễn Giải']]
     
     # --- Thêm Màn hình Chọn (Checkbox) ---
     df_grouped.insert(0, 'Chọn', True)
@@ -264,14 +264,7 @@ def show_print_export_view(service):
         df_grouped,
         use_container_width=True,
         hide_index=True,
-        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"],
-        column_config={
-            "Số lượng": st.column_config.NumberColumn(
-                "            Số Lượng", # Thêm khoảng trắng vào trước tiêu đề để đẩy nó sang phải
-                help="Số lượng xuất kho",
-                format="%d",
-            )
-        }
+        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], 
     )
     
     # Chỉ lấy những dòng được Tích chọn
@@ -283,7 +276,7 @@ def show_print_export_view(service):
         
     export_data = selected_df.drop(columns=['Chọn']).to_dict('records')
     
-    print_dept_name = department_name if department_name != 'Không có Ghi Chú' else ""
+    print_dept_name = department_name if department_name != 'Không có diễn giải' else ""
     excel_data = export_phieu_xuat_excel(export_data, selected_date, print_dept_name)
     
     safe_dept_name = print_dept_name.replace("/", "-").replace("\\", "-")
