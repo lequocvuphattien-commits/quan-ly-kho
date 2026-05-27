@@ -281,10 +281,13 @@ if st.session_state.current_menu == "Danh mục hàng":
         cleaned_products = []
         for p in products:
             row = list(p)
-            while len(row) < 5: row.append("") # Bù thiếu
-            cleaned_products.append(row[:5])   # Cắt dư
-
+            # Nếu dòng dữ liệu ít hơn 5 cột, thêm rỗng vào cho đủ
+            while len(row) < 5: 
+                row.append("")
+            cleaned_products.append(row[:5]) # Lấy đúng 5 cột
+            
         df = pd.DataFrame(cleaned_products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+        df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
@@ -402,22 +405,22 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
     
                         # 1. Khởi tạo stock_dict TRƯỚC khi dùng
                         db_products = service.get_products()
-                        stock_dict = {} 
-                        
-                        # 2. Xây dựng dictionary an toàn
+                        stock_dict = {} # Khởi tạo mặc định
                         if db_products:
                             for p in db_products:
+                                # p[1] là Mã (cột B), p[4] là Tồn (cột E)
                                 p_code = str(p[1]).strip()
                                 try:
-                                    # Lưu ý: Kiểm tra index [4] có đúng là cột tồn không
                                     val = float(p[4]) if len(p) > 4 and p[4] else 0.0
-                                except:
+                                except (ValueError, TypeError):
                                     val = 0.0
                                 stock_dict[p_code] = val
-                        
-                        # 3. Sau khi đã có stock_dict, tiến hành kiểm tra như bình thường
+
+                        # Bây giờ mới chạy vòng lặp kiểm tra xuất kho
                         error_msgs = []
                         for _, row in edited_df_cart.iterrows():
+                        
+                        # 3. Sau khi đã có stock_dict, tiến hành kiểm tra như bình thường
                             if row["Loại"] == "Xuất":
                                 p_code = str(row["Mã HH"]).strip()
                                 req_qty = float(row["Số lượng"])
