@@ -389,7 +389,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
                         for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                            service.add_transaction(row["Mã HH"], row["Tên HH"], row[Đvt=], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         st.session_state.cart = []
                         st.cache_data.clear()
