@@ -17,15 +17,28 @@ class DataService:
     def get_history(self):
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            cleaned_data = [row[:7] for row in data[1:]]
-            cleaned_data = [row + [""] * (7 - len(row)) for row in cleaned_data]
-            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "Đvt" "type", "qty", "note", "emp_name"])
+            # Đã sửa: Tăng từ 7 lên 8 cột để lấy được cột Đvt
+            cleaned_data = [row[:8] for row in data[1:]]
+            cleaned_data = [row + [""] * (8 - len(row)) for row in cleaned_data]
+            
+            # Đã sửa: Thêm dấu phẩy giữa "Đvt" và "type"
+            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "Đvt", "type", "qty", "note", "emp_name"])
             return df.values.tolist()
         return []
 
-    def add_transaction(self, product_id, product_name, Đvt, qty, trans_type, note, emp_name=""):
+    # Đã đồng bộ tên biến dvt (viết thường)
+    def add_transaction(self, product_id, product_name, dvt, qty, trans_type, note, emp_name=""):
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), str(Đvt), trans_type.upper(), float(qty), str(note), str(emp_name)])
+        self.sheet_transactions.append_row([
+            date_str, 
+            str(product_id), 
+            str(product_name), 
+            str(dvt), 
+            trans_type.upper(), 
+            float(qty), 
+            str(note), 
+            str(emp_name)
+        ])
 
     def get_products(self):
         data = self.sheet_products.get_all_values()
@@ -117,8 +130,7 @@ class DataService:
                 return True
         return False
     
-    # Hàm kiểm tra đăng nhập dựa trên Mã NV (Username) và Mật khẩu (giả sử cột 4 là mật khẩu)
-        return [row[:5] + [""] * (5 - len(row)) for row in data[1:]] if len(data) > 1 else []
+    # Đã xóa dòng code return bị dư thừa ở đây
 
     def check_login(self, username, password):
         """Kiểm tra đăng nhập và trả về Tên + Chức vụ"""
