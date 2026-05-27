@@ -18,14 +18,9 @@ class DataService:
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
             df = pd.DataFrame(data[1:], columns=data[0])
-            # Tự động map tên cột nếu cần thiết
-            column_mapping = {
-                'Ngày': 'Ngày', 'Mã HH': 'Mã HH', 'Loại': 'Loại', 
-                'Số Lượng': 'Số Lượng', 'Diễn Giải': 'Diễn Giải'
-            }
-            df = df.rename(columns=column_mapping)
+            # Chuẩn hóa về tiếng Việt hoàn toàn để khớp với Google Sheets
             return df
-        return pd.DataFrame() # Trả về DF rỗng nếu không có dữ liệu
+        return pd.DataFrame()
     
     # Đã đồng bộ tên biến dvt (viết thường)
     def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
@@ -201,31 +196,28 @@ class DataService:
     # 🔥 ĐÃ BỔ SUNG HÀM TÍNH TOÁN BÁO CÁO DƯỚI ĐÂY 🔥
     # ==========================================
     def get_product_stats_by_date(self, product_id, start_date, end_date):
-        df = self.get_history() # Sử dụng hàm mới đã sửa ở trên
-        if df.empty:
-            return 0.0, 0.0, 0.0
+        df = self.get_history()
+        if df.empty: return 0.0, 0.0, 0.0
         
-        # Ép kiểu dữ liệu
-        df['date'] = pd.to_datetime(df['date'])
-        df['product_id'] = df['product_id'].astype(str).str.strip()
+        # Chuyển đổi an toàn
+        df['Ngày'] = pd.to_datetime(df['Ngày'], errors='coerce')
+        df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
+        df['Số Lượng'] = pd.to_numeric(df['Số Lượng'], errors='coerce').fillna(0)
         
-        # Lọc theo mã hàng
+        # Lọc
         target_id = str(product_id).strip()
-        df_prod = df[df['product_id'] == target_id].copy()
+        df_prod = df[df['Mã HH'] == target_id].copy()
         
-        # Tính Tồn đầu (tất cả giao dịch trước ngày bắt đầu)
         start = pd.to_datetime(start_date)
-        past_data = df_prod[df_prod['date'] < start]
+        past_data = df_prod[df_prod['Ngày'] < start]
         
-        ton_dau = (past_data[past_data['type'] == 'IMPORT']['qty'].sum() - 
-                past_data[past_data['type'] == 'EXPORT']['qty'].sum())
+        # Tính toán (IMPORT/EXPORT khớp với cột 'Loại' trong Sheet)
+        ton_dau = (past_data[past_data['Loại'] == 'Nhập']['Số Lượng'].sum() - 
+                   past_data[past_data['Loại'] == 'Xuất']['Số Lượng'].sum())
         
-        # Tính Nhập/Xuất trong kỳ
-        end = pd.to_datetime(end_date)
-        period_data = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
-        
-        nhap = period_data[period_data['type'] == 'IMPORT']['qty'].sum()
-        xuat = period_data[period_data['type'] == 'EXPORT']['qty'].sum()
+        period_data = df_prod[(df_prod['Ngày'] >= start) & (df_prod['Ngày'] <= pd.to_datetime(end_date))]
+        nhap = period_data[period_data['Loại'] == 'Nhập']['Số Lượng'].sum()
+        xuat = period_data[period_data['Loại'] == 'Xuất']['Số Lượng'].sum()
         
         return float(ton_dau), float(nhap), float(xuat)
 

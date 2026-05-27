@@ -3,6 +3,7 @@ import pandas as pd
 import io
 import datetime
 import streamlit.components.v1 as components  # Đã thêm dòng này để sửa lỗi sidebar mobile
+from controllers.transaction_controller import TransactionController
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
@@ -485,58 +486,45 @@ elif st.session_state.current_menu == "Báo cáo tồn kho":
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
 
-# --- TAB 5: LỊCH SỬ GIAO DỊCH ---
+# --- TAB 5: LỊCH SỬ GIAO DỊCH (ĐÃ SỬA LỖI) ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     
-    # Chỉ cho phép Quản lý thực hiện xóa/sửa lịch sử để an toàn dữ liệu
-    is_admin = st.session_state.get("user_role") == "Quản lý"
+    # 1. Khởi tạo Controller an toàn
+    if 't_controller' not in st.session_state:
+        st.session_state.t_controller = TransactionController()
+    t_controller = st.session_state.t_controller
     
-    history = get_cached_history(service)
-    if history and len(history) > 0:
-        num_cols = len(history[0])
-        
-        # Tự động định nghĩa tên cột dựa trên số lượng cột thực tế
-        if num_cols == 5:
-            cols = ["Ngày tháng", "Mã HH", "Loại", "Số lượng", "Diễn giải"]
-        elif num_cols == 6:
-            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải"]
-        elif num_cols == 7:
-            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
-        elif num_cols == 8: # <-- TRƯỜNG HỢP MỚI ĐƯỢC THÊM VÀO
-            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
-        else:
-            # Trường hợp dự phòng
-            cols = [f"Cột {i+1}" for i in range(num_cols)]
+    # 2. Lấy dữ liệu dạng DataFrame chuẩn
+    history_df = t_controller.get_transaction_history()
+    
+    # 3. Kiểm tra DataFrame không rỗng
+    if history_df is not None and not history_df.empty:
+        # Nếu dữ liệu lấy về là list (cache cũ), chuyển sang DataFrame
+        if not isinstance(history_df, pd.DataFrame):
+            history_df = pd.DataFrame(history_df[1:], columns=history_df[0])
             
-        df = pd.DataFrame(history, columns=cols)
-        
-        # 2. Thêm cột checkbox chọn dòng ở đầu bảng (chỉ hiện nếu là Quản lý)
+        # Thêm cột "Chọn" nếu là Quản lý
+        is_admin = st.session_state.get("user_role") == "Quản lý"
+        display_df = history_df.copy()
         if is_admin:
-            df.insert(0, "Chọn", False)
+            display_df.insert(0, "Chọn", False)
             
-        # 3. Hiển thị bảng bằng st.data_editor (cho phép tích chọn)
+        # Hiển thị bảng editor
         edited_df = st.data_editor(
-            df, 
-            key="history_editor", 
-            use_container_width=True,
-            hide_index=True,
-            disabled=[col for col in df.columns if col != "Chọn"] # Khóa các cột khác, chỉ cho chọn checkbox
+            display_df, 
+            use_container_width=True, 
+            hide_index=True
         )
         
-        # 4. Xử lý nút bấm Xóa dành riêng cho Quản lý
+        # Xử lý xóa
         if is_admin:
-            # Lọc ra các dòng được người dùng tích chọn ở cột "Chọn"
             selected_rows = edited_df[edited_df["Chọn"] == True]
-            
             if not selected_rows.empty:
-                # Nếu có chọn dòng, hiện nút xóa
-                if st.button("🗑️ Xóa các giao dịch đã chọn", type="primary", use_container_width=True):
-                    # Gọi hàm Dialog hỏi lại để chắc chắn
+                if st.button("🗑️ Xóa giao dịch đã chọn"):
                     confirm_delete_history_dialog(selected_rows, service)
-            else:
-                # Nếu chưa chọn dòng nào, hiện nút mờ hướng dẫn
-                st.button("💡 Hãy tích chọn dòng ở bảng trên để xóa", disabled=True, use_container_width=True)
+    else:
+        st.info("Chưa có dữ liệu lịch sử giao dịch.")
 
 # --- TAB 5: QUẢN LÝ NHÂN VIÊN ---
 elif st.session_state.current_menu == "Quản lý nhân viên":

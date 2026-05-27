@@ -1,6 +1,7 @@
 import streamlit as st
 import sys
 import os
+import pandas as pd
 
 # Đảm bảo import đúng DataService
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -43,8 +44,9 @@ class TransactionController:
             return False
 
     def get_transaction_history(self):
-        """Lấy toàn bộ lịch sử giao dịch từ Google Sheets"""
-        return self._fetch_history_cached()
+        """Trả về DataFrame, nếu không có dữ liệu trả về DataFrame rỗng"""
+        df = self.service.get_history()
+        return df if not df.empty else pd.DataFrame()
 
     @st.cache_data(ttl=60, show_spinner=False)
     def _fetch_history_cached(_self):
