@@ -8,7 +8,7 @@ from io import BytesIO
 import datetime
 
 # --- 1. HÀM TẠO FILE EXCEL NGẦM ---
-def export_phieu_xuat_excel(export_data, selected_date):
+def export_phieu_xuat_excel(export_data, selected_date, department_name):
     """
     Hàm xuất dữ liệu giỏ hàng ra file Excel - CÓ LOGO CÔNG TY & TỐI ƯU IN KHỔ A4 DỌC
     """
@@ -73,12 +73,12 @@ def export_phieu_xuat_excel(export_data, selected_date):
     ws['C5'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[5].height = 32
     
-    # --- BỘ PHẬN ĐỀ NGHỊ (Yêu cầu 2: Nằm ở Ô A7) ---
-    ws['A7'] = "Bộ phận đề nghị: Thành Phẩm 1"
+    # --- BỘ PHẬN ĐỀ NGHỊ (Yêu cầu 2: Thay đổi linh hoạt) ---
+    ws['A7'] = f"Bộ phận đề nghị: {department_name}"
     ws['A7'].font = font_bold
     ws.row_dimensions[7].height = 20
        
-    # --- HEADER BẢNG DỮ LIỆU (Yêu cầu 4: 5 Cột) ---
+    # --- HEADER BẢNG DỮ LIỆU (Yêu cầu 1: Header là Ghi Chú) ---
     ws.row_dimensions[9].height = 26
     
     headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Ghi Chú"]
@@ -104,7 +104,8 @@ def export_phieu_xuat_excel(export_data, selected_date):
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
-        ws[f"E{current_row}"] = item.get("Ghi chú", "")
+        # Map chính xác lấy nội dung Ghi chú
+        ws[f"E{current_row}"] = str(item.get("Ghi chú", ""))
         
         # Cấu hình căn lề
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
@@ -121,7 +122,7 @@ def export_phieu_xuat_excel(export_data, selected_date):
             if i % 2 == 1:
                 cell.fill = fill_zebra
                 
-    # --- CHỮ KÝ & NGÀY THÁNG (Yêu cầu 3: Ngày tháng nằm trên dòng Người lập) ---
+    # --- CHỮ KÝ & NGÀY THÁNG ---
     last_data_row = current_row
     date_row = last_data_row + 2
     sign_title_row = date_row + 1
@@ -135,17 +136,17 @@ def export_phieu_xuat_excel(export_data, selected_date):
     
     ws.row_dimensions[sign_title_row].height = 25
     
-    # Chữ ký Kế Toán (Căn trái cột B)
+    # Chữ ký Kế Toán
     ws[f"B{sign_title_row}"] = "Kế Toán"
     ws[f"B{sign_title_row}"].font = font_bold
     ws[f"B{sign_title_row}"].alignment = Alignment(horizontal="left", vertical="center")
     
-    # Chữ ký Thủ Kho (Căn giữa cột C)
+    # Chữ ký Thủ Kho
     ws[f"C{sign_title_row}"] = "Thủ Kho"
     ws[f"C{sign_title_row}"].font = font_bold
     ws[f"C{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
     
-    # Chữ ký Người lập (Gộp ô D và E, căn giữa)
+    # Chữ ký Người lập
     ws.merge_cells(f'D{sign_title_row}:E{sign_title_row}')
     ws[f'D{sign_title_row}'] = "Người Lập"
     ws[f'D{sign_title_row}'].font = font_bold
@@ -165,10 +166,13 @@ def export_phieu_xuat_excel(export_data, selected_date):
 # --- 2. HÀM HIỂN THỊ GIAO DIỆN (VIEW) ---
 def show_print_export_view(service):
     st.subheader("🖨️ In Phiếu Xuất Kho")
-    st.markdown("Chọn một ngày để hệ thống tự động gom tất cả các mặt hàng đã **Xuất** trong ngày đó thành một phiếu in.")
     
-    # 1. Chọn ngày (Dữ liệu sẽ tự động xử lý ngay khi bạn đổi ngày)
-    selected_date = st.date_input("Chọn ngày in phiếu:", datetime.date.today())
+    # Bổ sung Text Input cho người dùng nhập Tên bộ phận
+    col_date, col_dept = st.columns(2)
+    with col_date:
+        selected_date = st.date_input("📅 Chọn ngày in phiếu:", datetime.date.today())
+    with col_dept:
+        department_name = st.text_input("🏢 Nhập bộ phận đề nghị:", "Thành Phẩm 1")
     
     # Lấy dữ liệu từ Google Sheets
     history = service.get_history()
@@ -180,17 +184,13 @@ def show_print_export_view(service):
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
-    # Chuyển đổi dữ liệu
+    # Chuyển đổi dữ liệu linh hoạt theo số lượng cột (7 hoặc 8 cột)
     num_cols = len(history[0])
-    
     if num_cols == 8:
-        # Cấu trúc mới nhất (8 cột): Ngày, Mã, Tên, Đvt, Loại, SL, Ghi chú, Nhân viên
         df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
     elif num_cols == 7:
-        # Cấu trúc cũ (7 cột)
         df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
     else:
-        # Cấu trúc cơ bản sơ khai nhất (5 cột)
         df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
         df["Tên hàng hóa"] = df["Mã HH"]
         
@@ -204,36 +204,59 @@ def show_print_export_view(service):
         st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
         return
         
-    # --- XỬ LÝ GỘP DÒNG (Yêu cầu 5) ---
+    # --- XỬ LÝ GỘP DÒNG ---
     raw_data = []
     for _, row in filtered_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
+        # Xử lý nội dung Ghi chú để tránh lỗi NaN khi groupby
+        ghi_chu_val = str(row.get("Ghi Chú", "")).strip()
+        if ghi_chu_val.lower() == "nan": 
+            ghi_chu_val = ""
+            
         raw_data.append({
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
             "Đvt": dvt_dict.get(ma_hh, ""),
             "Số lượng": float(row.get("Số Lượng", 0)),
-            "Ghi chú": str(row.get("Ghi Chú", ""))
+            "Ghi chú": ghi_chu_val
         })
     
     df_export = pd.DataFrame(raw_data)
     
     # Gom nhóm theo Tên hàng, Đvt, Ghi chú và TÍNH TỔNG số lượng
-    # dropna=False để giữ nguyên các dòng có Ghi chú là trống
     df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Ghi chú'], dropna=False, as_index=False)['Số lượng'].sum()
-    export_data = df_grouped.to_dict('records')
     
-    # Hiển thị LƯỚI DANH SÁCH (Grid) trực quan ra màn hình
-    st.success(f"✅ Đã tìm thấy và cộng dồn thành **{len(export_data)}** mặt hàng xuất kho trong ngày.")
-    st.dataframe(df_grouped, use_container_width=True, hide_index=True)
+    # --- Yêu cầu 3: BẢNG LƯỚI CÓ CHECKBOX ---
+    # Thêm cột "Chọn" vào đầu Dataframe, mặc định là True (Tích sẵn)
+    df_grouped.insert(0, 'Chọn', True)
     
-    # Tạo sẵn File Excel ngầm
-    excel_data = export_phieu_xuat_excel(export_data, selected_date)
+    st.success(f"✅ Đã tìm thấy **{len(df_grouped)}** mặt hàng xuất kho. Bạn có thể BỎ TÍCH những hàng không muốn in:")
     
-    # Nút bấm Tải xuống hiển thị luôn, không cần nút trung gian "Tạo phiếu"
+    # Dùng st.data_editor để người dùng tương tác tích chọn
+    edited_df = st.data_editor(
+        df_grouped,
+        use_container_width=True,
+        hide_index=True,
+        disabled=["Tên HH", "Đvt", "Số lượng", "Ghi chú"], # Khóa các cột dữ liệu, chỉ cho phép bấm Checkbox
+    )
+    
+    # Lọc ra những dòng được tích (Chọn == True)
+    selected_df = edited_df[edited_df["Chọn"] == True]
+    
+    if selected_df.empty:
+        st.error("🚫 Bạn chưa chọn mặt hàng nào để in!")
+        return
+        
+    # Xóa cột Checkbox đi và chuyển thành dict để nạp vào File Excel
+    export_data = selected_df.drop(columns=['Chọn']).to_dict('records')
+    
+    # Tạo sẵn File Excel ngầm (truyền thêm biến department_name)
+    excel_data = export_phieu_xuat_excel(export_data, selected_date, department_name)
+    
+    # Nút bấm Tải xuống sẽ cập nhật theo đúng số lượng mặt hàng được tích
     st.download_button(
-        label=f"📥 TẢI FILE EXCEL PHIẾU XUẤT KHO (Ngày {selected_date.strftime('%d/%m/%Y')})",
+        label=f"📥 TẢI FILE EXCEL PHIẾU XUẤT (In {len(export_data)} mặt hàng)",
         data=excel_data,
-        file_name=f"Phieu_Xuat_{selected_date.strftime('%d%m%Y')}.xlsx",
+        file_name=f"Phieu_Xuat_{department_name}_{selected_date.strftime('%d%m%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary",
         use_container_width=True
