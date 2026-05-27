@@ -81,7 +81,8 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     # --- HEADER BẢNG DỮ LIỆU ---
     ws.row_dimensions[9].height = 26
     
-    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Ghi Chú"]
+    # Đổi tiêu đề Ghi Chú thành Diễn Giải
+    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải"]
     cols = ["A", "B", "C", "D", "E"]
     
     for col_letter, header_text in zip(cols, headers):
@@ -104,7 +105,8 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
-        ws[f"E{current_row}"] = str(item.get("Ghi chú", ""))
+        # Lấy dữ liệu từ key "Diễn Giải"
+        ws[f"E{current_row}"] = str(item.get("Diễn Giải", ""))
         
         # Cấu hình căn lề
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
@@ -156,7 +158,7 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws.column_dimensions['B'].width = 38  # Tên hàng hóa
     ws.column_dimensions['C'].width = 10  # Đvt
     ws.column_dimensions['D'].width = 14  # Số lượng
-    ws.column_dimensions['E'].width = 22  # Ghi chú
+    ws.column_dimensions['E'].width = 22  # Diễn giải
         
     output = BytesIO()
     wb.save(output)
@@ -182,23 +184,22 @@ def show_print_export_view(service):
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
-    # --- KHẮC PHỤC LỖI CỘT DIỄN GIẢI & GHI CHÚ ---
-    # Linh hoạt cấu trúc cột theo thực tế (tách Diễn giải ra khỏi Ghi chú)
+    # --- KHẮC PHỤC LỖI CỘT DIỄN GIẢI ---
+    # Linh hoạt cấu trúc cột theo thực tế 
     num_cols = len(history[0])
     if num_cols >= 9:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú", "Nhân viên"]
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
     elif num_cols == 8:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú"]
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải"]
     elif num_cols == 7:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú"]
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải"]
     else:
-        cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
+        cols = ["Ngày", "Mã HH", "Loại", "Số Lượng"]
         
     df = pd.DataFrame(history, columns=cols[:num_cols])
     
-    # Tạo sẵn các cột nếu chẳng may sheet bị thiếu để tránh lỗi
+    # Tạo sẵn cột Diễn Giải nếu chẳng may sheet bị thiếu để tránh lỗi
     if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
-    if "Ghi Chú" not in df.columns: df["Ghi Chú"] = ""
         
     df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
     df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
@@ -244,21 +245,21 @@ def show_print_export_view(service):
     for _, row in filtered_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
         
-        # Bắt chuẩn cột Ghi Chú
-        ghi_chu_val = str(row.get("Ghi Chú", "")).strip()
-        if ghi_chu_val.lower() == "nan": ghi_chu_val = ""
+        # Bắt chuẩn cột Diễn Giải
+        dien_giai_val = str(row.get("Diễn Giải", "")).strip()
+        if dien_giai_val.lower() == "nan": dien_giai_val = ""
             
         raw_data.append({
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
             "Đvt": dvt_dict.get(ma_hh, ""),
             "Số lượng": float(row.get("Số Lượng", 0)),
-            "Ghi chú": ghi_chu_val
+            "Diễn Giải": dien_giai_val # Cập nhật key thành Diễn Giải
         })
     
     df_export = pd.DataFrame(raw_data)
     
-    # Gom nhóm và cộng tổng
-    df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Ghi chú'], dropna=False, as_index=False)['Số lượng'].sum()
+    # Gom nhóm và cộng tổng theo Diễn Giải
+    df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Diễn Giải'], dropna=False, as_index=False)['Số lượng'].sum()
     
     # --- Yêu cầu Màn hình Chọn (Checkbox) ---
     df_grouped.insert(0, 'Chọn', True)
@@ -270,7 +271,7 @@ def show_print_export_view(service):
         df_grouped,
         use_container_width=True,
         hide_index=True,
-        disabled=["Tên HH", "Đvt", "Số lượng", "Ghi chú"], # Khóa dữ liệu, chỉ cho bấm Checkbox
+        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], # Khóa dữ liệu cột Diễn Giải
     )
     
     # Chỉ lấy những dòng được Tích chọn
