@@ -399,20 +399,23 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
-                        
-                        # [LỚP BẢO VỆ 2]: Quét và kiểm tra chéo tồn kho thời gian thực trước khi lưu hẳn vào DB
+    
+                        # 1. Khởi tạo stock_dict TRƯỚC khi dùng
                         db_products = service.get_products()
-                        stock_dict = {}
-                    if products:
-                        for p in products:
-                            p_code = str(p[1]).strip()
-                            # Ép kiểu an toàn: nếu cột tồn (p[4]) trống hoặc không phải số thì trả về 0.0
-                            try:
-                                val = float(p[4]) if len(p) > 4 and p[4] else 0.0
-                            except (ValueError, TypeError):
-                                val = 0.0
-                            stock_dict[p_code] = val
+                        stock_dict = {} 
                         
+                        # 2. Xây dựng dictionary an toàn
+                        if db_products:
+                            for p in db_products:
+                                p_code = str(p[1]).strip()
+                                try:
+                                    # Lưu ý: Kiểm tra index [4] có đúng là cột tồn không
+                                    val = float(p[4]) if len(p) > 4 and p[4] else 0.0
+                                except:
+                                    val = 0.0
+                                stock_dict[p_code] = val
+                        
+                        # 3. Sau khi đã có stock_dict, tiến hành kiểm tra như bình thường
                         error_msgs = []
                         for _, row in edited_df_cart.iterrows():
                             if row["Loại"] == "Xuất":
