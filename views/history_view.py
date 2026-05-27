@@ -23,7 +23,8 @@ class HistoryView(ttk.Frame):
         self.tree.pack(side="top", fill="both", expand=True)
         scrollbar_x.pack(side="bottom", fill="x")
         
-        titles = ["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Ghi Chú", "ID Giao Dịch"]
+        # --- ĐÃ SỬA: Đổi "Ghi Chú" thành "Diễn Giải" trên giao diện ---
+        titles = ["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Diễn Giải", "ID Giao Dịch"]
         for i, col in enumerate(cols):
             self.tree.heading(col, text=titles[i])
             self.tree.column(col, width=100, anchor="center")
@@ -101,7 +102,8 @@ class HistoryView(ttk.Frame):
             t_type = "Nhập" if row[2] == 'IMPORT' else "Xuất"
             data.append([row[0], row[1], t_type, row[3], row[4]])
             
-        df = pd.DataFrame(data, columns=["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Ghi Chú"])
+        # --- ĐÃ SỬA: Đổi "Ghi Chú" thành "Diễn Giải" khi xuất Excel ---
+        df = pd.DataFrame(data, columns=["Ngày", "Tên Hàng", "Loại", "Số Lượng", "Diễn Giải"])
         
         # 3. Xuất file bằng xlsxwriter
         try:
@@ -120,12 +122,10 @@ class HistoryView(ttk.Frame):
             worksheet.set_column('A:A', 20) # Ngày
             worksheet.set_column('B:B', 30) # Tên Hàng
             worksheet.set_column('C:C', 10) # Loại
-            worksheet.set_column('E:E', 20) # Ghi chú
+            worksheet.set_column('E:E', 20) # Diễn giải
             
             writer.close()
             messagebox.showinfo("Thông báo", f"Đã xuất file '{file_name}' thành công!")
             
         except Exception as e:
             messagebox.showerror("Lỗi", f"Không thể xuất file: {e}")
-
-    
