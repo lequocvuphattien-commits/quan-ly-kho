@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import datetime
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
@@ -255,6 +256,7 @@ if st.sidebar.button("Đăng xuất", key="logout_btn"):
 menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất"]
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
+    menu_options.append("Sao lưu dữ liệu")
 
 if st.session_state.current_menu not in menu_options:
     st.session_state.current_menu = menu_options[0]
@@ -517,3 +519,46 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                 if st.button("Xác nhận xóa nhân viên", key="delete_emp_btn"):
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
+# --- TAB 6: SAO LƯU DỮ LIỆU ---
+elif st.session_state.current_menu == "Sao lưu dữ liệu":
+    # Bảo mật: Kiểm tra lại lần nữa, nếu không phải Quản lý thì chặn lại
+    if st.session_state.user_role != "Quản lý":
+        st.error("🚫 Bạn không có quyền truy cập trang này!")
+        st.stop()
+        
+    st.subheader("💾 Sao lưu an toàn dữ liệu")
+    st.info("Dữ liệu gốc đang được bảo vệ an toàn trên Google. Tuy nhiên, bạn có thể tải thêm một bản sao lưu ngoại tuyến (Offline) về máy tính để phòng hờ.")
+    
+    if st.button("📦 Tạo bản sao lưu ngay", type="primary"):
+        with st.spinner("Đang tổng hợp dữ liệu..."):
+            # 1. Lấy toàn bộ dữ liệu mới nhất
+            products = get_cached_products(service)
+            history = get_cached_history(service)
+            employees = get_cached_employees(service)
+            
+            # 2. Tạo file Excel trong bộ nhớ ảo
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                # Sheet Danh mục
+                if products:
+                    pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
+                
+                # Sheet Lịch sử
+                if history:
+                    # Tùy biến số lượng cột dựa trên cấu trúc
+                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
+                    pd.DataFrame(history, columns=cols).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
+                
+                # Sheet Nhân viên
+                if employees:
+                    pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "SĐT", "Chức vụ", "Mật khẩu"]).to_excel(writer, index=False, sheet_name="Nhan_Vien")
+            
+            # 3. Tạo nút Tải về
+            today_str = datetime.datetime.now().strftime("%d_%m_%Y")
+            st.success("🎉 Tạo file thành công! Hãy bấm nút bên dưới để tải về máy.")
+            st.download_button(
+                label="⬇️ Tải file Excel sao lưu",
+                data=output.getvalue(),
+                file_name=f"Backup_Kho_{today_str}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
