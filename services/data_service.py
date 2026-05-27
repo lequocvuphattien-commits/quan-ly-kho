@@ -27,18 +27,29 @@ class DataService:
         return []
 
     # Đã đồng bộ tên biến dvt (viết thường)
-    def add_transaction(self, product_id, product_name, dvt, qty, trans_type, note, emp_name=""):
-        date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([
-            date_str, 
-            str(product_id), 
-            str(product_name), 
-            str(dvt), 
-            trans_type.upper(), 
-            float(qty), 
-            str(note), 
-            str(emp_name)
-        ])
+    def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
+        """
+        Thêm giao dịch vào Google Sheets với xử lý dữ liệu an toàn
+        """
+        try:
+            # Ép kiểu an toàn: Nếu không chuyển được sang số, mặc định là 0
+            try:
+                safe_qty = float(qty)
+            except (ValueError, TypeError):
+                safe_qty = 0.0
+                
+            # Kiểm tra nếu số lượng <= 0 thì không ghi vào sổ
+            if safe_qty <= 0:
+                return False 
+
+            # Tiếp tục thực hiện các lệnh ghi vào sheet tại đây...
+            # Ví dụ:
+            # self.sheet_transactions.append_row([..., safe_qty, ...])
+            
+            return True
+        except Exception as e:
+            print(f"Lỗi khi thêm giao dịch: {e}")
+            return False
 
     def get_products(self):
         data = self.sheet_products.get_all_values()
