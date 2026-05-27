@@ -128,10 +128,26 @@ def show_report():
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            # HIỂN THỊ AGGRID... (Giữ nguyên phần AgGrid cũ của bạn)
+            # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
+            # Đảm bảo gb và go được định nghĩa bên trong khối này
+            gb = GridOptionsBuilder.from_dataframe(df_report)
+            gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
             
-            go = gb.build()
+            gb.configure_column("Mã HH", minWidth=60, maxWidth=120, cellStyle={'textAlign': 'center'})
+            gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
+            gb.configure_column("Đvt", minWidth=60, maxWidth=100, cellStyle={'textAlign': 'center'})
+
+            for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
+                gb.configure_column(
+                    col_name,
+                    minWidth=90, maxWidth=130,
+                    type=["numericColumn"],
+                    filter='agNumberColumnFilter',
+                    valueFormatter="Number(x).toLocaleString('en-US')",
+                    cellStyle={'textAlign': 'right'})
             
+            go = gb.build() # Biến go được tạo ra ở đây
+            # --- HIỂN THỊ AGGRID ---
             AgGrid(
                 df_report,
                 gridOptions=go,
@@ -139,6 +155,7 @@ def show_report():
                 theme='streamlit',
                 height=650)
             
+            # --- CÁC NÚT BẤM VÀ XUẤT EXCEL ---
             st.markdown("<br>", unsafe_allow_html=True)
             st.download_button(
                 label="📥 Xuất báo cáo ra Excel (.xlsx)",
