@@ -343,15 +343,22 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         p_dict = {}
         
         for p in products:
-            # p[1] là Mã, p[2] là Tên, p[3] là Đvt, p[4] là Tồn
-            ten_hien_thi = f"{p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})"
+            # 1. Bắt lỗi an toàn cho dữ liệu Tồn kho (p[4])
+            try:
+                # Kiểm tra độ dài và loại bỏ khoảng trắng thừa, nếu lỗi thì gán bằng 0.0
+                ton_kho = float(p[4]) if len(p) > 4 and str(p[4]).strip() != "" else 0.0
+            except (ValueError, TypeError):
+                ton_kho = 0.0
+                
+            # 2. Ráp chuỗi hiển thị
+            ten_hien_thi = f"{p[2]} (Tồn: {ton_kho:,.0f} {p[3]})"
             display_data.append(ten_hien_thi)
-            # Lưu trữ toàn bộ thông tin gốc vào dict
-            p_dict[ten_hien_thi] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]}
+            
+            # 3. Lưu trữ toàn bộ thông tin gốc vào dict (Sử dụng luôn ton_kho đã làm sạch)
+            p_dict[ten_hien_thi] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": ton_kho}
         
         # Sắp xếp danh sách hiển thị theo thứ tự Tên (A-Z)
         display_data.sort()
-        
         # Hiển thị Selectbox với danh sách đã chuẩn hóa
         selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
         # ---------------------------------------------------
