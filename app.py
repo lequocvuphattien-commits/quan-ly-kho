@@ -422,7 +422,7 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
         if len(history[0]) == 5:
             cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
         else:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
             
         df = pd.DataFrame(history, columns=cols)
         
