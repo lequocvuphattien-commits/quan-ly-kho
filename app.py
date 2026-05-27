@@ -292,8 +292,8 @@ if st.session_state.current_menu == "Danh mục hàng":
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
-        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
-        gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
+        gb.configure_column("Đvt", minWidth=50, editable=True)
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
         grid_response = AgGrid(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, height=400)
     
@@ -338,8 +338,23 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         st.session_state.qty_key = 0
     
     if products:
-        p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
-        selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
+        # --- ĐOẠN CODE ĐƯỢC TỐI ƯU HIỂN THỊ VÀ SẮP XẾP ---
+        display_data = []
+        p_dict = {}
+        
+        for p in products:
+            # p[1] là Mã, p[2] là Tên, p[3] là Đvt, p[4] là Tồn
+            ten_hien_thi = f"{p[2]} (Tồn: {float(p[4]):,.0f} {p[3]})"
+            display_data.append(ten_hien_thi)
+            # Lưu trữ toàn bộ thông tin gốc vào dict
+            p_dict[ten_hien_thi] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]}
+        
+        # Sắp xếp danh sách hiển thị theo thứ tự Tên (A-Z)
+        display_data.sort()
+        
+        # Hiển thị Selectbox với danh sách đã chuẩn hóa
+        selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
+        # ---------------------------------------------------
         
         # Chia 4 cột để gom nhóm
         c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
