@@ -19,13 +19,13 @@ class DataService:
         if len(data) > 1:
             cleaned_data = [row[:7] for row in data[1:]]
             cleaned_data = [row + [""] * (7 - len(row)) for row in cleaned_data]
-            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "type", "qty", "note", "emp_name"])
+            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "Đvt" "type", "qty", "note", "emp_name"])
             return df.values.tolist()
         return []
 
-    def add_transaction(self, product_id, product_name, qty, trans_type, note, emp_name=""):
+    def add_transaction(self, product_id, product_name, Đvt, qty, trans_type, note, emp_name=""):
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), str(note), str(emp_name)])
+        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), str(Đvt), trans_type.upper(), float(qty), str(note), str(emp_name)])
 
     def get_products(self):
         data = self.sheet_products.get_all_values()
