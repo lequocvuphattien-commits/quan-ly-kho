@@ -10,7 +10,8 @@ class TransactionController:
     def __init__(self):
         self.service = DataService(mode="ONLINE")
 
-    def process_transaction(self, product_id, product_name, trans_type, quantity, note):
+    # Đã thêm tham số `dvt` vào dòng dưới
+    def process_transaction(self, product_id, product_name, dvt, trans_type, quantity, note):
         """
         Xử lý giao dịch: Kiểm tra tồn kho (nếu là Xuất) và cập nhật dữ liệu.
         """
@@ -29,7 +30,8 @@ class TransactionController:
                     return "ERROR_INSUFFICIENT_STOCK"
 
             # 2. Ghi vào lịch sử và cập nhật tồn kho
-            self.service.add_transaction(product_id, product_name, quantity, trans_type, note)
+            # Đã truyền biến `dvt` vào hàm add_transaction thay vì dùng chữ `Đvt` chưa được khai báo
+            self.service.add_transaction(product_id, product_name, dvt, quantity, trans_type, note)
             self.service.update_stock(product_id, quantity, trans_type)
             
             # 3. Xóa cache để báo cáo cập nhật ngay lập tức

@@ -93,11 +93,16 @@ def show_report():
             processed_history = []
             for row in all_history:
                 row_copy = list(row)
-                while len(row_copy) < 7: 
+                # Đã sửa: tăng giới hạn lên 8 cột tương ứng với cấu trúc Transactions mới đổ về
+                while len(row_copy) < 8: 
                     row_copy.append("") 
                 processed_history.append(row_copy)
 
-            df_h = pd.DataFrame(processed_history, columns=["date", "product_id", "product_name", "type", "qty", "note", "voucher"])
+            # Đã sửa: Khai báo đủ 8 cột và đặt cột "Đvt" đúng thứ tự được trả về từ data_service
+            df_h = pd.DataFrame(
+                processed_history, 
+                columns=["date", "product_id", "product_name", "Đvt", "type", "qty", "note", "voucher"]
+            )
             
             if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
                 df_h = df_h.iloc[1:].copy()

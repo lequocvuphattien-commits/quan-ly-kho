@@ -17,15 +17,28 @@ class DataService:
     def get_history(self):
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            cleaned_data = [row[:7] for row in data[1:]]
-            cleaned_data = [row + [""] * (7 - len(row)) for row in cleaned_data]
-            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "type", "qty", "note", "emp_name"])
+            # Đã sửa: Tăng từ 7 lên 8 cột để lấy được cột Đvt
+            cleaned_data = [row[:8] for row in data[1:]]
+            cleaned_data = [row + [""] * (8 - len(row)) for row in cleaned_data]
+            
+            # Đã sửa: Thêm dấu phẩy giữa "Đvt" và "type"
+            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "Đvt", "type", "qty", "note", "emp_name"])
             return df.values.tolist()
         return []
 
-    def add_transaction(self, product_id, product_name, qty, trans_type, note, emp_name=""):
+    # Đã đồng bộ tên biến dvt (viết thường)
+    def add_transaction(self, product_id, product_name, dvt, qty, trans_type, note, emp_name=""):
         date_str = pd.Timestamp.now(tz='Asia/Ho_Chi_Minh').strftime("%Y-%m-%d %H:%M:%S")
-        self.sheet_transactions.append_row([date_str, str(product_id), str(product_name), trans_type.upper(), float(qty), str(note), str(emp_name)])
+        self.sheet_transactions.append_row([
+            date_str, 
+            str(product_id), 
+            str(product_name), 
+            str(dvt), 
+            trans_type.upper(), 
+            float(qty), 
+            str(note), 
+            str(emp_name)
+        ])
 
     def get_products(self):
         data = self.sheet_products.get_all_values()
@@ -36,8 +49,36 @@ class DataService:
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
 
     def add_product(self, code, name, unit):
+        # 1. Tạo và thêm hàng hóa mới vào dòng cuối trước
         new_id = str(uuid.uuid4())[:8].upper()
         self.sheet_products.append_row([new_id, code, name, unit, 0.0])
+        
+        # 2. Tự động sắp xếp lại Sheet theo Tên hàng hóa (A-Z)
+        try:
+            all_data = self.sheet_products.get_all_values()
+            if len(all_data) > 2:
+                # BƯỚC BẢO VỆ 1: Lọc bỏ toàn bộ các dòng trống hoàn toàn ở cuối file
+                # Tránh việc dòng trống bị mang đi sắp xếp và nhảy lên đầu sheet
+                product_rows = [row for row in all_data[1:] if any(str(cell).strip() for cell in row)]
+                
+                # BƯỚC BẢO VỆ 2: Sắp xếp tăng dần theo Tên hàng hóa (Cột C -> index 2)
+                product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
+                
+                # BƯỚC BẢO VỆ 3: Chuẩn hóa độ dài các dòng (Bù khoảng trống)
+                # Google Sheets API sẽ báo lỗi nếu mảng có dòng dài dòng ngắn
+                cleaned_rows = [row + [""] * (5 - len(row)) for row in product_rows]
+                
+                # BƯỚC BẢO VỆ 4: Cập nhật dữ liệu (Tương thích mọi phiên bản gspread)
+                try:
+                    # Dành cho gspread phiên bản mới (v6.0 trở lên)
+                    self.sheet_products.update(values=cleaned_rows, range_name="A2") 
+                except TypeError:
+                    # Dành cho gspread phiên bản cũ (v5.x trở xuống)
+                    self.sheet_products.update("A2", cleaned_rows)
+                    
+        except Exception as e:
+            print(f"⚠️ Lỗi tự động sắp xếp danh mục hàng hóa: {e}")
+            
         return True
 
     def delete_product(self, product_id):
@@ -116,9 +157,6 @@ class DataService:
                 self.sheet_employees.delete_rows(i + 1)
                 return True
         return False
-    
-    # Hàm kiểm tra đăng nhập dựa trên Mã NV (Username) và Mật khẩu (giả sử cột 4 là mật khẩu)
-        return [row[:5] + [""] * (5 - len(row)) for row in data[1:]] if len(data) > 1 else []
 
     def check_login(self, username, password):
         """Kiểm tra đăng nhập và trả về Tên + Chức vụ"""
@@ -134,20 +172,63 @@ class DataService:
                         "role": str(emp[3]).strip() # Phải có dòng này để trả về 'role'
                     }
         return {"status": False, "name": None, "role": None}
-    
+
+    # ==========================================
+    # 🔥 ĐÃ BỔ SUNG HÀM TÍNH TOÁN BÁO CÁO DƯỚI ĐÂY 🔥
+    # ==========================================
+    def get_product_stats_by_date(self, product_id, start_date, end_date):
+        """
+        Tính toán Tồn đầu, Nhập, Xuất của một sản phẩm dựa trên mốc thời gian.
+        """
+        try:
+            data = self.sheet_transactions.get_all_values()
+            if len(data) <= 1:
+                return 0.0, 0.0, 0.0
+            
+            opening_stock = 0.0
+            total_in = 0.0
+            total_out = 0.0
+            
+            # Cột trong sheet Transactions:
+            # row[0]: Ngày, row[1]: Mã sản phẩm, row[4]: Loại (NHẬP/XUẤT), row[5]: Số lượng
+            for row in data[1:]:
+                if len(row) < 6:
+                    continue
+                
+                # So khớp mã hàng hóa (bỏ khoảng trắng, không phân biệt hoa thường)
+                if str(row[1]).strip().lower() != str(product_id).strip().lower():
+                    continue
+                
+                row_date = row[0].strip()
+                trans_type = str(row[4]).strip().upper()
+                
+                try:
+                    qty = float(row[5])
+                except ValueError:
+                    qty = 0.0
+                
+                # Phân loại tính toán theo mốc thời gian lọc của người dùng
+                if row_date < start_date:
+                    if trans_type == "NHẬP":
+                        opening_stock += qty
+                    elif trans_type == "XUẤT":
+                        opening_stock -= qty
+                elif start_date <= row_date <= end_date:
+                    if trans_type == "NHẬP":
+                        total_in += qty
+                    elif trans_type == "XUẤT":
+                        total_out += qty
+                        
+            return opening_stock, total_in, total_out
+            
+        except Exception as e:
+            print(f"Lỗi tính toán báo cáo cho sản phẩm {product_id}: {e}")
+            return 0.0, 0.0, 0.0
+
     def delete_transaction(self, row_index, product_code, quantity, trans_type):
         """
         Xóa giao dịch và hoàn tác số lượng tồn kho
         """
-        # 1. Xóa dòng trong sheet Transactions
-        # Lưu ý: row_index lấy từ st.data_editor thường là index của DataFrame, 
-        # nên khi map vào Google Sheet phải cộng thêm 2 (1 cho header, 1 vì index bắt đầu từ 0)
         self.sheet_transactions.delete_rows(row_index + 2) 
-        
-        # 2. Hoàn tác tồn kho
-        # Nếu đã nhập kho (Nhập), giờ xóa đi thì phải trừ tồn (tồn giảm)
-        # Nếu đã xuất kho (Xuất), giờ xóa đi thì phải cộng lại tồn (tồn tăng)
         change = -quantity if trans_type == "Nhập" else quantity
-        
-        # Gọi lại hàm update_stock đã có sẵn của bạn để đồng bộ
         self.update_stock(product_code, change, "Nhập")

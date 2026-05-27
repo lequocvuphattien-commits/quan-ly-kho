@@ -87,13 +87,30 @@ class TransactionView(ttk.Frame):
 
     def process_all(self):
         if not self.cart: return
-        t = 'IMPORT' if self.combo_type.get() == "Nhập" else 'EXPORT'
-        for i in self.cart: self.t_controller.process_transaction(i['product'].id, t, i['qty'], "")
+        
+        # Lấy loại giao dịch để truyền vào Controller
+        t = "Nhập" if self.combo_type.get() == "Nhập" else "Xuất" 
+        
+        for i in self.cart: 
+            p = i['product']
+            qty = i['qty']
+            
+            # Gọi controller với đầy đủ tham số
+            self.t_controller.process_transaction(
+                product_id=p.id, 
+                product_name=p.name,
+                dvt=p.unit,
+                trans_type=t, 
+                quantity=qty, 
+                note=""
+            )
+            
         messagebox.showinfo("Thông báo", "Đã xử lý!")
-        self.cart = []; [self.tree.delete(i) for i in self.tree.get_children()]
+        self.cart = []
+        [self.tree.delete(i) for i in self.tree.get_children()]
 
     def delete_transaction(self, trans_id):
         """Hủy một giao dịch và tự động hoàn tác tồn kho"""
-        # DataService đã có hàm undo_transaction mà ta đã thiết kế trước đó
-        self.service.undo_transaction(trans_id)
+        # Sửa lỗi gọi sai service, chuyển sang gọi thông qua t_controller
+        self.t_controller.undo_transaction(trans_id)
         return True, "Đã hủy giao dịch thành công!"

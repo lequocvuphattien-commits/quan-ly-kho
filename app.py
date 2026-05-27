@@ -284,16 +284,13 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        # Đã thêm lệnh cắt 5 cột đầu tiên để không bao giờ bị văng lỗi ValueError
-        products_data = [row[:5] for row in products]
-        df = pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
-        
+        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
-        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
-        gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
+        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
+        gb.configure_column("Đvt", minWidth=50, editable=True)
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
         
         grid_response = AgGrid(
@@ -346,8 +343,30 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         st.session_state.qty_key = 0
     
     if products:
-        p_dict = {f"{p[1]} - {p[2]}": {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": p[4]} for p in products}
-        selected = st.selectbox("Chọn hàng hóa", options=list(p_dict.keys()), index=None, key="product_select_field")
+        # --- ĐOẠN CODE ĐƯỢC TỐI ƯU HIỂN THỊ VÀ SẮP XẾP ---
+        display_data = []
+        p_dict = {}
+        
+        for p in products:
+            # 1. Bắt lỗi an toàn cho dữ liệu Tồn kho (p[4])
+            try:
+                # Kiểm tra độ dài và loại bỏ khoảng trắng thừa, nếu lỗi thì gán bằng 0.0
+                ton_kho = float(p[4]) if len(p) > 4 and str(p[4]).strip() != "" else 0.0
+            except (ValueError, TypeError):
+                ton_kho = 0.0
+                
+            # 2. Ráp chuỗi hiển thị
+            ten_hien_thi = f"{p[2]} (Tồn: {ton_kho:,.0f} {p[3]})"
+            display_data.append(ten_hien_thi)
+            
+            # 3. Lưu trữ toàn bộ thông tin gốc vào dict (Sử dụng luôn ton_kho đã làm sạch)
+            p_dict[ten_hien_thi] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": ton_kho}
+        
+        # Sắp xếp danh sách hiển thị theo thứ tự Tên (A-Z)
+        display_data.sort()
+        # Hiển thị Selectbox với danh sách đã chuẩn hóa
+        selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
+        # ---------------------------------------------------
         
         # Chia 4 cột để gom nhóm
         c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
@@ -386,7 +405,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Tên HH": p_dict[selected]["Tên"], 
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
-                        "Diễn Giải": note, 
+                        "Ghi chú": note, 
                         "Loại": trans_type
                     })
                     
@@ -394,10 +413,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.session_state.qty_key += 1
                     st.rerun()
 
-        # Phần hiển thị giỏ hàng và nút xác nhận
+            # Phần hiển thị giỏ hàng và nút xác nhận
             if 'cart' not in st.session_state: st.session_state.cart = []
             if st.session_state.cart:
-                # Lưới của bạn giữ nguyên
+                # Lưới hiển thị danh sách giỏ hàng
                 edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
                 
                 # --- THÊM 2 NÚT BẤM CÙNG DÒNG Ở ĐÂY ---
@@ -405,8 +424,24 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
+    
+                        # 1. Khởi tạo stock_dict TRƯỚC khi dùng
+                        db_products = service.get_products()
+                        stock_dict = {} # Khởi tạo mặc định
+                        if db_products:
+                            for p in db_products:
+                                # p[1] là Mã (cột B), p[4] là Tồn (cột E)
+                                p_code = str(p[1]).strip()
+                                try:
+                                    val = float(p[4]) if len(p) > 4 and p[4] else 0.0
+                                except (ValueError, TypeError):
+                                    val = 0.0
+                                stock_dict[p_code] = val
+
+                        # Bây giờ mới chạy vòng lặp kiểm tra xuất kho
+                        error_msgs = []
                         for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Diễn Giải"], st.session_state.user_name)
+                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         st.session_state.cart = []
                         st.cache_data.clear()
@@ -436,11 +471,11 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     history = get_cached_history(service)
     if history:
         # 1. Tạo DataFrame từ dữ liệu lịch sử
-        # Đoạn này tự động khớp số lượng cột tùy theo cấu trúc dữ liệu trả về từ Sheet của bạn
+        # Đã đồng bộ chuẩn xác cấu trúc 8 cột để tránh hoàn toàn lỗi ValueError
         if len(history[0]) == 5:
             cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
         else:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
             
         df = pd.DataFrame(history, columns=cols)
         
@@ -550,7 +585,6 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                     
 # --- TAB 6: SAO LƯU DỮ LIỆU ---
 elif st.session_state.current_menu == "Sao lưu dữ liệu":
-    # Bảo mật: Kiểm tra lại lần nữa, nếu không phải Quản lý thì chặn lại
     if st.session_state.user_role != "Quản lý":
         st.error("🚫 Bạn không có quyền truy cập trang này!")
         st.stop()
@@ -560,31 +594,25 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
     
     if st.button("📦 Tạo bản sao lưu ngay", type="primary"):
         with st.spinner("Đang tổng hợp dữ liệu..."):
-            # 1. Lấy toàn bộ dữ liệu mới nhất
             products = get_cached_products(service)
             history = get_cached_history(service)
             employees = get_cached_employees(service)
             
-            # 2. Tạo file Excel trong bộ nhớ ảo
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                # Sheet Danh mục
                 if products:
                     # Đã thêm lệnh cắt 5 cột đầu tiên để đảm bảo lúc xuất Excel không bị lỗi
                     products_data = [row[:5] for row in products]
                     pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
-                # Sheet Lịch sử
                 if history:
                     # Tùy biến số lượng cột dựa trên cấu trúc
-                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
+                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
                     pd.DataFrame(history, columns=cols).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
-                # Sheet Nhân viên
                 if employees:
                     pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "SĐT", "Chức vụ", "Mật khẩu"]).to_excel(writer, index=False, sheet_name="Nhan_Vien")
             
-            # 3. Tạo nút Tải về
             today_str = datetime.datetime.now().strftime("%d_%m_%Y")
             st.success("🎉 Tạo file thành công! Hãy bấm nút bên dưới để tải về máy.")
             st.download_button(
@@ -593,3 +621,4 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                 file_name=f"Backup_Kho_{today_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
