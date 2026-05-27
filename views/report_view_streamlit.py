@@ -81,50 +81,60 @@ def show_report():
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
-            all_history = t_controller.get_transaction_history() # Lấy dữ liệu thô
+            all_history = t_controller.get_transaction_history()
             
-            if not products:
-                st.warning("Không tìm thấy hàng hóa!")
+            # Kiểm tra dữ liệu an toàn
+            if not products or not all_history or len(all_history) < 2:
+                st.warning("Không tìm thấy hàng hóa hoặc chưa có giao dịch!")
                 return
-            
-            # 1. Chuyển đổi lịch sử thành DataFrame an toàn
-            # Giả sử cấu trúc cột: Ngày, Mã HH, Tên, Đvt, Loại, Số lượng, Diễn giải, Nhân viên
-            df_h = pd.DataFrame(all_history[1:], columns=all_history[0]) 
-            
-            # Chuẩn hóa dữ liệu cực kỳ quan trọng
-            df_h['date'] = pd.to_datetime(df_h['Ngày'], errors='coerce')
-            df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
-            df_h['type'] = df_h['Loại'].astype(str).str.strip() # Cắt khoảng trắng
-            df_h['qty'] = pd.to_numeric(df_h['Số lượng'], errors='coerce').fillna(0)
-            
-            # 2. Xử lý tồn đầu
+
+            # --- CHUYỂN ĐỔI DỮ LIỆU ---
+            try:
+                headers = all_history[0]
+                data = all_history[1:]
+                df_h = pd.DataFrame(data, columns=headers)
+                
+                # Chuẩn hóa cột
+                df_h['date'] = pd.to_datetime(df_h['Ngày'], errors='coerce')
+                df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
+                df_h['type'] = df_h['Loại'].astype(str).str.strip()
+                df_h['qty'] = pd.to_numeric(df_h['Số Lượng'], errors='coerce').fillna(0)
+            except KeyError as e:
+                st.error(f"Lỗi cột: {e}. Vui lòng kiểm tra tiêu đề trong Google Sheets.")
+                return
+
+            # --- TÍNH TOÁN DỮ LIỆU (Đã đưa vào trong khối if để tránh lỗi Undefined) ---
             start = pd.to_datetime(start_date)
             end = pd.to_datetime(end_date)
             
+            # Khởi tạo df_past và df_period tại đây
             df_past = df_h[df_h['date'] < start]
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
             
-            # Hàm tính toán tổng nhóm
+            # Hàm tính toán tổng
             def get_stats(df):
+                if df.empty: return pd.DataFrame(columns=['Nhập', 'Xuất'])
                 pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                # Đảm bảo có đủ cột Nhập/Xuất để không bị lỗi KeyError
+                # Đảm bảo luôn có cột Nhập và Xuất
                 for col in ['Nhập', 'Xuất']:
                     if col not in pivot.columns: pivot[col] = 0
                 return pivot[['Nhập', 'Xuất']]
 
+            # Lấy thống kê
             past_stats = get_stats(df_past)
             past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
-            
             period_stats = get_stats(df_period)
             
-            # 3. Kết hợp dữ liệu (Merge)
+            # --- TẠO BÁO CÁO CUỐI CÙNG ---
             df_products = pd.DataFrame([[p.code, p.name, p.unit] for p in products], 
                                      columns=["Mã HH", "Tên hàng hóa", "Đvt"])
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
+            # Merge dữ liệu
             df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
             df_report = df_report.merge(period_stats, left_on='Mã HH', right_index=True, how='left').fillna(0)
             
+            # Tính tồn cuối
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
