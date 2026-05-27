@@ -81,84 +81,54 @@ def show_report():
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
-            all_history = t_controller.get_transaction_history()
+            all_history = t_controller.get_transaction_history() # Lấy dữ liệu thô
             
             if not products:
                 st.warning("Không tìm thấy hàng hóa!")
                 return
-            if not all_history:
-                st.info("Chưa có giao dịch.")
-                return
-
-            processed_history = []
-            for row in all_history:
-                row_copy = list(row)
-                # Đã sửa: tăng giới hạn lên 8 cột tương ứng với cấu trúc Transactions mới đổ về
-                while len(row_copy) < 8: 
-                    row_copy.append("") 
-                processed_history.append(row_copy)
-
-            # Đã sửa: Khai báo đủ 8 cột và đặt cột "Đvt" đúng thứ tự được trả về từ data_service
-            df_h = pd.DataFrame(
-                processed_history, 
-                columns=["date", "product_id", "product_name", "Đvt", "type", "qty", "note", "voucher"]
-            )
             
-            if not df_h.empty and str(df_h.iloc[0]['date']).strip() == 'Ngày':
-                df_h = df_h.iloc[1:].copy()
-
-            df_h['date'] = pd.to_datetime(df_h['date'], errors='coerce').dt.normalize()
-            df_h['qty'] = pd.to_numeric(df_h['qty'], errors='coerce').fillna(0)
-            df_h['product_id'] = df_h['product_id'].astype(str).str.strip().str.upper()
-            df_h['type'] = df_h['type'].astype(str).str.strip().str.capitalize()
+            # 1. Chuyển đổi lịch sử thành DataFrame an toàn
+            # Giả sử cấu trúc cột: Ngày, Mã HH, Tên, Đvt, Loại, Số lượng, Diễn giải, Nhân viên
+            df_h = pd.DataFrame(all_history[1:], columns=all_history[0]) 
             
-            df_products = pd.DataFrame(
-                [[p.code, p.name, p.unit] for p in products], 
-                columns=["code", "name", "unit"]
-            )
-            df_products['code'] = df_products['code'].astype(str).str.strip().str.upper()
+            # Chuẩn hóa dữ liệu cực kỳ quan trọng
+            df_h['date'] = pd.to_datetime(df_h['Ngày'], errors='coerce')
+            df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
+            df_h['type'] = df_h['Loại'].astype(str).str.strip() # Cắt khoảng trắng
+            df_h['qty'] = pd.to_numeric(df_h['Số lượng'], errors='coerce').fillna(0)
             
+            # 2. Xử lý tồn đầu
             start = pd.to_datetime(start_date)
             end = pd.to_datetime(end_date)
             
             df_past = df_h[df_h['date'] < start]
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
             
+            # Hàm tính toán tổng nhóm
             def get_stats(df):
-                if df.empty:
-                    return pd.DataFrame(columns=['Nhập', 'Xuất'])
                 pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                if 'Nhập' not in pivot.columns: pivot['Nhập'] = 0
-                if 'Xuất' not in pivot.columns: pivot['Xuất'] = 0
+                # Đảm bảo có đủ cột Nhập/Xuất để không bị lỗi KeyError
+                for col in ['Nhập', 'Xuất']:
+                    if col not in pivot.columns: pivot[col] = 0
                 return pivot[['Nhập', 'Xuất']]
 
             past_stats = get_stats(df_past)
-            period_stats = get_stats(df_period)
-            
             past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
             
-            df_report = df_products.merge(past_stats[['ton_dau']], left_on='code', right_index=True, how='left').fillna(0)
-            df_report = df_report.merge(period_stats, left_on='code', right_index=True, how='left').fillna(0)
+            period_stats = get_stats(df_period)
+            
+            # 3. Kết hợp dữ liệu (Merge)
+            df_products = pd.DataFrame([[p.code, p.name, p.unit] for p in products], 
+                                     columns=["Mã HH", "Tên hàng hóa", "Đvt"])
+            df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
+            
+            df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
+            df_report = df_report.merge(period_stats, left_on='Mã HH', right_index=True, how='left').fillna(0)
             
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
-            gb = GridOptionsBuilder.from_dataframe(df_report)
-            gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
-            
-            gb.configure_column("Mã HH", minWidth=60, maxWidth=120, cellStyle={'textAlign': 'center'})
-            gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
-            gb.configure_column("Đvt", minWidth=60, maxWidth=100, cellStyle={'textAlign': 'center'})
-
-            for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
-                gb.configure_column(
-                    col_name,
-                    minWidth=90, maxWidth=130,
-                    type=["numericColumn"],
-                    filter='agNumberColumnFilter',
-                    valueFormatter="Number(x).toLocaleString('en-US')",
-                    cellStyle={'textAlign': 'right'}
-                )
+            # HIỂN THỊ AGGRID... (Giữ nguyên phần AgGrid cũ của bạn)
             
             go = gb.build()
             
