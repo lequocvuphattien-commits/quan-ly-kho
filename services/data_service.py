@@ -49,8 +49,23 @@ class DataService:
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
 
     def add_product(self, code, name, unit):
+        # 1. Tạo và thêm hàng hóa mới
         new_id = str(uuid.uuid4())[:8].upper()
         self.sheet_products.append_row([new_id, code, name, unit, 0.0])
+        
+        # 2. Tự động sắp xếp lại Sheet theo Tên hàng hóa (A-Z)
+        try:
+            all_data = self.sheet_products.get_all_values()
+            if len(all_data) > 2:
+                product_rows = all_data[1:] # Lấy dữ liệu bỏ dòng tiêu đề
+                # Sắp xếp tăng dần theo Tên hàng hóa (Cột C -> index 2)
+                product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
+                
+                # Cập nhật lại toàn bộ dữ liệu từ ô A2 (giữ nguyên UUID ở cột A)
+                self.sheet_products.update("A2", product_rows)
+        except Exception as e:
+            print(f"⚠️ Lỗi tự động sắp xếp danh mục hàng hóa: {e}")
+            
         return True
 
     def delete_product(self, product_id):
