@@ -363,24 +363,29 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 if not selected or not qty or not note: 
                     st.warning("⚠️ Nhập đủ thông tin!")
                 else:
-                    if 'cart' not in st.session_state: st.session_state.cart = []
-                    st.session_state.cart.append({
-                        "Mã HH": p_dict[selected]["Mã"], 
-                        "Tên HH": p_dict[selected]["Tên"], 
-                        "Đvt": p_dict[selected]["Đvt"], 
-                        "Số lượng": float(qty), 
-                        "Ghi chú": note, 
-                        "Loại": trans_type
-                    })
-                    
-                    # TĂNG BIẾN ĐẾM ĐỂ RESET Ô SỐ LƯỢNG (Không gây lỗi)
-                    st.session_state.qty_key += 1
-                    st.rerun()
+                    # [LỚP BẢO VỆ 1]: Kiểm tra tồn kho ngay khi bấm Thêm hàng chờ
+                    current_stock = float(p_dict[selected]['Tồn'])
+                    if trans_type == "Xuất" and float(qty) > current_stock:
+                        st.error(f"❌ Không thể thêm! Số lượng xuất ({qty:,.0f}) lớn hơn số lượng tồn hiện tại ({current_stock:,.0f}).")
+                    else:
+                        if 'cart' not in st.session_state: st.session_state.cart = []
+                        st.session_state.cart.append({
+                            "Mã HH": p_dict[selected]["Mã"], 
+                            "Tên HH": p_dict[selected]["Tên"], 
+                            "Đvt": p_dict[selected]["Đvt"], 
+                            "Số lượng": float(qty), 
+                            "Ghi chú": note, 
+                            "Loại": trans_type
+                        })
+                        
+                        # TĂNG BIẾN ĐẾM ĐỂ RESET Ô SỐ LƯỢNG (Không gây lỗi)
+                        st.session_state.qty_key += 1
+                        st.rerun()
 
-        # Phần hiển thị giỏ hàng và nút xác nhận
+            # Phần hiển thị giỏ hàng và nút xác nhận
             if 'cart' not in st.session_state: st.session_state.cart = []
             if st.session_state.cart:
-                # Lưới của bạn giữ nguyên
+                # Lưới hiển thị danh sách giỏ hàng
                 edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
                 
                 # --- THÊM 2 NÚT BẤM CÙNG DÒNG Ở ĐÂY ---
@@ -388,13 +393,38 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
+                        
+                        # [LỚP BẢO VỆ 2]: Quét và kiểm tra chéo tồn kho thời gian thực trước khi lưu hẳn vào DB
+                        db_products = service.get_products()
+                        stock_dict = {str(p[1]).strip(): float(p[4]) for p in db_products} if db_products else {}
+                        
+                        error_msgs = []
                         for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Đvt"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
-                            service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                        st.session_state.cart = []
-                        st.cache_data.clear()
-                        st.success(f"🎉 Giao dịch thành công!")
-                        st.rerun()
+                            if row["Loại"] == "Xuất":
+                                p_code = str(row["Mã HH"]).strip()
+                                req_qty = float(row["Số lượng"])
+                                available = stock_dict.get(p_code, 0.0)
+                                
+                                if req_qty > available:
+                                    error_msgs.append(f"• **{row['Tên HH']}** ({p_code}): Xuất {req_qty:,.0f} vượt quá tồn kho hiện tại ({available:,.0f})")
+                                else:
+                                    # Trừ tạm thời vào bộ từ điển để kiểm tra nếu có dòng trùng mã sản phẩm tiếp theo
+                                    stock_dict[p_code] -= req_qty
+                        
+                        # Phân nhánh xử lý dựa trên kết quả kiểm tra chéo
+                        if error_msgs:
+                            st.error("🚫 **TỪ CHỐI XỬ LÝ: Có sản phẩm vượt quá số lượng tồn kho hiện tại! Vui lòng chỉnh sửa lại giỏ hàng.**")
+                            for msg in error_msgs:
+                                st.write(msg)
+                        else:
+                            # Nếu kiểm tra an toàn, tiến hành ghi đè dữ liệu lên Google Sheets
+                            for _, row in edited_df_cart.iterrows():
+                                service.add_transaction(row["Mã HH"], row["Tên HH"], row["Đvt"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                                service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                            st.session_state.cart = []
+                            st.cache_data.clear()
+                            st.success(f"🎉 Giao dịch thành công!")
+                            st.rerun()
                 
                 with col_huy:
                     if st.button("❌ Hủy hàng chờ", use_container_width=True, key="clear_cart_btn"):
@@ -408,7 +438,7 @@ elif st.session_state.current_menu == "Báo cáo tồn kho":
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
 
-# --- TAB 5: LẠCH SỬ GIAO DỊCH ---
+# --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     
@@ -418,7 +448,7 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     history = get_cached_history(service)
     if history:
         # 1. Tạo DataFrame từ dữ liệu lịch sử
-        # Đoạn này tự động khớp số lượng cột tùy theo cấu trúc dữ liệu trả về từ Sheet của bạn
+        # Đã đồng bộ chuẩn xác cấu trúc 8 cột để tránh hoàn toàn lỗi ValueError
         if len(history[0]) == 5:
             cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
         else:
@@ -521,7 +551,6 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
 # --- TAB 6: SAO LƯU DỮ LIỆU ---
 elif st.session_state.current_menu == "Sao lưu dữ liệu":
-    # Bảo mật: Kiểm tra lại lần nữa, nếu không phải Quản lý thì chặn lại
     if st.session_state.user_role != "Quản lý":
         st.error("🚫 Bạn không có quyền truy cập trang này!")
         st.stop()
@@ -531,29 +560,22 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
     
     if st.button("📦 Tạo bản sao lưu ngay", type="primary"):
         with st.spinner("Đang tổng hợp dữ liệu..."):
-            # 1. Lấy toàn bộ dữ liệu mới nhất
             products = get_cached_products(service)
             history = get_cached_history(service)
             employees = get_cached_employees(service)
             
-            # 2. Tạo file Excel trong bộ nhớ ảo
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                # Sheet Danh mục
                 if products:
                     pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
-                # Sheet Lịch sử
                 if history:
-                    # Tùy biến số lượng cột dựa trên cấu trúc
                     cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
                     pd.DataFrame(history, columns=cols).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
-                # Sheet Nhân viên
                 if employees:
                     pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "SĐT", "Chức vụ", "Mật khẩu"]).to_excel(writer, index=False, sheet_name="Nhan_Vien")
             
-            # 3. Tạo nút Tải về
             today_str = datetime.datetime.now().strftime("%d_%m_%Y")
             st.success("🎉 Tạo file thành công! Hãy bấm nút bên dưới để tải về máy.")
             st.download_button(
