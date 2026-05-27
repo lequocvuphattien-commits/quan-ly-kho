@@ -44,7 +44,7 @@ def confirm_delete_history_dialog(selected_rows, service):
     
     col_yes, col_no = st.columns(2)
     with col_yes:
-        if st.button("✅ Xác nhận xóa"):
+        if st.button("✅ Xác nhận xóa XXX"):
             
             # ==========================================
             # BƯỚC 1: KIỂM TRA RÀNG BUỘC (SIÊU CHUẨN XÁC)
