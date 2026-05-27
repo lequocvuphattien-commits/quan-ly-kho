@@ -63,7 +63,7 @@ def confirm_delete_history_dialog(selected_rows, service):
             for index, row in selected_rows.iterrows():
                 # Tự động nhận diện tên cột là "Mã HH" hay "Mã"
                 p_code = str(row.get("Mã HH", row.get("Mã", ""))).strip()
-                qty = float(row.get("Số Lượng", row.get("qty", 0)))
+                qty = float(row.get("Số lượng", row.get("Số Lượng", 0)))
                 
                 # Ép về chữ thường và xóa khoảng trắng (Ví dụ: " Nhập " -> "nhập")
                 t_type = str(row.get("Loại", "")).strip().lower()
@@ -498,13 +498,15 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
         
         # Tự động định nghĩa tên cột dựa trên số lượng cột thực tế
         if num_cols == 5:
-            cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
+            cols = ["Ngày tháng", "Mã HH", "Loại", "Số lượng", "Diễn giải"]
         elif num_cols == 6:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải"]
+            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải"]
         elif num_cols == 7:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
+            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
+        elif num_cols == 8: # <-- TRƯỜNG HỢP MỚI ĐƯỢC THÊM VÀO
+            cols = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
         else:
-            # Trường hợp dự phòng nếu cấu trúc thay đổi: tạo tên cột mặc định
+            # Trường hợp dự phòng
             cols = [f"Cột {i+1}" for i in range(num_cols)]
             
         df = pd.DataFrame(history, columns=cols)
@@ -636,9 +638,21 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                     pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
                 if history:
-                    # Tùy biến số lượng cột dựa trên cấu trúc
-                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
-                    pd.DataFrame(history, columns=cols).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
+                    # Lấy số cột thực tế và gán tiêu đề tương ứng để xuất Excel không bị lỗi
+                    num_cols_hist = len(history[0])
+                    
+                    if num_cols_hist == 5:
+                        cols_hist = ["Ngày tháng", "Mã HH", "Loại", "Số lượng", "Diễn giải"]
+                    elif num_cols_hist == 6:
+                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải"]
+                    elif num_cols_hist == 7:
+                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
+                    elif num_cols_hist == 8:
+                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
+                    else:
+                        cols_hist = [f"Cột {i+1}" for i in range(num_cols_hist)]
+                        
+                    pd.DataFrame(history, columns=cols_hist).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
                 if employees:
                     pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "SĐT", "Chức vụ", "Mật khẩu"]).to_excel(writer, index=False, sheet_name="Nhan_Vien")
