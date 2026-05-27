@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import datetime
+import streamlit.components.v1 as components  # Đã thêm dòng này để sửa lỗi sidebar mobile
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
@@ -10,6 +11,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
+
 # --- BỘ NHỚ ĐỆM ---
 @st.cache_data(ttl=600, show_spinner=False)
 def get_cached_products(_svc): return _svc.get_products()
@@ -174,7 +176,7 @@ st.markdown("""
 
 # --- SCRIPT TỰ ĐỘNG ĐÓNG SIDEBAR TRÊN MOBILE ---
 if st.session_state.get("force_close_sidebar", False):
-    st.components.v1.html(
+    components.html(  # Đã sửa lỗi st.components.v1.html thành components.html
         """
         <script>
             // Tìm nút X (đóng sidebar) trên giao diện mobile của Streamlit và mô phỏng thao tác bấm
@@ -245,6 +247,8 @@ if not st.session_state.logged_in:
     st.stop() 
 
 # --- THANH SIDEBAR ẨN (CHỈ CHỨA THÔNG TIN USER & ĐĂNG XUẤT) ---
+user_name = st.session_state.get("user_name", "Khách")
+user_role = st.session_state.get("user_role", "Chưa đăng nhập")
 st.sidebar.write(f"👤 Người dùng: **{st.session_state.user_name}**")
 st.sidebar.write(f"💼 Chức vụ: **{st.session_state.user_role}**") 
 st.sidebar.markdown("---")
@@ -280,7 +284,10 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+        # Đã thêm lệnh cắt 5 cột đầu tiên để không bao giờ bị văng lỗi ValueError
+        products_data = [row[:5] for row in products]
+        df = pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+        
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
@@ -288,7 +295,15 @@ if st.session_state.current_menu == "Danh mục hàng":
         gb.configure_column("Tên hàng hóa", minWidth=150, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
         gb.configure_column("Đvt", minWidth=50, editable=True, cellStyle={'backgroundColor': '#f0f8ff'})
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
-        grid_response = AgGrid(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, height=400)
+        
+        grid_response = AgGrid(
+            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], 
+            gridOptions=gb.build(), 
+            fit_columns_on_grid_load=True, 
+            theme='streamlit', 
+            update_on=[{'event': 'cellValueChanged'}], 
+            height=400
+        )
     
     c1, c2 = st.columns(2)
     with c1:
@@ -305,7 +320,7 @@ if st.session_state.current_menu == "Danh mục hàng":
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
                 # 1. Chuẩn bị dữ liệu
-                df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+                df = pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
                 product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
                 
                 # 2. Chọn sản phẩm
@@ -406,11 +421,12 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho":
     show_report()
+
 # --- TAB 4: IN PHIẾU XUẤT ---
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
 
-# --- TAB 5: LẠCH SỬ GIAO DỊCH ---
+# --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     
@@ -473,7 +489,17 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
         gb.configure_column("Chức vụ", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         gb.configure_column("Mật khẩu", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         
-        grid_response = AgGrid(df_emp, gridOptions=gb.build(), fit_columns_on_grid_load=True, theme='streamlit', update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=400, key="employees_grid")
+        # Đã cập nhật lại update_on thay cho update_mode
+        grid_response = AgGrid(
+            df_emp, 
+            gridOptions=gb.build(), 
+            fit_columns_on_grid_load=True, 
+            theme='streamlit', 
+            update_on=[{'event': 'cellValueChanged'}], 
+            data_return_mode=DataReturnMode.FILTERED_AND_SORTED, 
+            height=400, 
+            key="employees_grid"
+        )
         edited_df_emp = pd.DataFrame(grid_response['data'])
 
         has_changes = False
@@ -521,6 +547,7 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                 if st.button("Xác nhận xóa nhân viên", key="delete_emp_btn"):
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
+                    
 # --- TAB 6: SAO LƯU DỮ LIỆU ---
 elif st.session_state.current_menu == "Sao lưu dữ liệu":
     # Bảo mật: Kiểm tra lại lần nữa, nếu không phải Quản lý thì chặn lại
@@ -543,7 +570,9 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 # Sheet Danh mục
                 if products:
-                    pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
+                    # Đã thêm lệnh cắt 5 cột đầu tiên để đảm bảo lúc xuất Excel không bị lỗi
+                    products_data = [row[:5] for row in products]
+                    pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
                 # Sheet Lịch sử
                 if history:
