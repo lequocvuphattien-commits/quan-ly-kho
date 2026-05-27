@@ -81,46 +81,40 @@ def show_report():
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
             products = p_controller.get_all_products()
-            all_history = t_controller.get_transaction_history()
+            df_h = t_controller.get_transaction_history() # Trả về DataFrame
             
-            # Kiểm tra dữ liệu an toàn
-            if not products or not all_history or len(all_history) < 2:
-                st.warning("Không tìm thấy hàng hóa hoặc chưa có giao dịch!")
+            # Kiểm tra dữ liệu an toàn (Dùng .empty cho DataFrame)
+            if not products or df_h is None or df_h.empty:
+                st.warning("Không có dữ liệu giao dịch hoặc hàng hóa!")
                 return
 
-            # --- CHUYỂN ĐỔI DỮ LIỆU ---
+            # --- CHUẨN HÓA DỮ LIỆU ĐỂ TÍNH TOÁN ---
             try:
-                headers = all_history[0]
-                data = all_history[1:]
-                df_h = pd.DataFrame(data, columns=headers)
-                
-                # Chuẩn hóa cột
+                # Đảm bảo các cột được ép kiểu đúng
                 df_h['date'] = pd.to_datetime(df_h['Ngày'], errors='coerce')
                 df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
                 df_h['type'] = df_h['Loại'].astype(str).str.strip()
                 df_h['qty'] = pd.to_numeric(df_h['Số Lượng'], errors='coerce').fillna(0)
             except KeyError as e:
-                st.error(f"Lỗi cột: {e}. Vui lòng kiểm tra tiêu đề trong Google Sheets.")
+                st.error(f"Lỗi cấu trúc cột trong Google Sheets: Thiếu cột {e}")
                 return
 
-            # --- TÍNH TOÁN DỮ LIỆU (Đã đưa vào trong khối if để tránh lỗi Undefined) ---
+            # --- TÍNH TOÁN TỒN KHO ---
             start = pd.to_datetime(start_date)
             end = pd.to_datetime(end_date)
             
-            # Khởi tạo df_past và df_period tại đây
+            # Lọc dữ liệu dựa trên ngày
             df_past = df_h[df_h['date'] < start]
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
             
-            # Hàm tính toán tổng
             def get_stats(df):
                 if df.empty: return pd.DataFrame(columns=['Nhập', 'Xuất'])
                 pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                # Đảm bảo luôn có cột Nhập và Xuất
-                for col in ['Nhập', 'Xuất']:
-                    if col not in pivot.columns: pivot[col] = 0
+                # Đảm bảo cột luôn tồn tại
+                if 'Nhập' not in pivot.columns: pivot['Nhập'] = 0
+                if 'Xuất' not in pivot.columns: pivot['Xuất'] = 0
                 return pivot[['Nhập', 'Xuất']]
 
-            # Lấy thống kê
             past_stats = get_stats(df_past)
             past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
             period_stats = get_stats(df_period)
@@ -130,12 +124,11 @@ def show_report():
                                      columns=["Mã HH", "Tên hàng hóa", "Đvt"])
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
-            # Merge dữ liệu
             df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
             df_report = df_report.merge(period_stats, left_on='Mã HH', right_index=True, how='left').fillna(0)
             
-            # Tính tồn cuối
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
+            # Đổi tên cột hiển thị
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
