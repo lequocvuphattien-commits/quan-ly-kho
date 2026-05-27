@@ -29,22 +29,34 @@ class DataService:
     # Đã đồng bộ tên biến dvt (viết thường)
     def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
         """
-        Thêm giao dịch vào Google Sheets với xử lý dữ liệu an toàn
+        Thêm giao dịch vào Google Sheets với 8 cột đầy đủ
         """
+        import datetime # Khai báo để lấy giờ hệ thống
         try:
-            # Ép kiểu an toàn: Nếu không chuyển được sang số, mặc định là 0
+            # 1. Ép kiểu an toàn
             try:
                 safe_qty = float(qty)
             except (ValueError, TypeError):
                 safe_qty = 0.0
                 
-            # Kiểm tra nếu số lượng <= 0 thì không ghi vào sổ
             if safe_qty <= 0:
                 return False 
 
-            # Tiếp tục thực hiện các lệnh ghi vào sheet tại đây...
-            # Ví dụ:
-            # self.sheet_transactions.append_row([..., safe_qty, ...])
+            # 2. Tự động tìm Đơn vị tính (Đvt) từ Sheet Products
+            dvt = ""
+            products = self.get_products()
+            for p in products:
+                if str(p[1]).strip().lower() == str(p_code).strip().lower():
+                    dvt = str(p[3]).strip() if len(p) > 3 else ""
+                    break
+
+            # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 8 cột)
+            # Cấu trúc: [Ngày, Mã, Tên, Đvt, Loại, Số lượng, Diễn giải, Nhân viên]
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name]
+            
+            # 4. THỰC THI GHI VÀO GOOGLE SHEETS (Đã mở khóa)
+            self.sheet_transactions.append_row(new_row)
             
             return True
         except Exception as e:
@@ -200,17 +212,16 @@ class DataService:
             total_in = 0.0
             total_out = 0.0
             
-            # Cột trong sheet Transactions:
-            # row[0]: Ngày, row[1]: Mã sản phẩm, row[4]: Loại (NHẬP/XUẤT), row[5]: Số lượng
+            # Cột trong sheet Transactions (8 cột):
+            # row[0]: Ngày, row[1]: Mã, row[4]: Loại (NHẬP/XUẤT), row[5]: Số lượng
             for row in data[1:]:
                 if len(row) < 6:
                     continue
                 
-                # So khớp mã hàng hóa (bỏ khoảng trắng, không phân biệt hoa thường)
                 if str(row[1]).strip().lower() != str(product_id).strip().lower():
                     continue
                 
-                row_date = row[0].strip()
+                row_date_str = row[0].strip()
                 trans_type = str(row[4]).strip().upper()
                 
                 try:
@@ -218,13 +229,20 @@ class DataService:
                 except ValueError:
                     qty = 0.0
                 
-                # Phân loại tính toán theo mốc thời gian lọc của người dùng
-                if row_date < start_date:
+                # --- XỬ LÝ NGÀY THÁNG CHUẨN XÁC ---
+                try:
+                    # Chuyển chuỗi trong Sheet thành đối tượng Date để so sánh
+                    row_date_obj = pd.to_datetime(row_date_str).date()
+                except Exception:
+                    continue # Bỏ qua nếu dòng bị lỗi định dạng ngày
+                
+                # Phân loại tính toán
+                if row_date_obj < start_date:
                     if trans_type == "NHẬP":
                         opening_stock += qty
                     elif trans_type == "XUẤT":
                         opening_stock -= qty
-                elif start_date <= row_date <= end_date:
+                elif start_date <= row_date_obj <= end_date:
                     if trans_type == "NHẬP":
                         total_in += qty
                     elif trans_type == "XUẤT":
