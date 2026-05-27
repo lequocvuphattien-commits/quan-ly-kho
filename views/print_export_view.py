@@ -73,12 +73,12 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws['C5'].alignment = Alignment(horizontal="center", vertical="center")
     ws.row_dimensions[5].height = 32
     
-    # --- BỘ PHẬN ĐỀ NGHỊ (Yêu cầu 2: Thay đổi linh hoạt) ---
+    # --- BỘ PHẬN ĐỀ NGHỊ (Linh hoạt theo Selectbox) ---
     ws['A7'] = f"Bộ phận đề nghị: {department_name}"
     ws['A7'].font = font_bold
     ws.row_dimensions[7].height = 20
        
-    # --- HEADER BẢNG DỮ LIỆU (Yêu cầu 1: Header là Ghi Chú) ---
+    # --- HEADER BẢNG DỮ LIỆU ---
     ws.row_dimensions[9].height = 26
     
     headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Ghi Chú"]
@@ -104,7 +104,6 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"B{current_row}"] = item.get("Tên HH", "")
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
-        # Map chính xác lấy nội dung Ghi chú
         ws[f"E{current_row}"] = str(item.get("Ghi chú", ""))
         
         # Cấu hình căn lề
@@ -167,12 +166,11 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
 def show_print_export_view(service):
     st.subheader("🖨️ In Phiếu Xuất Kho")
     
-    # Bổ sung Text Input cho người dùng nhập Tên bộ phận
+    # Khởi tạo 2 cột để chọn ngày và chọn bộ phận
     col_date, col_dept = st.columns(2)
+    
     with col_date:
         selected_date = st.date_input("📅 Chọn ngày in phiếu:", datetime.date.today())
-    with col_dept:
-        department_name = st.text_input("🏢 Nhập bộ phận đề nghị:", "Thành Phẩm 1")
     
     # Lấy dữ liệu từ Google Sheets
     history = service.get_history()
@@ -184,34 +182,71 @@ def show_print_export_view(service):
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
-    # Chuyển đổi dữ liệu linh hoạt theo số lượng cột (7 hoặc 8 cột)
+    # --- KHẮC PHỤC LỖI CỘT DIỄN GIẢI & GHI CHÚ ---
+    # Linh hoạt cấu trúc cột theo thực tế (tách Diễn giải ra khỏi Ghi chú)
     num_cols = len(history[0])
-    if num_cols == 8:
-        df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+    if num_cols >= 9:
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú", "Nhân viên"]
+    elif num_cols == 8:
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú"]
     elif num_cols == 7:
-        df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Ghi Chú"]
     else:
-        df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
-        df["Tên hàng hóa"] = df["Mã HH"]
+        cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
+        
+    df = pd.DataFrame(history, columns=cols[:num_cols])
+    
+    # Tạo sẵn các cột nếu chẳng may sheet bị thiếu để tránh lỗi
+    if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
+    if "Ghi Chú" not in df.columns: df["Ghi Chú"] = ""
         
     df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
     df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
     
-    # Lọc danh sách XUẤT theo NGÀY
-    filtered_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
+    # Bước 1: Lọc danh sách XUẤT theo NGÀY được chọn
+    filtered_date_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
     
-    if filtered_df.empty:
+    if filtered_date_df.empty:
         st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
+        return
+        
+    # Bước 2: Quét tất cả các "Diễn Giải" có trong ngày đó để tạo danh sách (Selectbox)
+    dien_giai_raw = filtered_date_df["Diễn Giải"].astype(str).str.strip()
+    dien_giai_list = dien_giai_raw.unique().tolist()
+    
+    clean_dg_list = []
+    for dg in dien_giai_list:
+        # Nếu dòng nào trống hoặc bị NaN, gán mác là 'Không có diễn giải'
+        if dg.lower() in ['nan', '']:
+            clean_dg_list.append('Không có diễn giải')
+        else:
+            clean_dg_list.append(dg)
+            
+    # Xóa các mục trùng lặp
+    clean_dg_list = list(set(clean_dg_list))
+    
+    with col_dept:
+        # Tự động sinh danh sách chọn (Selectbox) dựa trên các Diễn Giải trong ngày
+        department_name = st.selectbox("🏢 Chọn bộ phận đề nghị (Theo Diễn giải):", clean_dg_list)
+        
+    # Bước 3: Lọc dữ liệu lần 2 dựa trên Bộ phận được chọn
+    if department_name == 'Không có diễn giải':
+        filtered_df = filtered_date_df[dien_giai_raw.isin(['', 'nan', 'NaN'])]
+    else:
+        filtered_df = filtered_date_df[dien_giai_raw == department_name]
+        
+    if filtered_df.empty:
+        st.info("Không có dữ liệu cho bộ phận này.")
         return
         
     # --- XỬ LÝ GỘP DÒNG ---
     raw_data = []
     for _, row in filtered_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
-        # Xử lý nội dung Ghi chú để tránh lỗi NaN khi groupby
+        
+        # Bắt chuẩn cột Ghi Chú
         ghi_chu_val = str(row.get("Ghi Chú", "")).strip()
-        if ghi_chu_val.lower() == "nan": 
-            ghi_chu_val = ""
+        if ghi_chu_val.lower() == "nan": ghi_chu_val = ""
             
         raw_data.append({
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
@@ -222,41 +257,44 @@ def show_print_export_view(service):
     
     df_export = pd.DataFrame(raw_data)
     
-    # Gom nhóm theo Tên hàng, Đvt, Ghi chú và TÍNH TỔNG số lượng
+    # Gom nhóm và cộng tổng
     df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Ghi chú'], dropna=False, as_index=False)['Số lượng'].sum()
     
-    # --- Yêu cầu 3: BẢNG LƯỚI CÓ CHECKBOX ---
-    # Thêm cột "Chọn" vào đầu Dataframe, mặc định là True (Tích sẵn)
+    # --- Yêu cầu Màn hình Chọn (Checkbox) ---
     df_grouped.insert(0, 'Chọn', True)
     
-    st.success(f"✅ Đã tìm thấy **{len(df_grouped)}** mặt hàng xuất kho. Bạn có thể BỎ TÍCH những hàng không muốn in:")
+    st.success(f"✅ Đã gom được **{len(df_grouped)}** mặt hàng xuất kho cho **{department_name}**. Nếu không muốn in dòng nào, bạn chỉ cần BỎ TÍCH:")
     
-    # Dùng st.data_editor để người dùng tương tác tích chọn
+    # Hiển thị bảng Checkbox
     edited_df = st.data_editor(
         df_grouped,
         use_container_width=True,
         hide_index=True,
-        disabled=["Tên HH", "Đvt", "Số lượng", "Ghi chú"], # Khóa các cột dữ liệu, chỉ cho phép bấm Checkbox
+        disabled=["Tên HH", "Đvt", "Số lượng", "Ghi chú"], # Khóa dữ liệu, chỉ cho bấm Checkbox
     )
     
-    # Lọc ra những dòng được tích (Chọn == True)
+    # Chỉ lấy những dòng được Tích chọn
     selected_df = edited_df[edited_df["Chọn"] == True]
     
     if selected_df.empty:
         st.error("🚫 Bạn chưa chọn mặt hàng nào để in!")
         return
         
-    # Xóa cột Checkbox đi và chuyển thành dict để nạp vào File Excel
     export_data = selected_df.drop(columns=['Chọn']).to_dict('records')
     
-    # Tạo sẵn File Excel ngầm (truyền thêm biến department_name)
-    excel_data = export_phieu_xuat_excel(export_data, selected_date, department_name)
+    # Tinh chỉnh lại Tên bộ phận in ra Excel (Xóa chữ "Không có diễn giải" nếu trống)
+    print_dept_name = department_name if department_name != 'Không có diễn giải' else ""
     
-    # Nút bấm Tải xuống sẽ cập nhật theo đúng số lượng mặt hàng được tích
+    excel_data = export_phieu_xuat_excel(export_data, selected_date, print_dept_name)
+    
+    # Đảm bảo tên file không chứa ký tự cấm (như dấu /)
+    safe_dept_name = print_dept_name.replace("/", "-").replace("\\", "-")
+    
+    # Nút bấm Download (màu nổi bật - primary)
     st.download_button(
         label=f"📥 TẢI FILE EXCEL PHIẾU XUẤT (In {len(export_data)} mặt hàng)",
         data=excel_data,
-        file_name=f"Phieu_Xuat_{department_name}_{selected_date.strftime('%d%m%Y')}.xlsx",
+        file_name=f"Phieu_Xuat_{safe_dept_name}_{selected_date.strftime('%d%m%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary",
         use_container_width=True
