@@ -181,9 +181,16 @@ def show_print_export_view(service):
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
     # Chuyển đổi dữ liệu
-    if len(history[0]) >= 7:
+    num_cols = len(history[0])
+    
+    if num_cols == 8:
+        # Cấu trúc mới nhất (8 cột): Ngày, Mã, Tên, Đvt, Loại, SL, Ghi chú, Nhân viên
+        df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
+    elif num_cols == 7:
+        # Cấu trúc cũ (7 cột)
         df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"])
     else:
+        # Cấu trúc cơ bản sơ khai nhất (5 cột)
         df = pd.DataFrame(history, columns=["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"])
         df["Tên hàng hóa"] = df["Mã HH"]
         
