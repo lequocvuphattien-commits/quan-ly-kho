@@ -15,17 +15,23 @@ class DataService:
         self.sheet_employees = self.provider.get_sheet("NhanVien")
 
     def get_history(self):
+        """Lấy toàn bộ lịch sử và đảm bảo lấy đủ tất cả các cột mới"""
         data = self.sheet_transactions.get_all_values()
         if len(data) > 1:
-            # Đã sửa: Tăng từ 7 lên 8 cột để lấy được cột Đvt
-            cleaned_data = [row[:8] for row in data[1:]]
-            cleaned_data = [row + [""] * (8 - len(row)) for row in cleaned_data]
+            # Lấy header từ dòng đầu tiên
+            headers = data[0]
+            # Lấy toàn bộ dữ liệu từ dòng thứ 2 trở đi
+            df = pd.DataFrame(data[1:], columns=headers)
             
-            # Đã sửa: Thêm dấu phẩy giữa "Đvt" và "type"
-            df = pd.DataFrame(cleaned_data, columns=["date", "product_id", "product_name", "Đvt", "type", "qty", "note", "emp_name"])
-            return df.values.tolist()
-        return []
-
+            # Chuẩn hóa các cột quan trọng (Đảm bảo tên cột khớp với sheet)
+            df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
+            df['qty'] = pd.to_numeric(df['qty'], errors='coerce').fillna(0)
+            # Kiểm tra và xử lý cột 'Diễn Giải' nếu có
+            if 'Diễn Giải' in df.columns:
+                df['Diễn Giải'] = df['Diễn Giải'].astype(str)
+                
+            return df # Trả về DataFrame để dễ xử lý hơn thay vì list
+        return pd.DataFrame() # Trả về DF rỗng nếu không có dữ liệu
     # Đã đồng bộ tên biến dvt (viết thường)
     def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
         """
@@ -200,59 +206,33 @@ class DataService:
     # 🔥 ĐÃ BỔ SUNG HÀM TÍNH TOÁN BÁO CÁO DƯỚI ĐÂY 🔥
     # ==========================================
     def get_product_stats_by_date(self, product_id, start_date, end_date):
-        """
-        Tính toán Tồn đầu, Nhập, Xuất của một sản phẩm dựa trên mốc thời gian.
-        """
-        try:
-            data = self.sheet_transactions.get_all_values()
-            if len(data) <= 1:
-                return 0.0, 0.0, 0.0
-            
-            opening_stock = 0.0
-            total_in = 0.0
-            total_out = 0.0
-            
-            # Cột trong sheet Transactions (8 cột):
-            # row[0]: Ngày, row[1]: Mã, row[4]: Loại (NHẬP/XUẤT), row[5]: Số lượng
-            for row in data[1:]:
-                if len(row) < 6:
-                    continue
-                
-                if str(row[1]).strip().lower() != str(product_id).strip().lower():
-                    continue
-                
-                row_date_str = row[0].strip()
-                trans_type = str(row[4]).strip().upper()
-                
-                try:
-                    qty = float(row[5])
-                except ValueError:
-                    qty = 0.0
-                
-                # --- XỬ LÝ NGÀY THÁNG CHUẨN XÁC ---
-                try:
-                    # Chuyển chuỗi trong Sheet thành đối tượng Date để so sánh
-                    row_date_obj = pd.to_datetime(row_date_str).date()
-                except Exception:
-                    continue # Bỏ qua nếu dòng bị lỗi định dạng ngày
-                
-                # Phân loại tính toán
-                if row_date_obj < start_date:
-                    if trans_type == "NHẬP":
-                        opening_stock += qty
-                    elif trans_type == "XUẤT":
-                        opening_stock -= qty
-                elif start_date <= row_date_obj <= end_date:
-                    if trans_type == "NHẬP":
-                        total_in += qty
-                    elif trans_type == "XUẤT":
-                        total_out += qty
-                        
-            return opening_stock, total_in, total_out
-            
-        except Exception as e:
-            print(f"Lỗi tính toán báo cáo cho sản phẩm {product_id}: {e}")
+        df = self.get_history() # Sử dụng hàm mới đã sửa ở trên
+        if df.empty:
             return 0.0, 0.0, 0.0
+        
+        # Ép kiểu dữ liệu
+        df['date'] = pd.to_datetime(df['date'])
+        df['product_id'] = df['product_id'].astype(str).str.strip()
+        
+        # Lọc theo mã hàng
+        target_id = str(product_id).strip()
+        df_prod = df[df['product_id'] == target_id].copy()
+        
+        # Tính Tồn đầu (tất cả giao dịch trước ngày bắt đầu)
+        start = pd.to_datetime(start_date)
+        past_data = df_prod[df_prod['date'] < start]
+        
+        ton_dau = (past_data[past_data['type'] == 'IMPORT']['qty'].sum() - 
+                past_data[past_data['type'] == 'EXPORT']['qty'].sum())
+        
+        # Tính Nhập/Xuất trong kỳ
+        end = pd.to_datetime(end_date)
+        period_data = df_prod[(df_prod['date'] >= start) & (df_prod['date'] <= end)]
+        
+        nhap = period_data[period_data['type'] == 'IMPORT']['qty'].sum()
+        xuat = period_data[period_data['type'] == 'EXPORT']['qty'].sum()
+        
+        return float(ton_dau), float(nhap), float(xuat)
 
     def delete_transaction(self, row_index, product_code, quantity, trans_type):
         """
