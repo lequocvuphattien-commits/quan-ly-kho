@@ -184,19 +184,21 @@ def show_print_export_view(service):
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         
-    # --- KHẮC PHỤC LỖI CỘT DIỄN GIẢI ---
-    # Linh hoạt cấu trúc cột theo thực tế 
+    # --- KHẮC PHỤC LỖI LỆCH SỐ LƯỢNG CỘT (VALUE ERROR) ---
     num_cols = len(history[0])
-    if num_cols >= 9:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
-    elif num_cols == 8:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải"]
-    elif num_cols == 7:
-        cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải"]
+    
+    # Định nghĩa danh sách các cột chuẩn theo đúng thứ tự Google Sheets của bạn
+    base_cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
+    
+    # Tự động căn chỉnh mảng tên cột cho khớp chính xác với số lượng cột từ Sheets
+    if num_cols > len(base_cols):
+        # Nếu Sheet có nhiều cột hơn, tự sinh thêm "Cột phụ" để Pandas không báo lỗi
+        cols = base_cols + [f"Cột_phụ_{i}" for i in range(len(base_cols), num_cols)]
     else:
-        cols = ["Ngày", "Mã HH", "Loại", "Số Lượng"]
+        # Lấy vừa đủ số tên cột cắt từ base_cols
+        cols = base_cols[:num_cols]
         
-    df = pd.DataFrame(history, columns=cols[:num_cols])
+    df = pd.DataFrame(history, columns=cols)
     
     # Tạo sẵn cột Diễn Giải nếu chẳng may sheet bị thiếu để tránh lỗi
     if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
