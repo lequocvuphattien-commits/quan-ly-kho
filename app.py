@@ -493,13 +493,19 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     is_admin = st.session_state.get("user_role") == "Quản lý"
     
     history = get_cached_history(service)
-    if history:
-        # 1. Tạo DataFrame từ dữ liệu lịch sử
-        # Đã đồng bộ chuẩn xác cấu trúc 8 cột để tránh hoàn toàn lỗi ValueError
-        if len(history[0]) == 5:
+    if history and len(history) > 0:
+        num_cols = len(history[0])
+        
+        # Tự động định nghĩa tên cột dựa trên số lượng cột thực tế
+        if num_cols == 5:
             cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
+        elif num_cols == 6:
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải"]
+        elif num_cols == 7:
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
         else:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
+            # Trường hợp dự phòng nếu cấu trúc thay đổi: tạo tên cột mặc định
+            cols = [f"Cột {i+1}" for i in range(num_cols)]
             
         df = pd.DataFrame(history, columns=cols)
         
