@@ -465,7 +465,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                                 row["Tên HH"], 
                                 row["Số lượng"], 
                                 row["Loại"], 
-                                row.get("Diễn Giải", ""), 
+                                row.get("Diễn giải", ""), 
                                 st.session_state.user_name)
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         st.session_state.cart = []
