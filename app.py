@@ -371,7 +371,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Tên HH": p_dict[selected]["Tên"], 
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
-                        "Ghi chú": note, 
+                        "Diễn Giải": note, 
                         "Loại": trans_type
                     })
                     
@@ -391,7 +391,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
                         for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Ghi chú"], st.session_state.user_name)
+                            service.add_transaction(row["Mã HH"], row["Tên HH"], row["Số lượng"], row["Loại"], row["Diễn Giải"], st.session_state.user_name)
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         st.session_state.cart = []
                         st.cache_data.clear()
@@ -422,9 +422,9 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
         # 1. Tạo DataFrame từ dữ liệu lịch sử
         # Đoạn này tự động khớp số lượng cột tùy theo cấu trúc dữ liệu trả về từ Sheet của bạn
         if len(history[0]) == 5:
-            cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
+            cols = ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
         else:
-            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"]
+            cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
             
         df = pd.DataFrame(history, columns=cols)
         
@@ -548,7 +548,7 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                 # Sheet Lịch sử
                 if history:
                     # Tùy biến số lượng cột dựa trên cấu trúc
-                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Ghi Chú", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Ghi Chú"]
+                    cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"] if len(history[0]) == 7 else ["Ngày", "Mã HH", "Loại", "Số Lượng", "Diễn Giải"]
                     pd.DataFrame(history, columns=cols).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
                 # Sheet Nhân viên
