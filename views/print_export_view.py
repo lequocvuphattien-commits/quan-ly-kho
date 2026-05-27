@@ -259,12 +259,22 @@ def show_print_export_view(service):
     
     st.success(f"✅ Đã gom được **{len(df_grouped)}** mặt hàng xuất kho cho **{department_name}**. Nếu không muốn in dòng nào, bạn chỉ cần BỎ TÍCH:")
     
-    # Hiển thị bảng Checkbox với thứ tự cột đã được đổi mới
+    # Chuyển đổi cột Số lượng sang dạng số thực (float) để nội dung tự động căn lề phải
+    df_grouped['Số lượng'] = df_grouped['Số lượng'].astype(float)
+    
+    # Hiển thị bảng Checkbox với cấu hình tiêu đề cột Số Lượng căn lề phải
     edited_df = st.data_editor(
         df_grouped,
         use_container_width=True,
         hide_index=True,
         disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], 
+        column_config={
+            "Số lượng": st.column_config.NumberColumn(
+                "            Số Lượng", # Thêm khoảng trắng để đẩy tiêu đề sang phải
+                help="Số lượng xuất kho",
+                format="%d", # Định dạng số nguyên
+            )
+        }
     )
     
     # Chỉ lấy những dòng được Tích chọn
