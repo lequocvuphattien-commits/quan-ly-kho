@@ -319,16 +319,28 @@ if st.session_state.current_menu == "Danh mục hàng":
                 # 1. Chuẩn bị dữ liệu
                 products_data = [row[:5] for row in products]
                 df = pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
-                product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": row["Mã"] for _, row in df.iterrows()}
+                product_map = {f"{row['Mã']} - {row['Tên hàng hóa']}": {"Mã": row["Mã"], "Tồn": float(row["Tồn"])} for _, row in df.iterrows()}
                 
                 # 2. Chọn sản phẩm
                 selected_product = st.selectbox("Chọn hàng cần xóa", options=list(product_map.keys()), key="delete_product_select")
-                del_code = product_map[selected_product]
+                selected_info = product_map[selected_product]
+                del_code = selected_info["Mã"]
+                current_stock = selected_info["Tồn"]
 
-                # 3. Nút xóa kích hoạt Dialog
+                # 3. Nút xóa với ràng buộc mới
                 if st.button("🗑️ Xóa hàng này", use_container_width=True):
-                    # Gọi dialog
-                    confirm_delete(selected_product, del_code, service)
+                    # Lấy lịch sử giao dịch để kiểm tra
+                    history = get_cached_history(service)
+                    has_transaction = any(str(row[1]).strip() == str(del_code).strip() for row in history)
+                    
+                    # Ràng buộc: Tồn phải = 0 VÀ không có giao dịch
+                    if current_stock != 0:
+                        st.error(f"🚫 Không thể xóa: Hàng hóa này vẫn còn tồn kho ({current_stock:,.0f})!")
+                    elif has_transaction:
+                        st.error("🚫 Không thể xóa: Hàng hóa này đã có lịch sử giao dịch!")
+                    else:
+                        # Gọi dialog nếu thỏa mãn điều kiện
+                        confirm_delete(selected_product, del_code, service)
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
