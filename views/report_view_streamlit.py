@@ -28,43 +28,34 @@ def show_report():
     if "clicked_report_filter" not in st.session_state:
         st.session_state.clicked_report_filter = False
 
-    # =================================================================
-    # --- [CẢI TIẾN CSS]: ÉP HÀNG NGANG VÀ KÉO SÁT TIÊU ĐỀ TRÊN ĐIỆN THOẠI ---
-    # =================================================================
     st.markdown("""
         <style>
-        /* 1. Kéo tiêu đề h3 dịch xuống hoặc thu nhỏ khoảng trống bên dưới nó */
         h3 {
             margin-bottom: -0.5rem !important;
             padding-bottom: 0rem !important;
         }
         
-        /* 2. Ép 3 thành phần nằm ngang và kéo mạnh lên sát tiêu đề h3 */
         [data-testid="stHorizontalBlock"] {
             flex-wrap: nowrap !important;
             flex-direction: row !important;
-            gap: 0.4rem !important; /* Thu hẹp khoảng cách giữa các ô */
-            margin-top: -1.5rem !important; /* [QUAN TRỌNG] Lực hút đẩy dòng này lên sát tiêu đề */
+            gap: 0.4rem !important; 
+            margin-top: -1.5rem !important; 
         }
         
-        /* Cho phép các ô tự động co nhỏ cho vừa màn hình điện thoại */
         [data-testid="stHorizontalBlock"] > div {
             min-width: 0px !important; 
         }
         
-        /* Đẩy nút "Báo cáo" thụt xuống để thẳng hàng khít với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
             padding-top: 1.75rem !important; 
         }
         
-        /* Làm nhỏ chữ tiêu đề "Từ ngày", "Đến ngày" để giao diện thanh thoát */
         [data-testid="stHorizontalBlock"] label {
             font-size: 0.8rem !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
-    # Chia cột tỉ lệ phù hợp cho màn hình dọc điện thoại
     col1, col2, col3 = st.columns([3, 3, 2.5])
     
     with col1:
@@ -82,7 +73,7 @@ def show_report():
         with st.spinner('Đang xử lý dữ liệu...'):
             # ĐÃ SỬA: Lấy products thẳng từ DataService dưới dạng List chuẩn
             products = t_controller.service.get_products()
-            df_h = t_controller.get_transaction_history() 
+            df_h = t_controller.get_transaction_history() # Trả về DataFrame
             
             if not products or df_h is None or df_h.empty:
                 st.warning("Không có dữ liệu giao dịch hoặc hàng hóa!")
@@ -90,9 +81,8 @@ def show_report():
 
             # --- CHUẨN HÓA DỮ LIỆU ĐỂ TÍNH TOÁN ---
             try:
-                # ĐÃ SỬA: Khai báo dayfirst=True để Pandas đọc đúng ngày Việt Nam (DD/MM/YYYY)
+                # ĐÃ SỬA: Khai báo dayfirst=True để Pandas đọc đúng ngày Việt Nam
                 df_h['date'] = pd.to_datetime(df_h['Ngày'], dayfirst=True, format='mixed', errors='coerce')
-                
                 df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
                 df_h['type'] = df_h['Loại'].astype(str).str.strip()
                 # Đồng bộ chính xác tên cột "Số Lượng" viết hoa chữ L
@@ -121,9 +111,9 @@ def show_report():
             period_stats = get_stats(df_period)
             
             # --- TẠO BÁO CÁO CUỐI CÙNG ---
-            # ĐÃ SỬA: Đọc dữ liệu từ List thay vì Object (p.code)
+            # ĐÃ SỬA: Đọc dữ liệu từ List thay vì Object
             df_products = pd.DataFrame(products, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn"])
-            df_products = df_products[["Mã HH", "Tên hàng hóa", "Đvt"]] # Chỉ lấy 3 cột cần thiết
+            df_products = df_products[["Mã HH", "Tên hàng hóa", "Đvt"]]
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
             df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
@@ -133,7 +123,6 @@ def show_report():
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
-            # Đảm bảo gb và go được định nghĩa bên trong khối này
             gb = GridOptionsBuilder.from_dataframe(df_report)
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
             
@@ -150,7 +139,7 @@ def show_report():
                     valueFormatter="Number(x).toLocaleString('en-US')",
                     cellStyle={'textAlign': 'right'})
             
-            go = gb.build() # Biến go được tạo ra ở đây
+            go = gb.build() 
             # --- HIỂN THỊ AGGRID ---
             AgGrid(
                 df_report,

@@ -24,7 +24,6 @@ class DataService:
             df.columns = [str(col).strip() for col in df.columns]
             
             # 2. Ép kiểu cột "Ngày" (hoặc tên cột tương ứng trong sheet của bạn)
-            # Giả sử cột ngày có tên là 'Ngày'
             if 'Ngày' in df.columns:
                 df['Ngày'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
                 # Sắp xếp mới nhất lên trên
@@ -38,7 +37,7 @@ class DataService:
         """
         Thêm giao dịch vào Google Sheets với 8 cột đầy đủ
         """
-        import datetime 
+        import datetime # Khai báo để lấy giờ hệ thống
         try:
             # 1. Ép kiểu an toàn
             try:
@@ -61,10 +60,9 @@ class DataService:
             # SỬA LỖI MÚI GIỜ: Lấy đúng giờ Việt Nam (UTC+7)
             tz_vn = datetime.timezone(datetime.timedelta(hours=7))
             now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
-            
             new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name]
             
-            # 4. THỰC THI GHI VÀO GOOGLE SHEETS
+            # 4. THỰC THI GHI VÀO GOOGLE SHEETS (Đã mở khóa)
             self.sheet_transactions.append_row(new_row)
             
             return True
@@ -90,22 +88,18 @@ class DataService:
             all_data = self.sheet_products.get_all_values()
             if len(all_data) > 2:
                 # BƯỚC BẢO VỆ 1: Lọc bỏ toàn bộ các dòng trống hoàn toàn ở cuối file
-                # Tránh việc dòng trống bị mang đi sắp xếp và nhảy lên đầu sheet
                 product_rows = [row for row in all_data[1:] if any(str(cell).strip() for cell in row)]
                 
                 # BƯỚC BẢO VỆ 2: Sắp xếp tăng dần theo Tên hàng hóa (Cột C -> index 2)
                 product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
                 
                 # BƯỚC BẢO VỆ 3: Chuẩn hóa độ dài các dòng (Bù khoảng trống)
-                # Google Sheets API sẽ báo lỗi nếu mảng có dòng dài dòng ngắn
                 cleaned_rows = [row + [""] * (5 - len(row)) for row in product_rows]
                 
                 # BƯỚC BẢO VỆ 4: Cập nhật dữ liệu (Tương thích mọi phiên bản gspread)
                 try:
-                    # Dành cho gspread phiên bản mới (v6.0 trở lên)
                     self.sheet_products.update(values=cleaned_rows, range_name="A2") 
                 except TypeError:
-                    # Dành cho gspread phiên bản cũ (v5.x trở xuống)
                     self.sheet_products.update("A2", cleaned_rows)
                     
         except Exception as e:
@@ -166,8 +160,7 @@ class DataService:
 
     def add_employee(self, emp_code, name, phone, role):
         """Thêm nhân viên mới"""
-        # Cấu trúc: [Mã NV, Tên NV, Số điện thoại, Chức vụ, Mật khẩu]
-        self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role), ""])  # Mật khẩu mặc định là chuỗi rỗng
+        self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role), ""])  
         return True
 
     def update_employee(self, emp_code, new_name, new_phone, new_role):
@@ -194,30 +187,23 @@ class DataService:
         """Kiểm tra đăng nhập và trả về Tên + Chức vụ"""
         employees = self.get_employees() 
         for emp in employees:
-            # Cấu trúc nhân viên: [Mã NV, Tên NV, SĐT, Chức vụ, Mật khẩu]
-            # Index:                 0        1       2       3         4
             if len(emp) >= 5:
                 if str(emp[0]).strip().upper() == username.strip().upper() and str(emp[4]).strip() == password:
                     return {
                         "status": True, 
                         "name": emp[1], 
-                        "role": str(emp[3]).strip() # Phải có dòng này để trả về 'role'
+                        "role": str(emp[3]).strip()
                     }
         return {"status": False, "name": None, "role": None}
 
-    # ==========================================
-    # 🔥 ĐÃ SỬA LỖI ĐỌC TÊN CỘT THEO ẢNH BẠN CUNG CẤP 🔥
-    # ==========================================
     def get_product_stats_by_date(self, product_id, start_date, end_date):
         df = self.get_history()
         if df.empty: return 0.0, 0.0, 0.0
         
-        # Sửa thành "Ngày" thay vì "Ngày"
-        # Sửa thành "Số lượng" thay vì "Số Lượng"
         try:
             df['Ngày'] = pd.to_datetime(df['Ngày'], errors='coerce')
             df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
-            df['Số lượng'] = pd.to_numeric(df['Số lượng'], errors='coerce').fillna(0)
+            df['Số lượng'] = pd.to_numeric(df['Số Lượng'], errors='coerce').fillna(0) # Đồng bộ với df['Số Lượng']
             
             # Lọc
             target_id = str(product_id).strip()
@@ -226,7 +212,6 @@ class DataService:
             start = pd.to_datetime(start_date)
             past_data = df_prod[df_prod['Ngày'] < start]
             
-            # Tính toán (IMPORT/EXPORT khớp với cột 'Loại' trong Sheet)
             ton_dau = (past_data[past_data['Loại'] == 'Nhập']['Số lượng'].sum() - 
                        past_data[past_data['Loại'] == 'Xuất']['Số lượng'].sum())
             

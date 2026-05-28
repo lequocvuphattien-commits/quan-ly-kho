@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import datetime
-import streamlit.components.v1 as components  # Đã thêm dòng này để sửa lỗi sidebar mobile
+import streamlit.components.v1 as components  
 from controllers.transaction_controller import TransactionController
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
@@ -51,38 +51,26 @@ def confirm_delete_history_dialog(selected_rows, service):
     with col_yes:
         if st.button("✅ Xác nhận xóa XXX"):
             
-            # ==========================================
             # BƯỚC 1: KIỂM TRA RÀNG BUỘC (SIÊU CHUẨN XÁC)
-            # ==========================================
-            # Lấy dữ liệu trực tiếp từ DB, BỎ QUA CACHE để có tồn kho mới nhất
             products = service.get_products()
-            
-            # Ép kiểu chuỗi và loại bỏ khoảng trắng ở 2 đầu để so sánh khớp 100%
             stock_dict = {str(p[1]).strip(): float(p[4]) for p in products} if products else {}
             
             stock_changes = {}
             for index, row in selected_rows.iterrows():
-                # Tự động nhận diện tên cột là "Mã HH" hay "Mã"
                 p_code = str(row.get("Mã HH", row.get("Mã", ""))).strip()
                 qty = float(row.get("Số lượng", row.get("Số Lượng", 0)))
                 
-                # Ép về chữ thường và xóa khoảng trắng (Ví dụ: " Nhập " -> "nhập")
                 t_type = str(row.get("Loại", "")).strip().lower()
-                
-                # Lọc chính xác: Nếu xóa phiếu Nhập -> trừ tồn. Xóa phiếu Xuất -> cộng tồn
                 change = -qty if t_type == "nhập" else qty
                 stock_changes[p_code] = stock_changes.get(p_code, 0) + change
             
             invalid_products = []
             for p_code, change in stock_changes.items():
                 current_stock = stock_dict.get(p_code, 0)
-                # Kiểm tra nghiêm ngặt
                 if current_stock + change < 0:
                     invalid_products.append(f"• **{p_code}** (Tồn hiện tại: {current_stock:,.0f} ➔ Sau khi xóa sẽ thành: {current_stock + change:,.0f})")
             
-            # ==========================================
             # BƯỚC 2: PHÂN NHÁNH XỬ LÝ
-            # ==========================================
             if invalid_products:
                 with msg_container:
                     st.error("🚫 **TỪ CHỐI XÓA: Giao dịch này sẽ làm tồn kho bị ÂM!**")
@@ -92,7 +80,6 @@ def confirm_delete_history_dialog(selected_rows, service):
                 for index, row in selected_rows.iterrows():
                     p_code = str(row.get("Mã HH", row.get("Mã", ""))).strip()
                     qty = float(row.get("Số Lượng", row.get("qty", 0)))
-                    # Giữ nguyên giá trị Loại gốc để truyền vào sheet
                     t_type_original = row.get("Loại", "")
                     
                     service.delete_transaction(index, p_code, qty, t_type_original)
@@ -177,15 +164,13 @@ st.markdown("""
 
 # --- SCRIPT TỰ ĐỘNG ĐÓNG SIDEBAR TRÊN MOBILE ---
 if st.session_state.get("force_close_sidebar", False):
-    components.html(  # Đã sửa lỗi st.components.v1.html thành components.html
+    components.html(
         """
         <script>
-            // Tìm nút X (đóng sidebar) trên giao diện mobile của Streamlit và mô phỏng thao tác bấm
             var closeBtn = window.parent.document.querySelector('[data-testid="stSidebarCollapseButton"]');
             if (closeBtn) {
                 closeBtn.click();
             } else {
-                // Dự phòng cho các phiên bản Streamlit cũ hơn
                 var altBtn = window.parent.document.querySelector('button[aria-label="Close"]');
                 if (altBtn) altBtn.click();
             }
@@ -194,7 +179,6 @@ if st.session_state.get("force_close_sidebar", False):
         height=0,
         width=0
     )
-    # Tắt cờ đi để script không bị chạy lại vào các thao tác sau
     st.session_state.force_close_sidebar = False
 
 @st.cache_resource(show_spinner=False)
@@ -225,26 +209,21 @@ if not st.session_state.logged_in:
         if st.button("Đăng nhập", type="primary", key="login_btn"):
             user_data = service.check_login(user, pwd)
             if user_data["status"]:
-                # 1. Kích hoạt trạng thái đăng nhập thành công
                 st.session_state.logged_in = True
                 st.session_state.user_name = user_data["name"]
                 st.session_state.user_role = user_data["role"]
                 
-                # 2. ÉP BUỘC nhảy thẳng vào chức năng Danh mục hàng ngay lập tức
                 st.session_state.current_menu = "Danh mục hàng"
                 
-                # 3. Lưu tham số vào URL trình duyệt để giữ trạng thái khi F5
                 st.query_params["logged_in"] = "true"
                 st.query_params["user_name"] = user_data["name"]
                 st.query_params["user_role"] = user_data["role"]
                 st.query_params["current_menu"] = "Danh mục hàng"
                 st.session_state.force_close_sidebar = True
-                # 4. Giải phóng giao diện, dẹp màn hình đăng nhập cũ ngay lập tức
                 st.rerun() 
             else: 
                 st.error("❌ Mã NV hoặc mật khẩu không đúng!")
                 
-    # Lệnh chặn này giữ người dùng ở lại form đăng nhập cho đến khi đăng nhập thành công
     st.stop() 
 
 # --- THANH SIDEBAR ẨN (CHỈ CHỨA THÔNG TIN USER & ĐĂNG XUẤT) ---
@@ -317,27 +296,20 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                # 1. Chuẩn bị dữ liệu hiển thị: "Tên hàng hóa - (Tồn: X,XXX cái)"
-                # Lưu ý: p[2] là Tên, p[3] là Đvt, p[4] là Tồn
                 product_map = {
                     f"{row['Tên hàng hóa']} - (Tồn: {float(row['Tồn']):,.0f} {row['Đvt']})": row["Mã"] 
                     for _, row in df.iterrows()
                 }
                 
-                # 2. Chọn sản phẩm từ map trên
                 selected_product = st.selectbox(
                     "Chọn hàng cần xóa", 
                     options=list(product_map.keys()), 
                     key="delete_product_select"
                 )
                 del_code = product_map[selected_product]
-                
-                # 3. Lấy thông tin tồn kho hiện tại để kiểm tra ràng buộc
                 current_stock = float(df[df["Mã"] == del_code]["Tồn"].iloc[0])
 
-                # 4. Nút xóa kích hoạt Dialog (với ràng buộc đã sửa ở bước trước)
                 if st.button("🗑️ Xóa hàng này", use_container_width=True):
-                    # Kiểm tra lịch sử giao dịch
                     history = get_cached_history(service)
                     has_transaction = any(str(row[1]).strip() == str(del_code).strip() for row in history)
                     
@@ -357,41 +329,30 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
     kho_nhap_list, kho_xuat_list = get_cached_config(service)
     products = get_cached_products(service)
     
-    # Khởi tạo biến đếm key để reset ô số lượng
     if "qty_key" not in st.session_state:
         st.session_state.qty_key = 0
     
     if products:
-        # --- ĐOẠN CODE ĐƯỢC TỐI ƯU HIỂN THỊ VÀ SẮP XẾP ---
         display_data = []
         p_dict = {}
         
         for p in products:
-            # 1. Bắt lỗi an toàn cho dữ liệu Tồn kho (p[4])
             try:
-                # Kiểm tra độ dài và loại bỏ khoảng trắng thừa, nếu lỗi thì gán bằng 0.0
                 ton_kho = float(p[4]) if len(p) > 4 and str(p[4]).strip() != "" else 0.0
             except (ValueError, TypeError):
                 ton_kho = 0.0
                 
-            # 2. Ráp chuỗi hiển thị
             ten_hien_thi = f"{p[2]} (Tồn: {ton_kho:,.0f} {p[3]})"
             display_data.append(ten_hien_thi)
             
-            # 3. Lưu trữ toàn bộ thông tin gốc vào dict (Sử dụng luôn ton_kho đã làm sạch)
             p_dict[ten_hien_thi] = {"Mã": p[1], "Tên": p[2], "Đvt": p[3], "Tồn": ton_kho}
         
-        # Sắp xếp danh sách hiển thị theo thứ tự Tên (A-Z)
         display_data.sort()
-        # Hiển thị Selectbox với danh sách đã chuẩn hóa
         selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
-        # ---------------------------------------------------
         
-        # Chia 4 cột để gom nhóm
         c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
         
         with c1: 
-            # Sử dụng key động dựa trên st.session_state.qty_key
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, 
                                   key=f"qty_input_{st.session_state.qty_key}")
             
@@ -411,7 +372,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
             
         with c4:
-            st.write("") # Căn chỉnh label
+            st.write("") 
             st.write("") 
             
             if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
@@ -419,36 +380,32 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
+                    # SỬA LỖI ĐỔI "Ghi chú" THÀNH "Diễn Giải"
                     st.session_state.cart.append({
                         "Mã HH": p_dict[selected]["Mã"], 
                         "Tên HH": p_dict[selected]["Tên"], 
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
-                        "Diễn Giải": note,  # ĐÃ SỬA: Đổi "Ghi chú" thành "Diễn Giải" để khớp dữ liệu
+                        "Diễn Giải": note, 
                         "Loại": trans_type
                     })
                     
                     st.session_state.qty_key += 1
                     st.rerun()
 
-            # Phần hiển thị giỏ hàng và nút xác nhận
             if 'cart' not in st.session_state: st.session_state.cart = []
             if st.session_state.cart:
-                # Lưới hiển thị danh sách giỏ hàng
                 edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
                 
-                # --- THÊM 2 NÚT BẤM CÙNG DÒNG Ở ĐÂY ---
                 col_xac_nhan, col_huy = st.columns(2)
                 
                 with col_xac_nhan:
                     if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
     
-                        # 1. Khởi tạo stock_dict TRƯỚC khi dùng
                         db_products = service.get_products()
-                        stock_dict = {} # Khởi tạo mặc định
+                        stock_dict = {} 
                         if db_products:
                             for p in db_products:
-                                # p[1] là Mã (cột B), p[4] là Tồn (cột E)
                                 p_code = str(p[1]).strip()
                                 try:
                                     val = float(p[4]) if len(p) > 4 and p[4] else 0.0
@@ -456,7 +413,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                                     val = 0.0
                                 stock_dict[p_code] = val
 
-                        # Bây giờ mới chạy vòng lặp kiểm tra xuất kho
                         error_msgs = []
                         for _, row in edited_df_cart.iterrows():
                             service.add_transaction(
@@ -485,38 +441,31 @@ elif st.session_state.current_menu == "Báo cáo tồn kho":
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
 
-# --- TAB 5: LỊCH SỬ GIAO DỊCH (ĐÃ SỬA LỖI) ---
+# --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
     st.header("Lịch sử giao dịch")
     
-    # 1. Khởi tạo Controller an toàn
     if 't_controller' not in st.session_state:
         st.session_state.t_controller = TransactionController()
     t_controller = st.session_state.t_controller
     
-    # 2. Lấy dữ liệu dạng DataFrame chuẩn
     history_df = t_controller.get_transaction_history()
     
-    # 3. Kiểm tra DataFrame không rỗng
     if history_df is not None and not history_df.empty:
-        # Nếu dữ liệu lấy về là list (cache cũ), chuyển sang DataFrame
         if not isinstance(history_df, pd.DataFrame):
             history_df = pd.DataFrame(history_df[1:], columns=history_df[0])
             
-        # Thêm cột "Chọn" nếu là Quản lý
         is_admin = st.session_state.get("user_role") == "Quản lý"
         display_df = history_df.copy()
         if is_admin:
             display_df.insert(0, "Chọn", False)
             
-        # Hiển thị bảng editor
         edited_df = st.data_editor(
             display_df, 
             use_container_width=True, 
             hide_index=True
         )
         
-        # Xử lý xóa
         if is_admin:
             selected_rows = edited_df[edited_df["Chọn"] == True]
             if not selected_rows.empty:
@@ -525,7 +474,7 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     else:
         st.info("Chưa có dữ liệu lịch sử giao dịch.")
 
-# --- TAB 5: QUẢN LÝ NHÂN VIÊN ---
+# --- TAB 6: QUẢN LÝ NHÂN VIÊN ---
 elif st.session_state.current_menu == "Quản lý nhân viên":
     if st.session_state.user_role != "Quản lý":
         st.error("🚫 Bạn không có quyền truy cập trang này!")
@@ -543,7 +492,6 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
         gb.configure_column("Chức vụ", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         gb.configure_column("Mật khẩu", minWidth=120, editable=True, cellStyle={'textAlign': 'center', 'backgroundColor': '#f0f8ff'})
         
-        # Đã cập nhật lại update_on thay cho update_mode
         grid_response = AgGrid(
             df_emp, 
             gridOptions=gb.build(), 
@@ -602,7 +550,7 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
                     service.delete_employee(del_emp_code)
                     st.cache_data.clear(); st.success(f"Đã xóa nhân viên {del_emp_code}!"); st.rerun()
                     
-# --- TAB 6: SAO LƯU DỮ LIỆU ---
+# --- TAB 7: SAO LƯU DỮ LIỆU ---
 elif st.session_state.current_menu == "Sao lưu dữ liệu":
     if st.session_state.user_role != "Quản lý":
         st.error("🚫 Bạn không có quyền truy cập trang này!")
@@ -620,26 +568,11 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 if products:
-                    # Đã thêm lệnh cắt 5 cột đầu tiên để đảm bảo lúc xuất Excel không bị lỗi
                     products_data = [row[:5] for row in products]
                     pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
-                if history:
-                    # Lấy số cột thực tế và gán tiêu đề tương ứng để xuất Excel không bị lỗi
-                    num_cols_hist = len(history[0])
-                    
-                    if num_cols_hist == 5:
-                        cols_hist = ["Ngày tháng", "Mã HH", "Loại", "Số lượng", "Diễn giải"]
-                    elif num_cols_hist == 6:
-                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải"]
-                    elif num_cols_hist == 7:
-                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
-                    elif num_cols_hist == 8:
-                        cols_hist = ["Ngày tháng", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số lượng", "Diễn giải", "Nhân Viên"]
-                    else:
-                        cols_hist = [f"Cột {i+1}" for i in range(num_cols_hist)]
-                        
-                    pd.DataFrame(history, columns=cols_hist).to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
+                if history is not None and not history.empty: # history là Dataframe
+                    history.to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
                 if employees:
                     pd.DataFrame(employees, columns=["Mã NV", "Tên NV", "SĐT", "Chức vụ", "Mật khẩu"]).to_excel(writer, index=False, sheet_name="Nhan_Vien")
@@ -652,4 +585,3 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                 file_name=f"Backup_Kho_{today_str}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
-
