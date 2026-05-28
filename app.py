@@ -264,18 +264,23 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm"])
+        # 1. THÊM CỘT "Mức tối thiểu" VÀO DATAFRAME
+        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm"]])
+        df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(10) # Mặc định là 10 nếu trống
+
+        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
         gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
         gb.configure_column("Đvt", minWidth=50, editable=True)
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
         gb.configure_column("Nhóm", minWidth=80, editable=True)
+        # 2. HIỂN THỊ CỘT MỚI LÊN LƯỚI
+        gb.configure_column("Mức tối thiểu", minWidth=80, editable=True, type=["numericColumn"])
 
         grid_response = AgGrid(
-            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn","Nhóm"]], 
+            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn","Nhóm", "Mức tối thiểu"]], 
             gridOptions=gb.build(), 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
@@ -287,14 +292,14 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c1:
         with st.expander("➕ Thêm hàng hóa mới"):
             with st.form("add_form", clear_on_submit=True):
-                # 1. Thêm các ô nhập liệu
                 code = st.text_input("Mã hàng")
                 name = st.text_input("Tên hàng")
                 unit = st.text_input("Đơn vị tính")
-                
-                # 2. Thêm ô chọn nhóm hàng
                 danh_sach_nhom = ["Vật tư", "Dụng cụ sản xuất", "Phụ gia", "Bao bì", "PE", "Khác"]
                 group = st.selectbox("Chọn nhóm hàng", danh_sach_nhom)
+                
+                # 3. THÊM Ô NHẬP "MỨC TỐI THIỂU"
+                min_stock = st.number_input("Mức tồn tối thiểu để cảnh báo", min_value=0, value=10, step=1)
                 
                 if st.form_submit_button("Thêm hàng hóa"):
                     if not code or not name: 
@@ -302,9 +307,8 @@ if st.session_state.current_menu == "Danh mục hàng":
                     elif service.check_product_exists(code.upper()): 
                         st.error("Mã đã tồn tại!")
                     else:
-                        # 3. TRUYỀN THÊM new_group VÀO HÀM ADD_PRODUCT
-                        # Đảm bảo hàm service.add_product đã nhận đủ 4 tham số
-                        service.add_product(code.upper(), name, unit, group)
+                        # 4. TRUYỀN THÊM min_stock VÀO HÀM
+                        service.add_product(code.upper(), name, unit, group, min_stock)
                         
                         st.cache_data.clear()
                         st.success("Đã thêm thành công!")

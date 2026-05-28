@@ -125,12 +125,16 @@ def show_report():
                 pivot_period = pd.DataFrame(columns=['Nhập', 'Xuất'])
             
             # --- KHỞI TẠO KHUNG BÁO CÁO TỪ SHEET PRODUCTS ---
-            # Bóc tách object ra list, bổ sung thêm biến p.group
-            product_list = [[p.id, p.code, p.name, p.unit, p.stock, p.group] for p in products]
+            product_list = []
+            for p in products:
+                # Trích xuất Mức tối thiểu an toàn (nếu class Product chưa được cập nhật kịp thì mặc định là 10)
+                min_stock = getattr(p, 'min_level', 0) 
+                product_list.append([p.id, p.code, p.name, p.unit, p.stock, p.group, min_stock])
             
-            # Đưa vào DataFrame và thêm tên cột Nhóm
-            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm"])
+            # Đưa vào DataFrame và thêm tên cột Nhóm, Mức tối thiểu
+            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu"])
             df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
+            df_products['Mức tối thiểu'] = pd.to_numeric(df_products['Mức tối thiểu'], errors='coerce').fillna(10)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
             # Kết nối dữ liệu lũy kế từ ngày lọc đến nay để làm phép tính trừ ngược
@@ -144,9 +148,32 @@ def show_report():
             df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Lũy_Kế'] + df_report['Xuất_Lũy_Kế']
             df_report['Tồn Cuối'] = df_report['Tồn Đầu'] + df_report['Nhập'] - df_report['Xuất']
             
-            # Định hình lại các cột hiển thị: Kéo cột Nhóm lên đứng đầu tiên
-            df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
+            # Định hình lại các cột hiển thị: Kéo cột Nhóm lên đứng đầu tiên và bổ sung Mức tối thiểu
+            df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
             
+            # =================================================================
+            # --- [NÂNG CẤP]: HIỂN THỊ CẢNH BÁO HÀNG SẮP HẾT ---
+            # =================================================================
+            st.markdown("---")
+            st.subheader("🚨 Cảnh báo mức tồn kho")
+            
+            # Lọc ra các mặt hàng có Tồn Cuối <= Mức tối thiểu
+            df_canh_bao = df_report[df_report["Tồn Cuối"] <= df_report["Mức tối thiểu"]]
+            
+            if not df_canh_bao.empty:
+                st.error(f"⚠️ Chú ý: Đang có **{len(df_canh_bao)}** mặt hàng chạm mức cảnh báo!")
+                st.dataframe(
+                    df_canh_bao[["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Cuối", "Mức tối thiểu"]], 
+                    use_container_width=True, 
+                    hide_index=True
+                )
+            else:
+                st.success("✅ Tuyệt vời! Tất cả hàng hóa đều có số lượng tồn kho trên mức an toàn.")
+                
+            st.markdown("---")
+            st.subheader("📦 Chi tiết tồn kho toàn bộ hàng hóa")
+            # =================================================================
+
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
@@ -158,7 +185,8 @@ def show_report():
             gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
             gb.configure_column("Đvt", minWidth=60, maxWidth=100, cellStyle={'textAlign': 'center'})
 
-            for col_name in ["Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
+            # Cấu hình định dạng số cho tất cả các cột tính toán (Bao gồm cả Mức tối thiểu)
+            for col_name in ["Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
                 gb.configure_column(
                     col_name,
                     minWidth=90, maxWidth=130,

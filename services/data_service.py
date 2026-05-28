@@ -94,25 +94,20 @@ class DataService:
         products = self.get_products()
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
 
-    def add_product(self, code, name, unit, group):
-        # 1. Tạo và thêm hàng hóa mới vào dòng cuối trước
+    def add_product(self, code, name, unit, group, min_level):
         new_id = str(uuid.uuid4())[:8].upper()
-        self.sheet_products.append_row([new_id, code, name, unit, 0.0, group])
+        # Đẩy dữ liệu mới vào với 7 cột
+        self.sheet_products.append_row([new_id, code, name, unit, 0.0, group, min_level])
         
-        # 2. Tự động sắp xếp lại Sheet theo Tên hàng hóa (A-Z)
         try:
             all_data = self.sheet_products.get_all_values()
             if len(all_data) > 2:
-                # BƯỚC BẢO VỆ 1: Lọc bỏ toàn bộ các dòng trống hoàn toàn ở cuối file
                 product_rows = [row for row in all_data[1:] if any(str(cell).strip() for cell in row)]
-                
-                # BƯỚC BẢO VỆ 2: Sắp xếp tăng dần theo Tên hàng hóa (Cột C -> index 2)
                 product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
                 
-                # BƯỚC BẢO VỆ 3: Chuẩn hóa độ dài các dòng (Bù khoảng trống)
-                cleaned_rows = [row + [""] * (6 - len(row)) for row in product_rows]
+                # BƯỚC BẢO VỆ 3: Đổi số 6 thành số 7 để bảo toàn cột Mức tối thiểu
+                cleaned_rows = [row + [""] * (7 - len(row)) for row in product_rows]
                 
-                # BƯỚC BẢO VỆ 4: Cập nhật dữ liệu (Tương thích mọi phiên bản gspread)
                 try:
                     self.sheet_products.update(values=cleaned_rows, range_name="A2") 
                 except TypeError:
@@ -258,7 +253,7 @@ class DataService:
                 # BẢO VỆ DỮ LIỆU: Tự động bù đủ 6 cột (để tương thích với cột 'Nhóm' mới thêm)
                 results = []
                 for row in data[1:]:
-                    if len(row) < 6:
+                    if len(row) < 7:
                         row += [""] * (6 - len(row))
                     results.append(row)
                 return results
