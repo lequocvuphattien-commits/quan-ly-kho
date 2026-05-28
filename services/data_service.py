@@ -23,11 +23,25 @@ class DataService:
             # 1. Làm sạch tên cột (tránh khoảng trắng thừa)
             df.columns = [str(col).strip() for col in df.columns]
             
-            # 2. Ép kiểu cột "Ngày" (hoặc tên cột tương ứng trong sheet của bạn)
+            # 2. Xử lý cột Ngày (Tuyệt chiêu chống lỗi None)
             if 'Ngày' in df.columns:
-                df['Ngày'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
-                # Sắp xếp mới nhất lên trên
-                df = df.sort_values(by='Ngày', ascending=False)
+                # Bước a: Cắt bỏ mọi khoảng trắng thừa ở 2 đầu dữ liệu
+                df['Ngày'] = df['Ngày'].astype(str).str.strip()
+                
+                # Bước b: Dịch sang kiểu thời gian để tính toán sắp xếp (tạo cột tạm Sort_Date)
+                # Dùng errors='coerce' để nếu có chữ lạ thì bỏ qua, không sập app
+                parsed_dates = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
+                df['Sort_Date'] = parsed_dates
+                
+                # Bước c: Sắp xếp các giao dịch mới nhất lên trên
+                df = df.sort_values(by='Sort_Date', ascending=False)
+                
+                # Bước d: ĐỔI NGƯỢC LẠI THÀNH CHUỖI ĐỂ TRÁNH LỖI "NONE" TRÊN GIAO DIỆN
+                # Nếu format thành công -> Xuất định dạng chuẩn. Nếu lỗi -> Lấy lại nguyên gốc chữ trên Sheet
+                df['Ngày'] = parsed_dates.dt.strftime('%d/%m/%Y %H:%M:%S').fillna(df['Ngày'])
+                
+                # Bước e: Xóa cột tạm đi để trả về DataFrame sạch
+                df = df.drop(columns=['Sort_Date'])
             
             return df
         return pd.DataFrame()
