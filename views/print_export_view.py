@@ -148,11 +148,11 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws.merge_cells(f'C{sign_title_row}:D{sign_title_row}')
     ws[f"C{sign_title_row}"] = "Thủ Kho"
     ws[f"C{sign_title_row}"].font = font_bold
-    ws[f"C{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
+    ws[f"C{sign_title_row}"].alignment = Alignment(horizontal="left", vertical="center")
     
     # Chữ ký Người lập (Dịch sang cột E và F)
     ws.merge_cells(f'E{sign_title_row}:F{sign_title_row}')
-    ws[f'E{sign_title_row}'] = "Người Lập"
+    ws[f'E{sign_title_row}'] = "   Người Lập"
     ws[f'E{sign_title_row}'].font = font_bold
     ws[f'E{sign_title_row}'].alignment = Alignment(horizontal="center", vertical="center")
         
