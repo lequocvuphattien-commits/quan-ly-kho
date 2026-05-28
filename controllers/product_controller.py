@@ -31,7 +31,7 @@ class ProductController:
             ))
         return products
 
-    def add_product(self, code, name, unit):
+    def add_product(self, code, name, unit, group):
         if self.service.check_product_exists(code):
             return False, f"Mã '{code}' đã tồn tại!"
         self.service.add_product(code, name, unit)

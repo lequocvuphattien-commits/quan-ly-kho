@@ -27,7 +27,7 @@ class ProductView(ttk.Frame):
         ttk.Label(input_frame, text="Đvt:").grid(row=0, column=4, padx=5, pady=5)
         self.entry_unit = ttk.Entry(input_frame, width=8)
         self.entry_unit.grid(row=0, column=5, padx=5, pady=5)
-        
+
         # Hàng 2: Nút Thêm Hàng nằm ở giữa
         # columnspan=6 cho phép nút trải dài hết chiều rộng của 6 cột phía trên, 
         # sau đó dùng sticky="ew" để căn giữa hoặc điều khiển vị trí
@@ -54,13 +54,14 @@ class ProductView(ttk.Frame):
         ttk.Label(self, text="DANH MỤC HÀNG HÓA", font=("Arial", 12, "bold")).pack(pady=5)
         
         # 3. Treeview hiển thị
-        self.tree = ttk.Treeview(self, columns=("ID", "Code", "Name", "Unit", "Stock"), show="headings")
+        self.tree = ttk.Treeview(self, columns=("ID", "Code", "Name", "Unit", "Stock", "Group"), show="headings")
         self.tree.heading("ID", text="ID"); self.tree.column("ID", width=30)
         self.tree.heading("Code", text="Mã"); self.tree.column("Code", width=80)
         self.tree.heading("Name", text="Tên hàng"); self.tree.column("Name", width=200)
         self.tree.heading("Unit", text="Đvt"); self.tree.column("Unit", width=60)
         self.tree.heading("Stock", text="Tồn"); self.tree.column("Stock", width=60)
         self.tree.pack(fill="both", expand=True, padx=10, pady=5)
+        self.tree.heading("Group", text="Nhóm"); self.tree.column("Group", width=100)
         
         # 4. Nút Xuất Excel
         ttk.Button(self, text="Xuất Excel", command=self.export_excel).pack(pady=5)
@@ -73,31 +74,34 @@ class ProductView(ttk.Frame):
 
         self.load_data()
 
-    def add_item(self): # Tên hàm tùy thuộc vào code của bạn
+    def add_item(self):
         code = self.entry_code.get()
         name = self.entry_name.get()
         unit = self.entry_unit.get()
+        group = self.combo_group.get() # Lấy giá trị nhóm
 
-        # Gọi Controller và nhận về kết quả (success, message)
-        success, message = self.controller.add_product(code, name, unit)
+        # Gọi Controller với 4 tham số
+        success, message = self.controller.add_product(code, name, unit, group)
 
         if success:
             messagebox.showinfo("Thông báo", message)
-            # Sau khi thêm thành công, bạn nên clear các ô nhập liệu và load lại bảng
+            # Clear ô nhập liệu
+            self.entry_code.delete(0, 'end')
+            self.entry_name.delete(0, 'end')
+            self.entry_unit.delete(0, 'end')
             self.refresh_table() 
         else:
-            # Nếu trùng mã, hiển thị thông báo lỗi
             messagebox.showwarning("Cảnh báo", message)
             
     def export_excel(self):
         products = self.controller.get_all_products()
-        data = [[p.code, p.name, p.unit, p.stock] for p in products]
+        data = [[p.code, p.name, p.unit, p.stock, p.group] for p in products]
         
         if not data:
             messagebox.showwarning("Thông báo", "Không có dữ liệu!")
             return
             
-        df = pd.DataFrame(data, columns=["Mã", "Tên Hàng", "Đvt", "Tồn"])
+        df = pd.DataFrame(data, columns=["Mã", "Tên Hàng", "Đvt", "Tồn", "Nhóm"])
         
         try:
             file_name = "DanhMucHangHoa.xlsx"
@@ -163,4 +167,4 @@ class ProductView(ttk.Frame):
         
         # 3. Chèn dữ liệu vào lại Treeview
         for p in products:
-            self.tree.insert("", "end", values=(p.id, p.code, p.name, p.unit, p.stock))
+            self.tree.insert("", "end", values=(p.id, p.code, p.name, p.unit, p.stock, p.group))

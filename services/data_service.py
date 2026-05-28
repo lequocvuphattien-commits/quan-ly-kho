@@ -94,10 +94,10 @@ class DataService:
         products = self.get_products()
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
 
-    def add_product(self, code, name, unit):
+    def add_product(self, code, name, unit, group):
         # 1. Tạo và thêm hàng hóa mới vào dòng cuối trước
         new_id = str(uuid.uuid4())[:8].upper()
-        self.sheet_products.append_row([new_id, code, name, unit, 0.0])
+        self.sheet_products.append_row([new_id, code, name, unit, 0.0, group])
         
         # 2. Tự động sắp xếp lại Sheet theo Tên hàng hóa (A-Z)
         try:
@@ -110,7 +110,7 @@ class DataService:
                 product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
                 
                 # BƯỚC BẢO VỆ 3: Chuẩn hóa độ dài các dòng (Bù khoảng trống)
-                cleaned_rows = [row + [""] * (5 - len(row)) for row in product_rows]
+                cleaned_rows = [row + [""] * (6 - len(row)) for row in product_rows]
                 
                 # BƯỚC BẢO VỆ 4: Cập nhật dữ liệu (Tương thích mọi phiên bản gspread)
                 try:

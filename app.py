@@ -287,13 +287,28 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c1:
         with st.expander("➕ Thêm hàng hóa mới"):
             with st.form("add_form", clear_on_submit=True):
-                code, name, unit = st.text_input("Mã hàng"), st.text_input("Tên hàng"), st.text_input("Đơn vị tính")
+                # 1. Thêm các ô nhập liệu
+                code = st.text_input("Mã hàng")
+                name = st.text_input("Tên hàng")
+                unit = st.text_input("Đơn vị tính")
+                
+                # 2. Thêm ô chọn nhóm hàng
+                danh_sach_nhom = ["Vật tư", "Dụng cụ sản xuất", "Phụ gia", "Bao bì", "PE", "Khác"]
+                group = st.selectbox("Chọn nhóm hàng", danh_sach_nhom)
+                
                 if st.form_submit_button("Thêm hàng hóa"):
-                    if not code or not name: st.warning("Nhập đủ Mã và Tên!")
-                    elif service.check_product_exists(code.upper()): st.error("Mã đã tồn tại!")
+                    if not code or not name: 
+                        st.warning("Nhập đủ Mã và Tên!")
+                    elif service.check_product_exists(code.upper()): 
+                        st.error("Mã đã tồn tại!")
                     else:
-                        service.add_product(code.upper(), name, unit)
-                        st.cache_data.clear(); st.success("Đã thêm thành công!"); st.rerun()
+                        # 3. TRUYỀN THÊM new_group VÀO HÀM ADD_PRODUCT
+                        # Đảm bảo hàm service.add_product đã nhận đủ 4 tham số
+                        service.add_product(code.upper(), name, unit, group)
+                        
+                        st.cache_data.clear()
+                        st.success("Đã thêm thành công!")
+                        st.rerun()
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
