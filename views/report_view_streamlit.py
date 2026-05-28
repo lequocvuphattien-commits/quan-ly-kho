@@ -20,9 +20,6 @@ def export_to_excel(df):
 def show_report():
     st.subheader("Báo cáo tồn kho")
     
-    p_controller = ProductController()
-    t_controller = TransactionController()
-    
     DEFAULT_START_DATE = date(2026, 1, 1)
     
     if "clicked_report_filter" not in st.session_state:
@@ -79,9 +76,14 @@ def show_report():
 
     # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
     if st.session_state.clicked_report_filter:
-        with st.spinner('Đang xử lý dữ liệu...'):
-            # Lấy danh mục hàng hóa từ dữ liệu gốc
-            products = t_controller.service.get_products()
+        with st.spinner('Đang kết nối và xử lý dữ liệu...'):
+            
+            # [TỐI ƯU TỐC ĐỘ VÀ SỬA LỖI]: Khởi tạo Controller bên trong vòng lặp click
+            p_controller = ProductController()
+            t_controller = TransactionController()
+            
+            # Lấy danh mục hàng hóa từ ProductController
+            products = p_controller.get_all_products()
             
             # Thêm .copy() để cô lập hoàn toàn bảng dữ liệu, tránh lem cột sang tab Lịch Sử
             df_h = t_controller.get_transaction_history().copy() 
@@ -124,7 +126,10 @@ def show_report():
                 pivot_period = pd.DataFrame(columns=['Nhập', 'Xuất'])
             
             # --- KHỞI TẠO KHUNG BÁO CÁO TỪ SHEET PRODUCTS ---
-            df_products = pd.DataFrame(products, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại"])
+            # SỬA LỖI TẠI ĐÂY: Bóc tách object ra list trước khi đưa vào Pandas
+            product_list = [[p.id, p.code, p.name, p.unit, p.stock] for p in products]
+            
+            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại"])
             df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             

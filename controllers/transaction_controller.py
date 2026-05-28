@@ -61,10 +61,15 @@ class TransactionController:
             print(f"Lỗi khi hủy giao dịch: {e}")
             return False
 
-    def get_product_stats_by_date(self, product_id, start_date, end_date):
-        """Lấy thống kê báo cáo theo khoảng thời gian"""
+    def get_product_stats_by_date(self, product_id, start_date, end_date, history_data=None):
+        """
+        Tính toán tồn đầu kỳ, tổng nhập, tổng xuất trong khoảng thời gian.
+        """
         try:
-            return self.service.get_product_stats_by_date(product_id, start_date, end_date)
+            return self.service.get_product_stats_by_date(product_id, start_date, end_date, history_data)
+        except AttributeError:
+            print("Lỗi: Hàm get_product_stats_by_date chưa được định nghĩa trong DataService!")
+            return 0.0, 0.0, 0.0
         except Exception as e:
-            print(f"Lỗi tính toán báo cáo: {e}")
+            print(f"Lỗi khi tính toán báo cáo: {e}")
             return 0.0, 0.0, 0.0

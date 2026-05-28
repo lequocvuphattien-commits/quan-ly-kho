@@ -82,9 +82,13 @@ class DataService:
             print(f"Lỗi khi thêm giao dịch: {e}")
             return False
 
-    def get_products(self):
-        data = self.sheet_products.get_all_values()
-        return data[1:] if len(data) > 1 else []
+    def get_product_stats_by_date(self, product_id, start_date, end_date, history_data=None):
+        """Tính toán tồn kho chuẩn xác"""
+        # Nếu đã có dữ liệu truyền vào thì dùng luôn, chưa có mới gọi get_history()
+        raw_data = history_data if history_data is not None else self.get_history()
+        
+        if not raw_data:
+            return 0.0, 0.0, 0.0
 
     def check_product_exists(self, product_code):
         products = self.get_products()
@@ -243,3 +247,14 @@ class DataService:
         self.sheet_transactions.delete_rows(row_index + 2) 
         change = -quantity if trans_type == "Nhập" else quantity
         self.update_stock(product_code, change, "Nhập")
+
+    def get_products(self):
+        """Lấy toàn bộ danh sách hàng hóa từ Google Sheets"""
+        try:
+            data = self.sheet_products.get_all_values()
+            if len(data) > 1:
+                return data[1:] # Bỏ qua dòng tiêu đề
+            return []
+        except Exception as e:
+            print(f"Lỗi khi tải danh sách hàng hóa: {e}")
+            return []
