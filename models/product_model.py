@@ -1,9 +1,12 @@
 class Product:
-    def __init__(self, id=None, code=None, name=None, unit=None, stock=0.0):
+    def __init__(self, id=None, code=None, name=None, unit=None, stock=0.0, group=None):
         self.id = id
         self.code = str(code).strip() if code else ""
         self.name = str(name).strip() if name else ""
         self.unit = str(unit).strip() if unit else ""
+        
+        # Thêm xử lý an toàn cho Nhóm hàng (nếu trống sẽ gán là "Chưa phân nhóm")
+        self.group = str(group).strip() if group and str(group).strip() != "" else "Chưa phân nhóm"
         
         # Xử lý an toàn số liệu
         try:

@@ -78,7 +78,6 @@ def show_report():
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang kết nối và xử lý dữ liệu...'):
             
-            # [TỐI ƯU TỐC ĐỘ VÀ SỬA LỖI]: Khởi tạo Controller bên trong vòng lặp click
             p_controller = ProductController()
             t_controller = TransactionController()
             
@@ -126,10 +125,11 @@ def show_report():
                 pivot_period = pd.DataFrame(columns=['Nhập', 'Xuất'])
             
             # --- KHỞI TẠO KHUNG BÁO CÁO TỪ SHEET PRODUCTS ---
-            # SỬA LỖI TẠI ĐÂY: Bóc tách object ra list trước khi đưa vào Pandas
-            product_list = [[p.id, p.code, p.name, p.unit, p.stock] for p in products]
+            # Bóc tách object ra list, bổ sung thêm biến p.group
+            product_list = [[p.id, p.code, p.name, p.unit, p.stock, p.group] for p in products]
             
-            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại"])
+            # Đưa vào DataFrame và thêm tên cột Nhóm
+            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm"])
             df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
@@ -141,18 +141,18 @@ def show_report():
             df_report = df_report.merge(pivot_period[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
             
             # Thực thi thuật toán: 
-            # Tồn Đầu = Tồn Hiện Tại - Tổng Nhập Phát Sinh Thêm + Tổng Xuất Phát Sinh Thêm
             df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Lũy_Kế'] + df_report['Xuất_Lũy_Kế']
-            
-            # Tồn Cuối = Tồn Đầu + Nhập Trong Kỳ - Xuất Trong Kỳ
             df_report['Tồn Cuối'] = df_report['Tồn Đầu'] + df_report['Nhập'] - df_report['Xuất']
             
-            # Định hình lại các cột hiển thị theo chuẩn cấu trúc cũ
-            df_report = df_report[["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
+            # Định hình lại các cột hiển thị: Kéo cột Nhóm lên đứng đầu tiên
+            df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
             
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
             gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1, minWidth=100)
+            
+            # Kích hoạt gom nhóm theo cột Nhóm
+            gb.configure_column("Nhóm", rowGroup=True, hide=True)
             
             gb.configure_column("Mã HH", minWidth=60, maxWidth=120, cellStyle={'textAlign': 'center'})
             gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})

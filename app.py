@@ -264,17 +264,18 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"])
+        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]])
+        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
         gb.configure_column("Mã", minWidth=50, editable=False)
         gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
         gb.configure_column("Đvt", minWidth=50, editable=True)
         gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
-        
+        gb.configure_column("Nhóm", minWidth=80, editable=True)
+
         grid_response = AgGrid(
-            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn"]], 
+            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn","Nhóm"]], 
             gridOptions=gb.build(), 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
