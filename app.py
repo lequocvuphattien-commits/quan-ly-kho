@@ -424,11 +424,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Tên HH": p_dict[selected]["Tên"], 
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
-                        "Ghi chú": note, 
+                        "Diễn Giải": note,  # ĐÃ SỬA: Đổi "Ghi chú" thành "Diễn Giải" để khớp dữ liệu
                         "Loại": trans_type
                     })
                     
-                    # TĂNG BIẾN ĐẾM ĐỂ RESET Ô SỐ LƯỢNG (Không gây lỗi)
                     st.session_state.qty_key += 1
                     st.rerun()
 

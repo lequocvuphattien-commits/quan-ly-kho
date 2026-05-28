@@ -80,20 +80,22 @@ def show_report():
     # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
-            products = p_controller.get_all_products()
-            df_h = t_controller.get_transaction_history() # Trả về DataFrame
+            # ĐÃ SỬA: Lấy products thẳng từ DataService dưới dạng List chuẩn
+            products = t_controller.service.get_products()
+            df_h = t_controller.get_transaction_history() 
             
-            # Kiểm tra dữ liệu an toàn (Dùng .empty cho DataFrame)
             if not products or df_h is None or df_h.empty:
                 st.warning("Không có dữ liệu giao dịch hoặc hàng hóa!")
                 return
 
             # --- CHUẨN HÓA DỮ LIỆU ĐỂ TÍNH TOÁN ---
             try:
-                # Đảm bảo các cột được ép kiểu đúng
-                df_h['date'] = pd.to_datetime(df_h['Ngày'], errors='coerce')
+                # ĐÃ SỬA: Khai báo dayfirst=True để Pandas đọc đúng ngày Việt Nam (DD/MM/YYYY)
+                df_h['date'] = pd.to_datetime(df_h['Ngày'], dayfirst=True, format='mixed', errors='coerce')
+                
                 df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
                 df_h['type'] = df_h['Loại'].astype(str).str.strip()
+                # Đồng bộ chính xác tên cột "Số Lượng" viết hoa chữ L
                 df_h['qty'] = pd.to_numeric(df_h['Số Lượng'], errors='coerce').fillna(0)
             except KeyError as e:
                 st.error(f"Lỗi cấu trúc cột trong Google Sheets: Thiếu cột {e}")
@@ -110,7 +112,6 @@ def show_report():
             def get_stats(df):
                 if df.empty: return pd.DataFrame(columns=['Nhập', 'Xuất'])
                 pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                # Đảm bảo cột luôn tồn tại
                 if 'Nhập' not in pivot.columns: pivot['Nhập'] = 0
                 if 'Xuất' not in pivot.columns: pivot['Xuất'] = 0
                 return pivot[['Nhập', 'Xuất']]
@@ -120,15 +121,15 @@ def show_report():
             period_stats = get_stats(df_period)
             
             # --- TẠO BÁO CÁO CUỐI CÙNG ---
-            df_products = pd.DataFrame([[p.code, p.name, p.unit] for p in products], 
-                                     columns=["Mã HH", "Tên hàng hóa", "Đvt"])
+            # ĐÃ SỬA: Đọc dữ liệu từ List thay vì Object (p.code)
+            df_products = pd.DataFrame(products, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn"])
+            df_products = df_products[["Mã HH", "Tên hàng hóa", "Đvt"]] # Chỉ lấy 3 cột cần thiết
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
             df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
             df_report = df_report.merge(period_stats, left_on='Mã HH', right_index=True, how='left').fillna(0)
             
             df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
-            # Đổi tên cột hiển thị
             df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
             
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---

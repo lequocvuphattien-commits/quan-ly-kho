@@ -38,7 +38,7 @@ class DataService:
         """
         Thêm giao dịch vào Google Sheets với 8 cột đầy đủ
         """
-        import datetime # Khai báo để lấy giờ hệ thống
+        import datetime 
         try:
             # 1. Ép kiểu an toàn
             try:
@@ -58,11 +58,13 @@ class DataService:
                     break
 
             # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 8 cột)
-            # Cấu trúc: [Ngày, Mã HH, Tên hàng hóa, Đvt, Loại, Số lượng, Diễn giải, Nhân Viên]
-            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # SỬA LỖI MÚI GIỜ: Lấy đúng giờ Việt Nam (UTC+7)
+            tz_vn = datetime.timezone(datetime.timedelta(hours=7))
+            now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
+            
             new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name]
             
-            # 4. THỰC THI GHI VÀO GOOGLE SHEETS (Đã mở khóa)
+            # 4. THỰC THI GHI VÀO GOOGLE SHEETS
             self.sheet_transactions.append_row(new_row)
             
             return True
