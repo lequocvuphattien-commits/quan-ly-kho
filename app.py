@@ -267,26 +267,97 @@ if st.session_state.current_menu == "Danh mục hàng":
         # 1. THÊM CỘT "Mức tối thiểu" VÀO DATAFRAME
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(10) # Mặc định là 10 nếu trống
+        df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
+        # Cấu hình lại GridOptions
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]])
         gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
-        gb.configure_column("Mã", minWidth=50, editable=False)
-        gb.configure_column("Tên hàng hóa", minWidth=150, editable=True)
-        gb.configure_column("Đvt", minWidth=50, editable=True)
-        gb.configure_column("Tồn", minWidth=60, editable=False, type=["numericColumn"], valueFormatter="Number(x).toLocaleString('en-US')")
-        gb.configure_column("Nhóm", minWidth=80, editable=True)
-        # 2. HIỂN THỊ CỘT MỚI LÊN LƯỚI
-        gb.configure_column("Mức tối thiểu", minWidth=80, editable=True, type=["numericColumn"])
+        gb.configure_column("Mã", editable=False)
+        gb.configure_column("Tồn", editable=False)
+        
+        # Ép kiểu cho Mức tối thiểu là số
+        gb.configure_column("Mức tối thiểu", editable=True, type=["numericColumn"], 
+                            valueFormatter="data['Mức tối thiểu'].toFixed(0)")
 
+        # 1. CẬP NHẬT LỆNH GỌI AGGRID
         grid_response = AgGrid(
-            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn","Nhóm", "Mức tối thiểu"]], 
+            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]], 
             gridOptions=gb.build(), 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
-            update_on=[{'event': 'cellValueChanged'}], 
-            height=400
-        )
+            update_mode='MODEL_CHANGED', # Thay cho update_on để ổn định hơn
+            data_return_mode='AS_INPUT', # Dùng 'AS_INPUT' thường ổn định hơn cho việc lấy dữ liệu đã edit
+            height=400,
+            key="products_grid")
+        changes_to_save = []    
+
+        # 2. KHỐI LOGIC QUÉT THAY ĐỔI (Đảm bảo an toàn)
+        if grid_response['data'] is not None:
+            # Chuyển đổi dữ liệu trả về thành DataFrame một cách an toàn
+            edited_df = pd.DataFrame(grid_response['data'])
+            
+            # Kiểm tra xem có thay đổi thực sự so với df gốc không
+            if not edited_df.equals(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]]):
+                has_changes = True
+                # Gợi ý: Tại đây bạn có thể so sánh dòng nào thay đổi và lưu vào changes_to_save
+                st.write("Có thay đổi cần lưu!")
+            else:
+                has_changes = False
+        else:
+            edited_df = df # Fallback nếu không có dữ liệu trả về
+            has_changes = False
+        
+        # Hàm ép kiểu an toàn
+        def to_float(val):
+            try: return float(val)
+            except: return 0.0
+
+        if not edited_df.empty and not df.empty:
+            for i in range(len(edited_df)):
+                ma = str(edited_df.iloc[i]["Mã"]).strip()
+                
+                # Tìm dòng gốc dựa trên Mã
+                orig_row = df[df["Mã"].astype(str).str.strip() == ma]
+                if orig_row.empty: continue
+                orig_row = orig_row.iloc[0]
+                
+                # Trích xuất giá trị
+                ten_moi = str(edited_df.iloc[i]["Tên hàng hóa"]).strip()
+                dvt_moi = str(edited_df.iloc[i]["Đvt"]).strip()
+                nhom_moi = str(edited_df.iloc[i]["Nhóm"]).strip()
+                muc_moi = to_float(edited_df.iloc[i]["Mức tối thiểu"])
+                
+                ten_cu = str(orig_row["Tên hàng hóa"]).strip()
+                dvt_cu = str(orig_row["Đvt"]).strip()
+                nhom_cu = str(orig_row["Nhóm"]).strip()
+                muc_cu = to_float(orig_row["Mức tối thiểu"])
+                
+                # LOGIC SO SÁNH (Sử dụng abs để kiểm tra số thực)
+                is_changed = (
+                    ten_moi != ten_cu or 
+                    dvt_moi != dvt_cu or 
+                    nhom_moi != nhom_cu or 
+                    abs(muc_moi - muc_cu) > 0.001
+                )
+                
+                if is_changed:
+                    has_changes = True
+                    changes_to_save.append({
+                        "Mã": ma, "Tên": ten_moi, "Đvt": dvt_moi, 
+                        "Nhóm": nhom_moi, "Mức": muc_moi
+                    })
+
+        # Hiện thông báo và nút bấm
+        if has_changes:
+            st.info(f"⚠️ Có {len(changes_to_save)} hàng hóa đã thay đổi thông tin!")
+            if st.button("💾 Lưu thay đổi vào Google Sheets", type="primary"):
+                with st.spinner("Đang cập nhật..."):
+                    for item in changes_to_save:
+                        service.update_product(item["Mã"], item["Tên"], item["Đvt"], item["Nhóm"], item["Mức"])
+                
+                st.cache_data.clear() # Xóa cache để tải dữ liệu mới nhất từ Sheet
+                st.success("🎉 Cập nhật thành công!")
+                st.rerun()
     
     c1, c2 = st.columns(2)
     with c1:

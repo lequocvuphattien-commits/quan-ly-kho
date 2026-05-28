@@ -128,14 +128,44 @@ class DataService:
                 return True
         return False
 
-    def update_product(self, product_id, new_name, new_unit):
-        data = self.sheet_products.get_all_values()
-        for i, row in enumerate(data):
-            if row[1] == product_id:
-                self.sheet_products.update_cell(i + 1, 3, new_name)
-                self.sheet_products.update_cell(i + 1, 4, new_unit)
-                return True
-        return False
+    def get_products(self):
+        """Lấy toàn bộ danh sách hàng hóa từ Google Sheets"""
+        try:
+            data = self.sheet_products.get_all_values()
+            if len(data) > 1:
+                results = []
+                for row in data[1:]:
+                    # Bù đủ 7 cột: ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu
+                    if len(row) < 7:
+                        row += ["0"] * (7 - len(row))
+                    
+                    # Nếu ô Mức tối thiểu trên Google Sheets bỏ trống, ép về 0 (thay vì lỗi)
+                    if str(row[6]).strip() == "":
+                        row[6] = "0"
+                        
+                    results.append(row)
+                return results
+            return []
+        except Exception as e:
+            print(f"Lỗi khi tải danh sách hàng hóa: {e}")
+            return []
+
+    def update_product(self, product_code, new_name, new_unit, new_group, new_min_level):
+        try:
+            data = self.sheet_products.get_all_values()
+            for i, row in enumerate(data):
+                if i > 0 and len(row) > 1 and str(row[1]).strip().upper() == str(product_code).strip().upper():
+                    # Ép kiểu new_min_level sang float trước khi ghi
+                    val_min = float(new_min_level)
+                    self.sheet_products.update_cell(i + 1, 3, str(new_name))
+                    self.sheet_products.update_cell(i + 1, 4, str(new_unit))
+                    self.sheet_products.update_cell(i + 1, 6, str(new_group))
+                    self.sheet_products.update_cell(i + 1, 7, val_min)
+                    return True
+            return False
+        except Exception as e:
+            raise Exception(f"Lỗi ghi dữ liệu: {e}")
+            return False
 
     def update_stock(self, product_code, qty, trans_type):
         records = self.sheet_products.get_all_values()
@@ -244,20 +274,3 @@ class DataService:
         self.sheet_transactions.delete_rows(row_index + 2) 
         change = -quantity if trans_type == "Nhập" else quantity
         self.update_stock(product_code, change, "Nhập")
-
-    def get_products(self):
-        """Lấy toàn bộ danh sách hàng hóa từ Google Sheets"""
-        try:
-            data = self.sheet_products.get_all_values()
-            if len(data) > 1:
-                # BẢO VỆ DỮ LIỆU: Tự động bù đủ 6 cột (để tương thích với cột 'Nhóm' mới thêm)
-                results = []
-                for row in data[1:]:
-                    if len(row) < 7:
-                        row += [""] * (6 - len(row))
-                    results.append(row)
-                return results
-            return []
-        except Exception as e:
-            print(f"Lỗi khi tải danh sách hàng hóa: {e}")
-            return []

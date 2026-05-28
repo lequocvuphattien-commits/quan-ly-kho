@@ -134,7 +134,7 @@ def show_report():
             # Đưa vào DataFrame và thêm tên cột Nhóm, Mức tối thiểu
             df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu"])
             df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
-            df_products['Mức tối thiểu'] = pd.to_numeric(df_products['Mức tối thiểu'], errors='coerce').fillna(10)
+            df_products['Mức tối thiểu'] = pd.to_numeric(df_products['Mức tối thiểu'], errors='coerce').fillna(0)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
             # Kết nối dữ liệu lũy kế từ ngày lọc đến nay để làm phép tính trừ ngược
