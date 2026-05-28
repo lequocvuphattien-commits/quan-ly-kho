@@ -15,6 +15,7 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     template_path = "phieu_mau.xlsx"
     try:
         wb = openpyxl.load_workbook(template_path)
+        ws = wb.active # BỔ SUNG: Khai báo ws khi mở file mẫu thành công
     except FileNotFoundError:
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -52,9 +53,9 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     logo_path = "logo.png"
     if os.path.exists(logo_path):
         img = OpenpyxlImage(logo_path)
-        img.width = 145
-        img.height = 85
-        ws.add_image(img, 'E1')
+        img.width = 125
+        img.height = 75
+        ws.add_image(img, 'A4')
         
     ws.row_dimensions[1].height = 18
     ws.row_dimensions[2].height = 18
@@ -81,8 +82,9 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     # --- HEADER BẢNG DỮ LIỆU ---
     ws.row_dimensions[9].height = 26
     
-    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải"]
-    cols = ["A", "B", "C", "D", "E"]
+    # ĐÃ THÊM CỘT GHI CHÚ
+    headers = ["STT", "Tên hàng hóa", "Đvt", "Số Lượng", "Diễn Giải", "Ghi chú"]
+    cols = ["A", "B", "C", "D", "E", "F"]
     
     for col_letter, header_text in zip(cols, headers):
         cell = ws[f"{col_letter}9"]
@@ -105,7 +107,8 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"C{current_row}"] = item.get("Đvt", "")
         ws[f"D{current_row}"] = float(item.get("Số lượng", 0))
         ws[f"E{current_row}"] = str(item.get("Diễn Giải", ""))
-        
+        ws[f"F{current_row}"] = "" # Để trống hoàn toàn cột F để ghi tay
+                
         # Cấu hình căn lề
         ws[f"A{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"B{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
@@ -113,7 +116,8 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
         ws[f"D{current_row}"].alignment = Alignment(horizontal="center", vertical="center")
         ws[f"D{current_row}"].number_format = '#,##0' 
         ws[f"E{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-        
+        ws[f"F{current_row}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+              
         for col_letter in cols:
             cell = ws[f"{col_letter}{current_row}"]
             cell.font = font_regular
@@ -126,12 +130,12 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     date_row = last_data_row + 2
     sign_title_row = date_row + 1
     
-    # Ghi ngày tháng (Gộp ô D và E để cân giữa phía trên người lập)
+    # Ghi ngày tháng (Dịch sang cột E và F để cân đối với 6 cột)
     date_str = f"Ngày {selected_date.day:02d} tháng {selected_date.month:02d} năm {selected_date.year}"
-    ws.merge_cells(f'D{date_row}:E{date_row}')
-    ws[f'D{date_row}'] = date_str
-    ws[f'D{date_row}'].font = font_italic
-    ws[f'D{date_row}'].alignment = Alignment(horizontal="center", vertical="center")
+    ws.merge_cells(f'E{date_row}:F{date_row}')
+    ws[f'E{date_row}'] = date_str
+    ws[f'E{date_row}'].font = font_italic
+    ws[f'E{date_row}'].alignment = Alignment(horizontal="center", vertical="center")
     
     ws.row_dimensions[sign_title_row].height = 25
     
@@ -141,22 +145,24 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws[f"B{sign_title_row}"].alignment = Alignment(horizontal="left", vertical="center")
     
     # Chữ ký Thủ Kho
+    ws.merge_cells(f'C{sign_title_row}:D{sign_title_row}')
     ws[f"C{sign_title_row}"] = "Thủ Kho"
     ws[f"C{sign_title_row}"].font = font_bold
     ws[f"C{sign_title_row}"].alignment = Alignment(horizontal="center", vertical="center")
     
-    # Chữ ký Người lập
-    ws.merge_cells(f'D{sign_title_row}:E{sign_title_row}')
-    ws[f'D{sign_title_row}'] = "Người Lập"
-    ws[f'D{sign_title_row}'].font = font_bold
-    ws[f'D{sign_title_row}'].alignment = Alignment(horizontal="center", vertical="center")
+    # Chữ ký Người lập (Dịch sang cột E và F)
+    ws.merge_cells(f'E{sign_title_row}:F{sign_title_row}')
+    ws[f'E{sign_title_row}'] = "Người Lập"
+    ws[f'E{sign_title_row}'].font = font_bold
+    ws[f'E{sign_title_row}'].alignment = Alignment(horizontal="center", vertical="center")
         
-    # --- CHỈNH KÍCH THƯỚC CỘT (Tối ưu cho 5 cột) ---
-    ws.column_dimensions['A'].width = 7   # STT
+    # --- CHỈNH KÍCH THƯỚC CỘT (Tối ưu lại tỷ lệ cho 6 cột vừa khổ A4) ---
+    ws.column_dimensions['A'].width = 6   # STT
     ws.column_dimensions['B'].width = 38  # Tên hàng hóa
-    ws.column_dimensions['C'].width = 10  # Đvt
-    ws.column_dimensions['D'].width = 14  # Số lượng
-    ws.column_dimensions['E'].width = 22  # Diễn giải
+    ws.column_dimensions['C'].width = 8   # Đvt
+    ws.column_dimensions['D'].width = 11  # Số lượng
+    ws.column_dimensions['E'].width = 18  # Diễn giải
+    ws.column_dimensions['F'].width = 15  # Ghi chú
         
     output = BytesIO()
     wb.save(output)
@@ -176,9 +182,15 @@ def show_print_export_view(service):
     history = service.get_history()
     products = service.get_products()
     
-    if not history:
-        st.info("Kho dữ liệu trống hoặc đang tải...")
+    history_data = service.get_history()
+    
+    # Kiểm tra an toàn xem bảng có dữ liệu hay không
+    if history_data is None or len(history_data) == 0:
+        st.warning("Không có dữ liệu lịch sử giao dịch!")
         return
+        
+    # Ép kiểu dữ liệu về dạng List (Danh sách) để các lệnh vẽ bảng/in phiếu bên dưới không bị lỗi
+    history = history_data.values.tolist() if isinstance(history_data, pd.DataFrame) else history_data
         
     dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
         

@@ -5,7 +5,7 @@ from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
 from controllers.product_controller import ProductController
 from datetime import date  
-from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 def export_to_excel(df):
     buffer = io.BytesIO()
@@ -28,34 +28,43 @@ def show_report():
     if "clicked_report_filter" not in st.session_state:
         st.session_state.clicked_report_filter = False
 
+    # =================================================================
+    # --- [CẢI TIẾN CSS]: ÉP HÀNG NGANG VÀ KÉO SÁT TIÊU ĐỀ TRÊN ĐIỆN THOẠI ---
+    # =================================================================
     st.markdown("""
         <style>
+        /* 1. Kéo tiêu đề h3 dịch xuống hoặc thu nhỏ khoảng trống bên dưới nó */
         h3 {
             margin-bottom: -0.5rem !important;
             padding-bottom: 0rem !important;
         }
         
+        /* 2. Ép 3 thành phần nằm ngang và kéo mạnh lên sát tiêu đề h3 */
         [data-testid="stHorizontalBlock"] {
             flex-wrap: nowrap !important;
             flex-direction: row !important;
-            gap: 0.4rem !important; 
-            margin-top: -1.5rem !important; 
+            gap: 0.4rem !important; /* Thu hẹp khoảng cách giữa các ô */
+            margin-top: -1.5rem !important; /* Lực hút đẩy dòng này lên sát tiêu đề */
         }
         
+        /* Cho phép các ô tự động co nhỏ cho vừa màn hình điện thoại */
         [data-testid="stHorizontalBlock"] > div {
             min-width: 0px !important; 
         }
         
+        /* Đẩy nút "Báo cáo" thụt xuống để thẳng hàng khít với ô nhập ngày */
         [data-testid="stHorizontalBlock"] > div:nth-child(3) {
             padding-top: 1.75rem !important; 
         }
         
+        /* Làm nhỏ chữ tiêu đề "Từ ngày", "Đến ngày" để giao diện thanh thoát */
         [data-testid="stHorizontalBlock"] label {
             font-size: 0.8rem !important;
         }
         </style>
     """, unsafe_allow_html=True)
 
+    # Chia cột tỉ lệ phù hợp cho màn hình dọc điện thoại
     col1, col2, col3 = st.columns([3, 3, 2.5])
     
     with col1:
@@ -71,9 +80,11 @@ def show_report():
     # --- NẾU ĐÃ BẤM NÚT LỌC, TIẾN HÀNH XỬ LÝ VÀ HIỂN THỊ DỮ LIỆU ---
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang xử lý dữ liệu...'):
-            # ĐÃ SỬA: Lấy products thẳng từ DataService dưới dạng List chuẩn
+            # Lấy danh mục hàng hóa từ dữ liệu gốc
             products = t_controller.service.get_products()
-            df_h = t_controller.get_transaction_history() # Trả về DataFrame
+            
+            # Thêm .copy() để cô lập hoàn toàn bảng dữ liệu, tránh lem cột sang tab Lịch Sử
+            df_h = t_controller.get_transaction_history().copy() 
             
             if not products or df_h is None or df_h.empty:
                 st.warning("Không có dữ liệu giao dịch hoặc hàng hóa!")
@@ -81,46 +92,58 @@ def show_report():
 
             # --- CHUẨN HÓA DỮ LIỆU ĐỂ TÍNH TOÁN ---
             try:
-                # ĐÃ SỬA: Khai báo dayfirst=True để Pandas đọc đúng ngày Việt Nam
                 df_h['date'] = pd.to_datetime(df_h['Ngày'], dayfirst=True, format='mixed', errors='coerce')
                 df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
                 df_h['type'] = df_h['Loại'].astype(str).str.strip()
-                # Đồng bộ chính xác tên cột "Số Lượng" viết hoa chữ L
                 df_h['qty'] = pd.to_numeric(df_h['Số Lượng'], errors='coerce').fillna(0)
             except KeyError as e:
                 st.error(f"Lỗi cấu trúc cột trong Google Sheets: Thiếu cột {e}")
                 return
 
-            # --- TÍNH TOÁN TỒN KHO ---
-            start = pd.to_datetime(start_date)
-            end = pd.to_datetime(end_date)
+            # Xác định các mốc biên ngày lọc công thức
+            start = pd.to_datetime(start_date).normalize()
+            end = pd.to_datetime(end_date).replace(hour=23, minute=59, second=59)
             
-            # Lọc dữ liệu dựa trên ngày
-            df_past = df_h[df_h['date'] < start]
+            # --- THUẬT TOÁN TÍNH TOÁN TRUY NGƯỢC THỜI GIAN ---
+            # 1. Gom toàn bộ giao dịch phát sinh từ NGÀY BẮT ĐẦU cho tới thời điểm HIỆN TẠI
+            df_from_start = df_h[df_h['date'] >= start]
+            if not df_from_start.empty:
+                pivot_from_start = df_from_start.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+                if 'Nhập' not in pivot_from_start.columns: pivot_from_start['Nhập'] = 0
+                if 'Xuất' not in pivot_from_start.columns: pivot_from_start['Xuất'] = 0
+            else:
+                pivot_from_start = pd.DataFrame(columns=['Nhập', 'Xuất'])
+                
+            # 2. Gom lượng giao dịch phát sinh giới hạn TRONG KỲ lọc (Từ ngày -> Đến ngày)
             df_period = df_h[(df_h['date'] >= start) & (df_h['date'] <= end)]
+            if not df_period.empty:
+                pivot_period = df_period.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+                if 'Nhập' not in pivot_period.columns: pivot_period['Nhập'] = 0
+                if 'Xuất' not in pivot_period.columns: pivot_period['Xuất'] = 0
+            else:
+                pivot_period = pd.DataFrame(columns=['Nhập', 'Xuất'])
             
-            def get_stats(df):
-                if df.empty: return pd.DataFrame(columns=['Nhập', 'Xuất'])
-                pivot = df.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                if 'Nhập' not in pivot.columns: pivot['Nhập'] = 0
-                if 'Xuất' not in pivot.columns: pivot['Xuất'] = 0
-                return pivot[['Nhập', 'Xuất']]
-
-            past_stats = get_stats(df_past)
-            past_stats['ton_dau'] = past_stats['Nhập'] - past_stats['Xuất']
-            period_stats = get_stats(df_period)
-            
-            # --- TẠO BÁO CÁO CUỐI CÙNG ---
-            # ĐÃ SỬA: Đọc dữ liệu từ List thay vì Object
-            df_products = pd.DataFrame(products, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn"])
-            df_products = df_products[["Mã HH", "Tên hàng hóa", "Đvt"]]
+            # --- KHỞI TẠO KHUNG BÁO CÁO TỪ SHEET PRODUCTS ---
+            df_products = pd.DataFrame(products, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại"])
+            df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
             
-            df_report = df_products.merge(past_stats[['ton_dau']], left_on='Mã HH', right_index=True, how='left').fillna(0)
-            df_report = df_report.merge(period_stats, left_on='Mã HH', right_index=True, how='left').fillna(0)
+            # Kết nối dữ liệu lũy kế từ ngày lọc đến nay để làm phép tính trừ ngược
+            df_report = df_products.merge(pivot_from_start[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
+            df_report.rename(columns={'Nhập': 'Nhập_Lũy_Kế', 'Xuất': 'Xuất_Lũy_Kế'}, inplace=True)
             
-            df_report['Tồn Cuối'] = df_report['ton_dau'] + df_report['Nhập'] - df_report['Xuất']
-            df_report.columns = ["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
+            # Kết nối dữ liệu thực tế phát sinh trong kỳ
+            df_report = df_report.merge(pivot_period[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
+            
+            # Thực thi thuật toán: 
+            # Tồn Đầu = Tồn Hiện Tại - Tổng Nhập Phát Sinh Thêm + Tổng Xuất Phát Sinh Thêm
+            df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Lũy_Kế'] + df_report['Xuất_Lũy_Kế']
+            
+            # Tồn Cuối = Tồn Đầu + Nhập Trong Kỳ - Xuất Trong Kỳ
+            df_report['Tồn Cuối'] = df_report['Tồn Đầu'] + df_report['Nhập'] - df_report['Xuất']
+            
+            # Định hình lại các cột hiển thị theo chuẩn cấu trúc cũ
+            df_report = df_report[["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
             
             # --- PHẦN KHỞI TẠO BẢNG AGGRID ---
             gb = GridOptionsBuilder.from_dataframe(df_report)
