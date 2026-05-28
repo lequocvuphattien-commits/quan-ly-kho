@@ -327,7 +327,15 @@ if st.session_state.current_menu == "Danh mục hàng":
 
                 if st.button("🗑️ Xóa hàng này", use_container_width=True):
                     history = get_cached_history(service)
-                    has_transaction = any(str(row[1]).strip() == str(del_code).strip() for row in history)
+                    
+                    # SỬA LỖI: Kiểm tra giao dịch trực tiếp trên Pandas DataFrame
+                    has_transaction = False
+                    if isinstance(history, pd.DataFrame) and not history.empty:
+                        # Lấy đúng tên cột chứa mã hàng
+                        col_ma = "Mã HH" if "Mã HH" in history.columns else "Mã"
+                        if col_ma in history.columns:
+                            # Quét xem mã hàng xóa (del_code) có nằm trong cột Mã không
+                            has_transaction = str(del_code).strip() in history[col_ma].astype(str).str.strip().values
                     
                     if current_stock != 0:
                         st.error(f"🚫 Không thể xóa: Hàng hóa này vẫn còn tồn kho ({current_stock:,.0f})!")

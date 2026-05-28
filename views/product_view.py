@@ -129,12 +129,35 @@ class ProductView(ttk.Frame):
             self.menu.post(event.x_root, event.y_root)
 
     def delete_item(self):
-        if not self.tree.selection(): return
-        item = self.tree.selection()[0]
+        # 1. Kiểm tra chọn
+        selection = self.tree.selection()
+        if not selection:
+            return
+
+        item = selection[0]
         data = self.tree.item(item)['values']
-        if messagebox.askyesno("Xác nhận", f"Xóa hàng hóa '{data[2]}'?"):
-            self.controller.delete_product(data[0])
-            self.load_data()
+        
+        # data[0] thường là ID, hãy đảm bảo bạn lấy đúng cột ID
+        product_id = data[0] 
+        product_name = data[2]
+
+        # 2. Hộp thoại xác nhận an toàn
+        # Gán kết quả vào biến để kiểm soát chặt chẽ
+        confirm = messagebox.askyesno("Xác nhận", f"Bạn có chắc chắn muốn xóa hàng hóa '{product_name}'?")
+        
+        if confirm:
+            # 3. CHỈ KHI NÀO confirm LÀ TRUE THÌ MỚI VÀO ĐÂY
+            try:
+                # Gọi controller xóa
+                self.controller.delete_product(product_id)
+                # Load lại dữ liệu
+                self.load_data()
+                messagebox.showinfo("Thông báo", "Đã xóa hàng hóa thành công!")
+            except Exception as e:
+                messagebox.showerror("Lỗi", f"Không thể xóa: {e}")
+        else:
+            # 4. Nếu confirm là False, hàm kết thúc tại đây mà không thực hiện gì cả
+            return
 
     def edit_item(self):
         if not self.tree.selection(): return
@@ -154,8 +177,8 @@ class ProductView(ttk.Frame):
     def load_data(self):
         for i in self.tree.get_children(): self.tree.delete(i)
         for p in self.controller.get_all_products():
-            self.tree.insert("", "end", values=(p.id, p.code, p.name, p.unit, Product.format_number(p.stock)))
-
+            # Thêm p.group vào cuối
+            self.tree.insert("", "end", values=(p.id, p.code, p.name, p.unit, p.stock, p.group))
     def refresh_table(self):
         """Xóa dữ liệu cũ và load lại danh sách sản phẩm mới từ controller"""
         # 1. Xóa toàn bộ dữ liệu đang hiển thị trong Treeview

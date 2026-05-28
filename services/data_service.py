@@ -126,8 +126,10 @@ class DataService:
     def delete_product(self, product_id):
         data = self.sheet_products.get_all_values()
         for i, row in enumerate(data):
-            if row[1] == product_id:
-                self.sheet_transactions.delete_rows(i + 1)
+            # Thêm điều kiện len(row) > 1 để chống lỗi văng App do dòng trống
+            if len(row) > 1 and str(row[1]).strip() == str(product_id).strip():
+                # SỬA LỖI ĐỔI TÊN SHEET: sheet_transactions -> sheet_products
+                self.sheet_products.delete_rows(i + 1)
                 return True
         return False
 
@@ -253,7 +255,13 @@ class DataService:
         try:
             data = self.sheet_products.get_all_values()
             if len(data) > 1:
-                return data[1:] # Bỏ qua dòng tiêu đề
+                # BẢO VỆ DỮ LIỆU: Tự động bù đủ 6 cột (để tương thích với cột 'Nhóm' mới thêm)
+                results = []
+                for row in data[1:]:
+                    if len(row) < 6:
+                        row += [""] * (6 - len(row))
+                    results.append(row)
+                return results
             return []
         except Exception as e:
             print(f"Lỗi khi tải danh sách hàng hóa: {e}")
