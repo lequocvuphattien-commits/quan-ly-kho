@@ -337,39 +337,55 @@ def show_report():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
 def get_count_import_by_department(service, start_date, end_date):
-    """Tính số lần nhập kho theo Bộ phận (cột I trong Transactions)"""
+    """
+    Tính số lần nhập kho theo Bộ phận.
+    Thuật toán: Các dòng có cùng Bộ phận VÀ giống hệt chuỗi thời gian (Ngày giờ phút giây) 
+    thì chỉ được đếm là 1 lần nhập.
+    """
     history_df = service.get_history()
     if history_df is None or history_df.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
 
     df = history_df.copy()
-    # Chuyển Ngày thành datetime
-    df['date_obj'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
-    # Áp dụng quy tắc mốc 06:00 sáng
-    df['Ngày_Kho'] = (df['date_obj'] - pd.Timedelta(hours=6)).dt.date
     
-    # 1. Lọc chỉ lấy giao dịch NHẬP
+    # Chuẩn hóa tên cột để tránh lỗi do khoảng trắng thừa
+    df.columns = [str(col).strip() for col in df.columns]
+    
+    # Kiểm tra các cột bắt buộc
+    if 'Ngày' not in df.columns or 'Loại' not in df.columns or 'Bộ phận' not in df.columns:
+        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
+
+    # 1. Lọc chỉ lấy các giao dịch NHẬP
     df_nhap = df[df['Loại'].astype(str).str.strip().str.upper() == 'NHẬP'].copy()
+    if df_nhap.empty:
+        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
     
-    # 2. Lọc theo khoảng thời gian
+    # 2. Xử lý khoảng thời gian (Chỉ dùng phần 'Ngày' để lọc start_date, end_date)
+    df_nhap['date_obj'] = pd.to_datetime(df_nhap['Ngày'], dayfirst=True, errors='coerce')
+    df_nhap['just_date'] = df_nhap['date_obj'].dt.date
+    
     start = pd.to_datetime(start_date).date()
     end = pd.to_datetime(end_date).date()
-    df_nhap = df_nhap[(df_nhap['Ngày_Kho'] >= start) & (df_nhap['Ngày_Kho'] <= end)]
     
-    # 3. Sử dụng cột 'Bộ phận' để thống kê
-    # Đảm bảo tên cột khớp với file Google Sheets của bạn (ví dụ: 'Bộ phận')
-    col_bp = 'Bộ phận' 
-    
-    if col_bp not in df_nhap.columns:
-        # Nếu cột không tồn tại, trả về thông báo lỗi
-        return pd.DataFrame(columns=[col_bp, 'Số lần nhập'])
+    # Lọc các dòng nằm trong khoảng ngày người dùng chọn trên giao diện
+    df_nhap = df_nhap[(df_nhap['just_date'] >= start) & (df_nhap['just_date'] <= end)]
+    if df_nhap.empty:
+        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
 
-    # Điền giá trị rỗng nếu cột 'Bộ phận' có ô trống
-    df_nhap[col_bp] = df_nhap[col_bp].fillna("Chưa xác định")
+    # 3. Chuẩn hóa tên Bộ phận (tránh trường hợp ô trống)
+    df_nhap['Bộ phận'] = df_nhap['Bộ phận'].astype(str).str.strip().fillna("Chưa xác định")
+    df_nhap.loc[df_nhap['Bộ phận'] == "", 'Bộ phận'] = "Chưa xác định"
     
-    # 4. Loại bỏ trùng lặp: Cùng ngày và cùng bộ phận chỉ tính 1 lần
-    df_unique = df_nhap.drop_duplicates(subset=['Ngày_Kho', col_bp])
+    # 4. THỰC HIỆN THUẬT TOÁN ĐẾM CHÍNH XÁC (Theo yêu cầu)
+    # Lấy chính xác chuỗi thời gian từ Google Sheets (ví dụ: "29/05/2026 10:15:00")
+    df_nhap['Thời_gian_chính_xác'] = df_nhap['Ngày'].astype(str).str.strip()
+
+    # Cốt lõi: Xóa các dòng trùng lặp dựa trên 2 cột (Thời gian chính xác VÀ Bộ phận)
+    # ID 1,2,3 (10:15:00) -> Giữ lại dòng đầu tiên, xóa 2 dòng sau
+    # ID 4 (10:20:11) -> Giữ lại
+    df_unique = df_nhap.drop_duplicates(subset=['Thời_gian_chính_xác', 'Bộ phận'])
     
-    # 5. Đếm số lần nhập theo bộ phận
-    report = df_unique.groupby(col_bp).size().reset_index(name='Số lần nhập')
+    # 5. Đếm tổng số dòng duy nhất còn lại theo từng Bộ phận
+    report = df_unique.groupby('Bộ phận').size().reset_index(name='Số lần nhập')
+    
     return report
