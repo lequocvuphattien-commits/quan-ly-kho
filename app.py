@@ -307,15 +307,23 @@ if st.session_state.current_menu == "Danh mục hàng":
 
             if not edited_df.empty and not df.empty:
                 # [BÍ QUYẾT TĂNG TỐC TẠI ĐÂY] 
-                # Chuyển DataFrame gốc thành Dictionary để tra cứu tức thì (Mất 0.001 giây thay vì vài giây)
+                # Chuyển DataFrame gốc thành Dictionary để tra cứu tức thì
                 df_clean = df.copy()
                 df_clean['Mã'] = df_clean['Mã'].astype(str).str.strip()
+                
+                # --- MÀNG LỌC CHỐNG LỖI ---
+                # 1. Loại bỏ các dòng rỗng (Mã trống do Google Sheets dư dòng)
+                df_clean = df_clean[df_clean['Mã'] != ""]
+                # 2. Xử lý trùng lặp: Nếu có 2 mã giống hệt nhau do nhập nhầm, giữ lại dòng đầu tiên
+                df_clean = df_clean.drop_duplicates(subset=['Mã'], keep='first')
+                # --------------------------
+
                 orig_dict = df_clean.set_index('Mã').to_dict('index')
 
                 for i in range(len(edited_df)):
                     ma = str(edited_df.iloc[i]["Mã"]).strip()
                     
-                    # Tra cứu trực tiếp từ Dictionary (O(1)) thay vì quét toàn bộ DataFrame (O(N^2))
+                    # Tra cứu trực tiếp từ Dictionary (O(1))
                     if ma not in orig_dict: 
                         continue
                     orig_row = orig_dict[ma]
