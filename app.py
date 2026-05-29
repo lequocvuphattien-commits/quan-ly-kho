@@ -7,8 +7,9 @@ from controllers.transaction_controller import TransactionController
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
-from views.report_view_streamlit import show_report
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
+from views.report_view_streamlit import show_report, export_history_to_excel
+from datetime import date
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
@@ -563,7 +564,7 @@ elif st.session_state.current_menu == "In phiếu xuất":
 
 # --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
-    st.header("Lịch sử giao dịch")
+    st.header("📜 Lịch sử giao dịch")
     
     if 't_controller' not in st.session_state:
         st.session_state.t_controller = TransactionController()
@@ -574,6 +575,14 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
     if history_df is not None and not history_df.empty:
         if not isinstance(history_df, pd.DataFrame):
             history_df = pd.DataFrame(history_df[1:], columns=history_df[0])
+            
+        # --- BỔ SUNG: NÚT XUẤT EXCEL Ở ĐÂY ---
+        st.download_button(
+            label="📥 Xuất lịch sử giao dịch ra Excel",
+            data=export_history_to_excel(history_df),
+            file_name=f"LichSuGiaoDich_{date.today().strftime('%d%m%Y')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
             
         is_admin = st.session_state.get("user_role") == "Quản lý"
         display_df = history_df.copy()

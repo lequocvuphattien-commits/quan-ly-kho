@@ -6,6 +6,8 @@ from openpyxl.drawing.image import Image as OpenpyxlImage
 import os
 from io import BytesIO
 import datetime
+import io
+from openpyxl.utils import get_column_letter
 
 # --- 1. HÀM TẠO FILE EXCEL NGẦM ---
 def export_phieu_xuat_excel(export_data, selected_date, department_name):
@@ -178,147 +180,101 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
 def show_print_export_view(service):
     st.subheader("🖨️ In Phiếu Xuất Kho")
     
-    # Khởi tạo 2 cột để chọn ngày và chọn bộ phận
     col_date, col_dept = st.columns(2)
-    
     with col_date:
         selected_date = st.date_input("📅 Chọn ngày in phiếu:", datetime.date.today())
     
-    # Lấy dữ liệu từ Google Sheets
-    history = service.get_history()
-    # [THÊM ĐOẠN NÀY ĐỂ DỊCH CHUYỂN NGÀY VỀ MỐC 6H SÁNG]
-    if not history.empty:
-        history['date_obj'] = pd.to_datetime(history['Ngày'], dayfirst=True, errors='coerce')
-        # Dịch lùi 6 tiếng: 05:59 ngày 30/05 sẽ thành 23:59 ngày 29/05
-        history['Ngày_Kho'] = (history['date_obj'] - pd.Timedelta(hours=6)).dt.strftime('%d/%m/%Y')
-    products = service.get_products()
-    
+    # 1. Lấy và chuẩn hóa dữ liệu với mốc 6h sáng
     history_data = service.get_history()
-    
-    # Kiểm tra an toàn xem bảng có dữ liệu hay không
-    if history_data is None or len(history_data) == 0:
+    if history_data is None or history_data.empty:
         st.warning("Không có dữ liệu lịch sử giao dịch!")
         return
         
-    # Ép kiểu dữ liệu về dạng List (Danh sách) để các lệnh vẽ bảng/in phiếu bên dưới không bị lỗi
-    history = history_data.values.tolist() if isinstance(history_data, pd.DataFrame) else history_data
-        
-    dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
-        
-    # --- KHẮC PHỤC LỖI LỆCH SỐ LƯỢNG CỘT ---
-    num_cols = len(history[0])
-    base_cols = ["Ngày", "Mã HH", "Tên hàng hóa", "Đvt", "Loại", "Số Lượng", "Diễn Giải", "Nhân viên"]
+    df = history_data.copy()
+    # Chuyển Ngày thành datetime
+    df['date_obj'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
+    # Tạo cột Ngày_Kho (dịch lùi 6 tiếng để dồn về mốc 06:00)
+    df['Ngày_Kho'] = (df['date_obj'] - pd.Timedelta(hours=6)).dt.date
     
-    if num_cols > len(base_cols):
-        cols = base_cols + [f"Cột_phụ_{i}" for i in range(len(base_cols), num_cols)]
-    else:
-        cols = base_cols[:num_cols]
-        
-    df = pd.DataFrame(history, columns=cols)
+    # Lọc các giao dịch XUẤT theo Ngày_Kho đã chọn
+    filtered_df = df[(df['Loại'].astype(str).str.strip().str.upper() == 'XUẤT') & 
+                     (df['Ngày_Kho'] == selected_date)]
     
-    if "Diễn Giải" not in df.columns: df["Diễn Giải"] = ""
-        
-    df['Loại_chuẩn'] = df['Loại'].astype(str).str.strip().str.upper()
-    df['Ngày_chuẩn'] = pd.to_datetime(df['Ngày'], errors='coerce').dt.date
-    
-    # Bước 1: Lọc danh sách XUẤT theo NGÀY được chọn
-    filtered_date_df = df[(df['Loại_chuẩn'] == 'XUẤT') & (df['Ngày_chuẩn'] == selected_date)]
-    
-    if filtered_date_df.empty:
-        st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào được ghi nhận trong ngày {selected_date.strftime('%d/%m/%Y')}.")
+    if filtered_df.empty:
+        st.warning(f"⚠️ Không có giao dịch XUẤT KHO nào trong ngày {selected_date.strftime('%d/%m/%Y')} (tính từ 06:00).")
         return
-        
-    # Bước 2: Quét tất cả các "Diễn Giải" có trong ngày đó để tạo danh sách (Selectbox)
-    dien_giai_raw = filtered_date_df["Diễn Giải"].astype(str).str.strip()
-    dien_giai_list = dien_giai_raw.unique().tolist()
-    
-    clean_dg_list = []
-    for dg in dien_giai_list:
-        if dg.lower() in ['nan', '']:
-            clean_dg_list.append('Không có diễn giải')
-        else:
-            clean_dg_list.append(dg)
-            
-    clean_dg_list = list(set(clean_dg_list))
+
+    # 2. Xử lý Bộ phận đề nghị (Selectbox)
+    dien_giai_list = filtered_df["Diễn Giải"].astype(str).str.strip().unique().tolist()
+    clean_dg_list = ['Không có diễn giải' if dg.lower() in ['nan', ''] else dg for dg in dien_giai_list]
+    clean_dg_list = sorted(list(set(clean_dg_list)))
     
     with col_dept:
-        department_name = st.selectbox("🏢 Chọn bộ phận đề nghị (Theo Diễn giải):", clean_dg_list)
+        department_name = st.selectbox("🏢 Chọn bộ phận đề nghị:", clean_dg_list)
         
-    # Bước 3: Lọc dữ liệu lần 2 dựa trên Bộ phận được chọn
+    # Lọc lại lần 2 theo Bộ phận
     if department_name == 'Không có diễn giải':
-        filtered_df = filtered_date_df[dien_giai_raw.isin(['', 'nan', 'NaN'])]
+        final_df = filtered_df[filtered_df["Diễn Giải"].astype(str).str.strip().isin(['', 'nan', 'NaN'])]
     else:
-        filtered_df = filtered_date_df[dien_giai_raw == department_name]
-        
-    if filtered_df.empty:
-        st.info("Không có dữ liệu cho bộ phận này.")
-        return
-        
-    # --- XỬ LÝ GỘP DÒNG ---
+        final_df = filtered_df[filtered_df["Diễn Giải"].astype(str).str.strip() == department_name]
+
+    # 3. Gộp dòng và chuẩn bị dữ liệu xuất
+    products = service.get_products()
+    dvt_dict = {str(p[1]): str(p[3]) for p in products} if products else {}
+    
     raw_data = []
-    for _, row in filtered_df.iterrows():
+    for _, row in final_df.iterrows():
         ma_hh = str(row.get("Mã HH", ""))
-        
-        dien_giai_val = str(row.get("Diễn Giải", "")).strip()
-        if dien_giai_val.lower() == "nan": dien_giai_val = ""
-            
         raw_data.append({
             "Tên HH": row.get("Tên hàng hóa", ma_hh),
             "Đvt": dvt_dict.get(ma_hh, ""),
             "Số lượng": float(row.get("Số Lượng", 0)),
-            "Diễn Giải": dien_giai_val
+            "Diễn Giải": str(row.get("Diễn Giải", ""))
         })
     
-    df_export = pd.DataFrame(raw_data)
-    
-    # Gom nhóm và cộng tổng theo Diễn Giải
-    df_grouped = df_export.groupby(['Tên HH', 'Đvt', 'Diễn Giải'], dropna=False, as_index=False)['Số lượng'].sum()
-    
-    # --- ĐỔI THỨ TỰ CỘT TRÊN GIAO DIỆN (ĐƯA SỐ LƯỢNG LÊN TRƯỚC DIỄN GIẢI) ---
-    df_grouped = df_grouped[['Tên HH', 'Đvt', 'Số lượng', 'Diễn Giải']]
-    
-    # --- Thêm Màn hình Chọn (Checkbox) ---
+    df_grouped = pd.DataFrame(raw_data).groupby(['Tên HH', 'Đvt', 'Diễn Giải'], as_index=False)['Số lượng'].sum()
     df_grouped.insert(0, 'Chọn', True)
     
-    st.success(f"✅ Đã gom được **{len(df_grouped)}** mặt hàng xuất kho cho **{department_name}**. Nếu không muốn in dòng nào, bạn chỉ cần BỎ TÍCH:")
-    
-    # Chuyển đổi cột Số lượng sang dạng số thực (float) để nội dung tự động căn lề phải
-    df_grouped['Số lượng'] = df_grouped['Số lượng'].astype(float)
-    
-    # Hiển thị bảng Checkbox với cấu hình tiêu đề cột Số Lượng căn lề phải
+    # 4. Giao diện tích chọn
     edited_df = st.data_editor(
-        df_grouped,
-        use_container_width=True,
-        hide_index=True,
-        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"], 
-        column_config={
-            "Số lượng": st.column_config.NumberColumn(
-                "            Số Lượng", # Thêm khoảng trắng để đẩy tiêu đề sang phải
-                help="Số lượng xuất kho",
-                format="%d", # Định dạng số nguyên
-            )
-        }
+        df_grouped, use_container_width=True, hide_index=True,
+        disabled=["Tên HH", "Đvt", "Số lượng", "Diễn Giải"],
+        column_config={"Số lượng": st.column_config.NumberColumn("Số Lượng", format="%d")}
     )
     
-    # Chỉ lấy những dòng được Tích chọn
     selected_df = edited_df[edited_df["Chọn"] == True]
-    
     if selected_df.empty:
-        st.error("🚫 Bạn chưa chọn mặt hàng nào để in!")
+        st.error("🚫 Bạn chưa chọn mặt hàng nào!")
         return
         
+    # 5. Xuất Excel
     export_data = selected_df.drop(columns=['Chọn']).to_dict('records')
-    
-    print_dept_name = department_name if department_name != 'Không có diễn giải' else ""
-    excel_data = export_phieu_xuat_excel(export_data, selected_date, print_dept_name)
-    
-    safe_dept_name = print_dept_name.replace("/", "-").replace("\\", "-")
+    excel_data = export_phieu_xuat_excel(export_data, selected_date, department_name)
     
     st.download_button(
-        label=f"📥 TẢI FILE EXCEL PHIẾU XUẤT (In {len(export_data)} mặt hàng)",
+        label="📥 TẢI FILE EXCEL PHIẾU XUẤT",
         data=excel_data,
-        file_name=f"Phieu_Xuat_{safe_dept_name}_{selected_date.strftime('%d%m%Y')}.xlsx",
+        file_name=f"Phieu_Xuat_{selected_date.strftime('%d%m%Y')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        type="primary",
-        use_container_width=True
-    )
+        type="primary", use_container_width=True)
+    
+def export_history_to_excel(df):
+    """Xuất lịch sử giao dịch ra file Excel"""
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        # Ghi dữ liệu ra sheet 'LichSu'
+        df.to_excel(writer, index=False, sheet_name='LichSu')
+        ws = writer.sheets['LichSu']
+        
+        # Định dạng tiêu đề (dòng 1)
+        header_fill = PatternFill(start_color='0070C0', end_color='0070C0', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF')
+        for col in range(1, ws.max_column + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+            # Tự động chỉnh độ rộng cột
+            ws.column_dimensions[get_column_letter(col)].width = 18
+            
+    return buffer.getvalue()
