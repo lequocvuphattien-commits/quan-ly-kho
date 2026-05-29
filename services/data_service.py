@@ -2,6 +2,7 @@ import sys
 import os
 import uuid
 import pandas as pd
+import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from controllers.google_provider import GoogleProvider
@@ -44,12 +45,10 @@ class DataService:
             return df
         return pd.DataFrame()
     
-    # Đã đồng bộ tên biến dvt (viết thường) và BỔ SUNG tham số bo_phan
     def add_transaction(self, p_code, p_name, qty, t_type, note, user_name, bo_phan=""):
         """
         Thêm giao dịch vào Google Sheets với 9 cột đầy đủ (Cột I là Bộ phận)
         """
-        import datetime # Khai báo để lấy giờ hệ thống
         try:
             # 1. Ép kiểu an toàn
             try:
@@ -69,7 +68,6 @@ class DataService:
                     break
 
             # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 9 cột, thêm bo_phan vào cuối)
-            # SỬA LỖI MÚI GIỜ: Lấy đúng giờ Việt Nam (UTC+7)
             tz_vn = datetime.timezone(datetime.timedelta(hours=7))
             now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
             new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name, bo_phan]
@@ -81,14 +79,6 @@ class DataService:
         except Exception as e:
             print(f"Lỗi khi thêm giao dịch: {e}")
             return False
-
-    def get_product_stats_by_date(self, product_id, start_date, end_date, history_data=None):
-        """Tính toán tồn kho chuẩn xác"""
-        # Nếu đã có dữ liệu truyền vào thì dùng luôn, chưa có mới gọi get_history()
-        raw_data = history_data if history_data is not None else self.get_history()
-        
-        if not raw_data:
-            return 0.0, 0.0, 0.0
 
     def check_product_exists(self, product_code):
         products = self.get_products()
@@ -121,7 +111,6 @@ class DataService:
     def delete_product(self, product_id):
         data = self.sheet_products.get_all_values()
         for i, row in enumerate(data):
-            # Thêm điều kiện len(row) > 1 để chống lỗi văng App do dòng trống
             if len(row) > 1 and str(row[1]).strip() == str(product_id).strip():
                 self.sheet_products.delete_rows(i + 1)
                 return True
@@ -138,7 +127,7 @@ class DataService:
                     if len(row) < 8:
                         row += [""] * (8 - len(row))
                     
-                    # Nếu ô Mức tối thiểu trên Google Sheets bỏ trống, ép về 0 (thay vì lỗi)
+                    # Nếu ô Mức tối thiểu trên Google Sheets bỏ trống, ép về 0
                     if str(row[6]).strip() == "":
                         row[6] = "0"
                         
@@ -154,7 +143,6 @@ class DataService:
             data = self.sheet_products.get_all_values()
             for i, row in enumerate(data):
                 if i > 0 and len(row) > 1 and str(row[1]).strip().upper() == str(product_code).strip().upper():
-                    # Ép kiểu new_min_level sang float trước khi ghi
                     val_min = float(new_min_level)
                     self.sheet_products.update_cell(i + 1, 3, str(new_name))
                     self.sheet_products.update_cell(i + 1, 4, str(new_unit))
@@ -177,7 +165,6 @@ class DataService:
                 return True
         return False
 
-    # CẬP NHẬT: Đọc thêm Cột C (Bộ phận) từ tab Config
     def get_config_options(self):
         data = self.sheet_config.get_all_values()
         kho_nhap = [str(r[0]).strip() for r in data[1:] if len(r) > 0 and str(r[0]).strip()]
@@ -191,10 +178,8 @@ class DataService:
         data = self.sheet_employees.get_all_values()
         if len(data) > 1:
             results = []
-            for row in data[1:]: # Bỏ qua dòng tiêu đề
-                # Lấy 5 cột đầu tiên
+            for row in data[1:]:
                 row_data = row[:5]
-                # Nếu dòng thiếu cột, bù bằng chuỗi rỗng
                 if len(row_data) < 5:
                     row_data += [""] * (5 - len(row_data))
                 results.append(row_data)
@@ -202,28 +187,24 @@ class DataService:
         return []
 
     def check_employee_exists(self, emp_code):
-        """Kiểm tra mã nhân viên đã tồn tại chưa"""
         employees = self.get_employees()
         return any(str(emp[0]).strip().lower() == str(emp_code).strip().lower() for emp in employees if len(emp) > 0)
 
     def add_employee(self, emp_code, name, phone, role):
-        """Thêm nhân viên mới"""
         self.sheet_employees.append_row([str(emp_code).upper(), str(name), str(phone), str(role), ""])  
         return True
 
     def update_employee(self, emp_code, new_name, new_phone, new_role):
-        """Cập nhật thông tin nhân viên (Sửa trực tiếp trên lưới)"""
         data = self.sheet_employees.get_all_values()
         for i, row in enumerate(data):
             if i > 0 and len(row) > 0 and str(row[0]).strip().upper() == str(emp_code).strip().upper():
-                self.sheet_employees.update_cell(i + 1, 2, new_name)  # Cột B: Tên NV
-                self.sheet_employees.update_cell(i + 1, 3, new_phone) # Cột C: SĐT
-                self.sheet_employees.update_cell(i + 1, 4, new_role)  # Cột D: Chức vụ
+                self.sheet_employees.update_cell(i + 1, 2, new_name)  
+                self.sheet_employees.update_cell(i + 1, 3, new_phone) 
+                self.sheet_employees.update_cell(i + 1, 4, new_role)  
                 return True
         return False
 
     def delete_employee(self, emp_code):
-        """Xóa nhân viên"""
         data = self.sheet_employees.get_all_values()
         for i, row in enumerate(data):
             if i > 0 and len(row) > 0 and str(row[0]).strip().upper() == str(emp_code).strip().upper():
@@ -232,7 +213,6 @@ class DataService:
         return False
 
     def check_login(self, username, password):
-        """Kiểm tra đăng nhập và trả về Tên + Chức vụ"""
         employees = self.get_employees() 
         for emp in employees:
             if len(emp) >= 5:
@@ -244,26 +224,35 @@ class DataService:
                     }
         return {"status": False, "name": None, "role": None}
 
-    def get_product_stats_by_date(self, product_id, start_date, end_date):
-        df = self.get_history()
-        if df.empty: return 0.0, 0.0, 0.0
+    # ĐÃ GỘP 2 HÀM BỊ TRÙNG LẶP THÀNH 1 HÀM CHUẨN (Có hỗ trợ Cache Data)
+    def get_product_stats_by_date(self, product_id, start_date, end_date, history_data=None):
+        """Tính toán tồn kho chuẩn xác và siêu tốc (hỗ trợ đọc từ Cache)"""
+        df = history_data if history_data is not None else self.get_history()
+        
+        if df is None or df.empty: 
+            return 0.0, 0.0, 0.0
         
         try:
-            df['Ngày'] = pd.to_datetime(df['Ngày'], errors='coerce')
+            df['Ngày'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
             df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
-            df['Số lượng'] = pd.to_numeric(df['Số Lượng'], errors='coerce').fillna(0) # Đồng bộ với df['Số Lượng']
             
-            # Lọc
+            qty_col = 'Số Lượng' if 'Số Lượng' in df.columns else 'Số lượng'
+            df['Số lượng'] = pd.to_numeric(df[qty_col], errors='coerce').fillna(0)
+            
             target_id = str(product_id).strip()
             df_prod = df[df['Mã HH'] == target_id].copy()
             
+            if df_prod.empty:
+                return 0.0, 0.0, 0.0
+                
             start = pd.to_datetime(start_date)
-            past_data = df_prod[df_prod['Ngày'] < start]
+            end = pd.to_datetime(end_date)
             
+            past_data = df_prod[df_prod['Ngày'] < start]
             ton_dau = (past_data[past_data['Loại'] == 'Nhập']['Số lượng'].sum() - 
                        past_data[past_data['Loại'] == 'Xuất']['Số lượng'].sum())
             
-            period_data = df_prod[(df_prod['Ngày'] >= start) & (df_prod['Ngày'] <= pd.to_datetime(end_date))]
+            period_data = df_prod[(df_prod['Ngày'] >= start) & (df_prod['Ngày'] <= end)]
             nhap = period_data[period_data['Loại'] == 'Nhập']['Số lượng'].sum()
             xuat = period_data[period_data['Loại'] == 'Xuất']['Số lượng'].sum()
             
@@ -273,9 +262,68 @@ class DataService:
             return 0.0, 0.0, 0.0
 
     def delete_transaction(self, row_index, product_code, quantity, trans_type):
-        """
-        Xóa giao dịch và hoàn tác số lượng tồn kho
-        """
         self.sheet_transactions.delete_rows(row_index + 2) 
         change = -quantity if trans_type == "Nhập" else quantity
         self.update_stock(product_code, change, "Nhập")
+
+    # =========================================================================
+    # TÍNH NĂNG MỚI: XỬ LÝ LƯU HÀNG LOẠT SIÊU TỐC
+    # =========================================================================
+    def process_batch_transactions(self, transactions_list):
+        """
+        Ghi toàn bộ phiếu nhập/xuất nhiều dòng chỉ với 2 lần gọi API Google Sheets.
+        Dữ liệu đầu vào (transactions_list): list các dict 
+        [{'p_code': 'A', 'p_name':'B', 'qty': 10, 't_type': 'Nhập', 'note': '', 'user_name': '', 'bo_phan': ''}]
+        """
+        try:
+            if not transactions_list:
+                return False
+
+            tz_vn = datetime.timezone(datetime.timedelta(hours=7))
+            now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
+            
+            # 1. Tải danh mục SP 1 lần duy nhất để tra cứu ĐVT và sửa tồn kho trực tiếp trong RAM
+            products_data = self.sheet_products.get_all_values()
+            
+            new_rows = []
+            for txn in transactions_list:
+                p_code = txn.get('p_code', '')
+                try:
+                    qty = float(txn.get('qty', 0))
+                except:
+                    qty = 0.0
+                    
+                t_type = txn.get('t_type', '')
+                dvt = ""
+                
+                # Tìm và cập nhật Tồn kho (Cột 5 - index 4) trực tiếp trong mảng data
+                for i, row in enumerate(products_data):
+                    if i > 0 and len(row) > 1 and str(row[1]).strip().lower() == str(p_code).strip().lower():
+                        dvt = str(row[3]).strip() if len(row) > 3 else ""
+                        
+                        current_stock = float(row[4]) if len(row) > 4 and str(row[4]).strip() != "" else 0.0
+                        new_stock = current_stock + qty if t_type.strip().capitalize() == "Nhập" else current_stock - qty
+                        
+                        # Bù cột nếu mảng bị cụt
+                        if len(row) < 5:
+                            row += [""] * (5 - len(row))
+                        products_data[i][4] = new_stock
+                        break
+                        
+                # Đóng gói dữ liệu giao dịch
+                new_row = [
+                    now_str, p_code, txn.get('p_name', ''), dvt, t_type, 
+                    qty, txn.get('note', ''), txn.get('user_name', ''), txn.get('bo_phan', '')
+                ]
+                new_rows.append(new_row)
+
+            # 2. Bắn dữ liệu lên Server: Đúng 2 lệnh duy nhất cho 100 món hàng!
+            if new_rows:
+                self.sheet_transactions.append_rows(new_rows)
+                
+            self.sheet_products.update(values=products_data, range_name="A1")
+            
+            return True
+        except Exception as e:
+            print(f"Lỗi lưu hàng loạt: {e}")
+            return False

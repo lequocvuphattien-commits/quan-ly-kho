@@ -10,6 +10,7 @@ from views.print_export_view import show_print_export_view
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
 from views.report_view_streamlit import show_report, export_history_to_excel, get_count_import_by_department
 from datetime import date
+import plotly.express as px
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
@@ -33,9 +34,10 @@ def confirm_delete(product_name, del_code, service):
         if st.button("✅ Yes"):
             service.delete_product(del_code)
             
-            # --- ĐOẠN CODE BẠN QUÊN CHÈN ---
-            if "cached_products_list" in st.session_state:
-                del st.session_state["cached_products_list"]
+            # --- [TỐI ƯU UX]: Xóa bộ nhớ giao diện để cập nhật lưới mới ---
+            if "cached_products_list" in st.session_state: del st.session_state["cached_products_list"]
+            if "products_df" in st.session_state: del st.session_state["products_df"]
+            if "grid_options" in st.session_state: del st.session_state["grid_options"]
             # -------------------------------
                 
             st.cache_data.clear()
@@ -91,6 +93,12 @@ def confirm_delete_history_dialog(selected_rows, service):
                     service.delete_transaction(index, p_code, qty, t_type_original)
                     
                 st.cache_data.clear()
+                # --- [TỐI ƯU UX]: Đảm bảo cập nhật báo cáo và lưới ---
+                if "cached_products_list" in st.session_state: del st.session_state["cached_products_list"]
+                if "products_df" in st.session_state: del st.session_state["products_df"]
+                if "grid_options" in st.session_state: del st.session_state["grid_options"]
+                if "report_cache_key" in st.session_state: del st.session_state["report_cache_key"]
+                
                 st.success("🎉 Đã xóa và hoàn tác tồn kho thành công!")
                 st.rerun()
                 
@@ -245,7 +253,7 @@ if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
-menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất", "Thống kê nhập kho"]
+menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất", "Thống kê nhập kho", "Biểu đồ thống kê"]
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
     menu_options.append("Sao lưu dữ liệu")
@@ -269,40 +277,38 @@ if menu != st.session_state.current_menu:
 if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     
-    # ==============================================================
-    # [TỐI ƯU TỐC ĐỘ]: LƯU TRỮ DỮ LIỆU VÀO BỘ NHỚ TẠM (SESSION STATE)
-    # ==============================================================
     if "cached_products_list" not in st.session_state:
         with st.spinner("Đang tải danh mục hàng hóa..."):
             st.session_state.cached_products_list = get_cached_products(service)
             
-    # Lấy dữ liệu siêu nhanh từ bộ nhớ tạm
     products = st.session_state.cached_products_list
 
     if products:
-        # 1. THÊM CỘT "Mức tối thiểu" VÀ "Ghi chú" VÀO DATAFRAME
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu", "Ghi chú"])
-        df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
-        df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
+        # ==============================================================
+        # [TỐI ƯU UX]: CHUYỂN TAB KHÔNG TẢI LẠI (CACHE LƯỚI & DATAFRAME)
+        # ==============================================================
+        if "products_df" not in st.session_state or "grid_options" not in st.session_state:
+            df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu", "Ghi chú"])
+            df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
+            df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
-        # ==============================================================
-        # CẤU HÌNH ĐỘ RỘNG CỘT VÀ CHỨC NĂNG SỬA CHO BẢNG DANH MỤC HÀNG
-        # ==============================================================
-        gb = GridOptionsBuilder.from_dataframe(df)
-        
-        gb.configure_default_column(sortable=True, filter=True, resizable=True, editable=True)
-        gb.configure_column("ID", hide=True)
-        gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
-        gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
-        gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold', 'color': '#28a745'})
-        gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
-        gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, type=["numericColumn"], valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
-        gb.configure_column("Ghi chú", minWidth=150, editable=True, cellStyle={'textAlign': 'left'})
+            gb = GridOptionsBuilder.from_dataframe(df)
+            gb.configure_default_column(sortable=True, filter=True, resizable=True, editable=True)
+            gb.configure_column("ID", hide=True)
+            gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
+            gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
+            gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
+            gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold', 'color': '#28a745'})
+            gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
+            gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, type=["numericColumn"], valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
+            gb.configure_column("Ghi chú", minWidth=150, editable=True, cellStyle={'textAlign': 'left'})
+            
+            st.session_state.products_df = df
+            st.session_state.grid_options = gb.build()
 
         grid_response = AgGrid(
-            df, 
-            gridOptions=gb.build(), 
+            st.session_state.products_df, 
+            gridOptions=st.session_state.grid_options, 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
             update_mode='MODEL_CHANGED', 
@@ -310,10 +316,12 @@ if st.session_state.current_menu == "Danh mục hàng":
             height=400,
             key="products_grid") 
             
+        df = st.session_state.products_df # Dùng cho logic so sánh
+        
         # ==============================================================
-        # 2. KHỐI LOGIC QUÉT THAY ĐỔI (Đã Tối Ưu Tốc Độ Siêu Nhanh)
+        # KHỐI LOGIC QUÉT THAY ĐỔI 
         # ==============================================================
-        changes_to_save = [] # BẮT BUỘC KHỞI TẠO Ở NGOÀI CÙNG
+        changes_to_save = [] 
         
         if grid_response['data'] is not None:
             edited_df = pd.DataFrame(grid_response['data'])
@@ -323,26 +331,15 @@ if st.session_state.current_menu == "Danh mục hàng":
                 except: return 0.0
 
             if not edited_df.empty and not df.empty:
-                # [BÍ QUYẾT TĂNG TỐC TẠI ĐÂY] 
-                # Chuyển DataFrame gốc thành Dictionary để tra cứu tức thì
                 df_clean = df.copy()
                 df_clean['Mã'] = df_clean['Mã'].astype(str).str.strip()
-                
-                # --- MÀNG LỌC CHỐNG LỖI ---
-                # 1. Loại bỏ các dòng rỗng (Mã trống do Google Sheets dư dòng)
                 df_clean = df_clean[df_clean['Mã'] != ""]
-                # 2. Xử lý trùng lặp: Nếu có 2 mã giống hệt nhau do nhập nhầm, giữ lại dòng đầu tiên
                 df_clean = df_clean.drop_duplicates(subset=['Mã'], keep='first')
-                # --------------------------
-
                 orig_dict = df_clean.set_index('Mã').to_dict('index')
 
                 for i in range(len(edited_df)):
                     ma = str(edited_df.iloc[i]["Mã"]).strip()
-                    
-                    # Tra cứu trực tiếp từ Dictionary (O(1))
-                    if ma not in orig_dict: 
-                        continue
+                    if ma not in orig_dict: continue
                     orig_row = orig_dict[ma]
                     
                     ten_moi = str(edited_df.iloc[i].get("Tên hàng hóa", "")).strip()
@@ -357,7 +354,6 @@ if st.session_state.current_menu == "Danh mục hàng":
                     muc_cu = to_float(orig_row.get("Mức tối thiểu", 0))
                     ghi_chu_cu = str(orig_row.get("Ghi chú", "")).strip()
                     
-                    # LOGIC SO SÁNH
                     is_changed = (
                         ten_moi != ten_cu or 
                         dvt_moi != dvt_cu or 
@@ -372,9 +368,6 @@ if st.session_state.current_menu == "Danh mục hàng":
                             "Nhóm": nhom_moi, "Mức": muc_moi, "Ghi chú": ghi_chu_moi
                         })
 
-        # ==============================================================
-        # HIỆN THÔNG BÁO VÀ NÚT BẤM (CHỈ KHI CÓ THAY ĐỔI > 0)
-        # ==============================================================
         if len(changes_to_save) > 0:
             st.markdown("### Có thay đổi cần lưu")
             st.warning(f"⚠️ Có {len(changes_to_save)} hàng hóa đã thay đổi thông tin!")
@@ -384,9 +377,11 @@ if st.session_state.current_menu == "Danh mục hàng":
                     for item in changes_to_save:
                         service.update_product(item["Mã"], item["Tên"], item["Đvt"], item["Nhóm"], item["Mức"], item["Ghi chú"])
                 
-                # --- [TỐI ƯU] XÓA BỘ NHỚ TẠM ĐỂ TẢI LẠI DỮ LIỆU MỚI NHẤT ---
-                if "cached_products_list" in st.session_state:
-                    del st.session_state["cached_products_list"]
+                # --- [TỐI ƯU UX]: ĐỒNG BỘ CACHE ---
+                if "cached_products_list" in st.session_state: del st.session_state["cached_products_list"]
+                if "products_df" in st.session_state: del st.session_state["products_df"]
+                if "grid_options" in st.session_state: del st.session_state["grid_options"]
+                if "report_cache_key" in st.session_state: del st.session_state["report_cache_key"]
                 st.cache_data.clear()
                 
                 st.success("🎉 Cập nhật thành công!")
@@ -412,9 +407,11 @@ if st.session_state.current_menu == "Danh mục hàng":
                     else:
                         service.add_product(code.upper(), name, unit, group, min_stock, note)
                         
-                        # --- [TỐI ƯU] XÓA BỘ NHỚ TẠM ĐỂ TẢI LẠI DỮ LIỆU MỚI NHẤT ---
-                        if "cached_products_list" in st.session_state:
-                            del st.session_state["cached_products_list"]
+                        # --- [TỐI ƯU UX]: ĐỒNG BỘ CACHE ---
+                        if "cached_products_list" in st.session_state: del st.session_state["cached_products_list"]
+                        if "products_df" in st.session_state: del st.session_state["products_df"]
+                        if "grid_options" in st.session_state: del st.session_state["grid_options"]
+                        if "report_cache_key" in st.session_state: del st.session_state["report_cache_key"]
                         st.cache_data.clear()
                         
                         st.success("Đã thêm thành công!")
@@ -422,7 +419,6 @@ if st.session_state.current_menu == "Danh mục hàng":
     with c2:
         with st.expander("🗑️ Xóa hàng hóa"):
             if products:
-                # [TỐI ƯU TỐC ĐỘ 2]: Dùng hàm Zip thay vì iterrows() để nạp danh sách vào Selectbox cực nhanh
                 product_map = {
                     f"{n} - (Tồn: {float(t):,.0f} {d})": m
                     for m, n, t, d in zip(df["Mã"], df["Tên hàng hóa"], df["Tồn"], df["Đvt"])
@@ -451,8 +447,6 @@ if st.session_state.current_menu == "Danh mục hàng":
                         st.error("🚫 Không thể xóa: Hàng hóa này đã có lịch sử giao dịch!")
                     else:
                         confirm_delete(selected_product, del_code, service)
-                        # Lưu ý: Nếu hàm confirm_delete thực hiện xóa thành công, hãy chắc chắn 
-                        # bên trong hàm đó cũng có lệnh del st.session_state["cached_products_list"]
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
@@ -460,7 +454,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
     
     trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
     
-    # 1. Bổ sung nhận 3 danh sách từ hàm get_cached_config
     kho_nhap_list, kho_xuat_list, bo_phan_list = get_cached_config(service)
     products = get_cached_products(service)
     
@@ -485,7 +478,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         display_data.sort()
         selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
         
-        # 2. Chia lại thành 5 cột để có chỗ hiển thị chọn "Bộ phận"
         c1, c2, c3, c4, c5 = st.columns([0.8, 1, 1.2, 1.2, 0.8])
         
         with c1: 
@@ -508,7 +500,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
             
         with c4:
-            # 3. Chỉ hiển thị chọn Bộ phận nếu là loại "Nhập"
             if trans_type == "Nhập":
                 bo_phan = st.selectbox("Bộ phận", options=bo_phan_list, index=None, key="bophan_select_field")
             else:
@@ -520,7 +511,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             st.write("") 
             
             if st.button("➕ Thêm", key="add_to_cart_btn"):
-                # Ràng buộc: Nhập kho thì bắt buộc phải có Bộ phận
                 if not selected or not qty or not note or (trans_type == "Nhập" and not bo_phan): 
                     st.warning("⚠️ Nhập đủ thông tin!")
                 else:
@@ -531,7 +521,7 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
                         "Diễn Giải": note, 
-                        "Bộ phận": bo_phan, # Lưu giá trị bộ phận vào giỏ hàng
+                        "Bộ phận": bo_phan, 
                         "Loại": trans_type
                     })
                     
@@ -546,23 +536,19 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             
             with col_xac_nhan:
                 if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
-                    
-                    # 1. Lấy tồn kho mới nhất để kiểm tra
                     db_products = service.get_products()
                     stock_dict = {} 
                     if db_products:
                         for p in db_products:
                             p_code = str(p[1]).strip()
                             try:
-                                # p[4] là cột Tồn kho (đảm bảo index này khớp với code cũ của bạn)
                                 val = float(p[4]) if len(p) > 4 and str(p[4]).strip() else 0.0
                             except (ValueError, TypeError):
                                 val = 0.0
                             stock_dict[p_code] = val
 
-                    # 2. Kiểm tra tồn kho trước khi lưu (Chống xuất âm)
                     error_msgs = []
-                    temp_stock = stock_dict.copy() # Dùng bản sao để tính toán tạm
+                    temp_stock = stock_dict.copy() 
                     
                     for _, row in edited_df_cart.iterrows():
                         ma_hh = str(row["Mã HH"]).strip()
@@ -576,12 +562,10 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                             else:
                                 temp_stock[ma_hh] -= qty_xuat
                     
-                    # 3. Nếu có lỗi thì hiển thị và dừng lại, không ghi vào Sheets
                     if error_msgs:
                         for msg in error_msgs:
                             st.error(msg)
                     else:
-                        # 4. Nếu hợp lệ, tiến hành ghi vào Sheets
                         for _, row in edited_df_cart.iterrows():
                             service.add_transaction(
                                 row["Mã HH"], 
@@ -596,6 +580,12 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         
                         st.session_state.cart = []
                         st.cache_data.clear()
+                        # --- [TỐI ƯU UX]: ĐỒNG BỘ CACHE ---
+                        if "cached_products_list" in st.session_state: del st.session_state["cached_products_list"]
+                        if "products_df" in st.session_state: del st.session_state["products_df"]
+                        if "grid_options" in st.session_state: del st.session_state["grid_options"]
+                        if "report_cache_key" in st.session_state: del st.session_state["report_cache_key"]
+                        
                         st.success(f"🎉 Giao dịch thành công!")
                         st.rerun()
                 
@@ -623,16 +613,13 @@ elif st.session_state.current_menu == "Thống kê nhập kho":
         e_date = st.date_input("Đến ngày", key="rep_e")
         
     if st.button("Xem thống kê", type="primary"):
-        # Gọi hàm tính toán
         df_freq = get_count_import_by_department(service, s_date, e_date)
         
         if not df_freq.empty:
             st.table(df_freq)
-            
-            # Xuất Excel cho bảng thống kê này
             st.download_button(
                 label="📥 Xuất thống kê ra Excel",
-                data=export_history_to_excel(df_freq), # Tái sử dụng hàm xuất đã có
+                data=export_history_to_excel(df_freq), 
                 file_name=f"ThongKeNhapKho_{s_date.strftime('%d%m%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
@@ -653,7 +640,6 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
         if not isinstance(history_df, pd.DataFrame):
             history_df = pd.DataFrame(history_df[1:], columns=history_df[0])
             
-        # --- BỔ SUNG: NÚT XUẤT EXCEL Ở ĐÂY ---
         st.download_button(
             label="📥 Xuất lịch sử giao dịch ra Excel",
             data=export_history_to_excel(history_df),
@@ -679,6 +665,109 @@ elif st.session_state.current_menu == "Lịch sử giao dịch":
                     confirm_delete_history_dialog(selected_rows, service)
     else:
         st.info("Chưa có dữ liệu lịch sử giao dịch.")
+
+# --- TAB MỚI: BIỂU ĐỒ THỐNG KÊ ---
+elif st.session_state.current_menu == "Biểu đồ thống kê":
+    st.header("📈 Biểu đồ phân tích xu hướng")
+    st.info("Tính năng này giúp bạn theo dõi tổng lưu lượng Nhập và Xuất kho theo từng ngày, cũng như xác định các mặt hàng có lượng giao dịch lớn nhất.")
+    
+    # 1. BỘ LỌC THỜI GIAN
+    c1, c2, c3 = st.columns([2, 2, 4])
+    with c1:
+        # Mặc định lấy từ đầu tháng hiện tại
+        start_date = st.date_input("Từ ngày", value=date.today().replace(day=1), key="chart_start")
+    with c2:
+        end_date = st.date_input("Đến ngày", value=date.today(), key="chart_end")
+        
+    if st.button("📊 Phân tích dữ liệu", type="primary"):
+        with st.spinner("Đang vẽ biểu đồ..."):
+            history_df = get_cached_history(service)
+            
+            if history_df is None or history_df.empty:
+                st.warning("Chưa có dữ liệu giao dịch để phân tích.")
+            else:
+                # 2. CHUẨN HÓA DỮ LIỆU
+                df = history_df.copy()
+                # Xử lý tên cột tránh khoảng trắng ẩn
+                df.columns = [str(c).strip() for c in df.columns]
+                
+                # Chuyển đổi ngày tháng để so sánh
+                df['date_parsed'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
+                df['just_date'] = df['date_parsed'].dt.date
+                
+                # Ép kiểu dữ liệu cho tính toán
+                df['Loại'] = df['Loại'].astype(str).str.strip().str.capitalize()
+                
+                # Tương thích với các định dạng tên cột số lượng (Số lượng hoặc Số Lượng)
+                col_qty = 'Số Lượng' if 'Số Lượng' in df.columns else 'Số lượng'
+                df['Số lượng'] = pd.to_numeric(df[col_qty], errors='coerce').fillna(0)
+                
+                # Lọc dữ liệu theo khoảng thời gian
+                mask = (df['just_date'] >= start_date) & (df['just_date'] <= end_date)
+                df_filtered = df[mask].copy()
+                
+                if df_filtered.empty:
+                    st.error("Không có giao dịch nào trong khoảng thời gian bạn chọn.")
+                else:
+                    # ==============================================================
+                    # BIỂU ĐỒ 1: ĐƯỜNG XU HƯỚNG THEO THỜI GIAN
+                    # ==============================================================
+                    st.markdown("---")
+                    st.subheader("📉 Xu hướng Nhập/Xuất theo thời gian")
+                    
+                    # Gom nhóm tính tổng số lượng theo Ngày và Loại (Nhập/Xuất)
+                    daily_trend = df_filtered.groupby(['just_date', 'Loại'])['Số lượng'].sum().reset_index()
+                    daily_trend.rename(columns={'just_date': 'Ngày'}, inplace=True)
+                    
+                    # Cấu hình biểu đồ đường
+                    fig_line = px.line(
+                        daily_trend, 
+                        x='Ngày', 
+                        y='Số lượng', 
+                        color='Loại', 
+                        markers=True, # Hiển thị chấm tròn trên đường
+                        color_discrete_map={"Nhập": "#28a745", "Xuất": "#dc3545"}, # Xanh lá cho Nhập, Đỏ cho Xuất
+                        labels={"Số lượng": "Tổng số lượng", "Ngày": "Thời gian giao dịch"},
+                        title="Tổng lưu lượng hàng hóa giao dịch theo ngày"
+                    )
+                    # Cải thiện giao diện lưới
+                    fig_line.update_layout(xaxis_title="", hovermode="x unified")
+                    st.plotly_chart(fig_line, use_container_width=True)
+                    
+                    # ==============================================================
+                    # BIỂU ĐỒ 2: CỘT TOP HÀNG HÓA GIAO DỊCH NHIỀU NHẤT
+                    # ==============================================================
+                    st.markdown("---")
+                    st.subheader("📊 Top mặt hàng có lưu lượng giao dịch lớn nhất")
+                    
+                    # 1. Tự động nhận diện tên cột chứa thông tin hàng hóa
+                    col_item = 'Mã hàng' # Dự phòng mặc định
+                    possible_names = ['Tên hàng hóa', 'Tên Hàng Hóa', 'Tên hàng', 'Tên HH', 'Sản phẩm', 'Mã hàng', 'Mã hàng hóa']
+                    for name in possible_names:
+                        if name in df_filtered.columns:
+                            col_item = name
+                            break
+                    
+                    # 2. Gom nhóm tính tổng số lượng theo Tên (hoặc Mã) và Loại
+                    item_trend = df_filtered.groupby([col_item, 'Loại'])['Số lượng'].sum().reset_index()
+                    
+                    # 3. Chỉ lấy Top 10 mặt hàng có TỔNG lưu lượng cao nhất
+                    top_items = item_trend.groupby(col_item)['Số lượng'].sum().nlargest(10).index
+                    item_trend_top = item_trend[item_trend[col_item].isin(top_items)]
+                    
+                    # 4. Vẽ biểu đồ
+                    fig_bar = px.bar(
+                        item_trend_top, 
+                        x=col_item, 
+                        y='Số lượng', 
+                        color='Loại', 
+                        barmode='group',
+                        color_discrete_map={"Nhập": "#28a745", "Xuất": "#dc3545"},
+                        labels={"Số lượng": "Số lượng", col_item: "Hàng hóa"},
+                        title="So sánh Nhập - Xuất của Top 10 mặt hàng"
+                    )
+                    fig_bar.update_layout(xaxis_tickangle=-45) 
+                    st.plotly_chart(fig_bar, use_container_width=True)
 
 # --- TAB 6: QUẢN LÝ NHÂN VIÊN ---
 elif st.session_state.current_menu == "Quản lý nhân viên":
@@ -776,7 +865,7 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                     products_data = [row[:5] for row in products]
                     pd.DataFrame(products_data, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn"]).to_excel(writer, index=False, sheet_name="Danh_Muc_Ton")
                 
-                if history is not None and not history.empty: # history là Dataframe
+                if history is not None and not history.empty: 
                     history.to_excel(writer, index=False, sheet_name="Lich_Su_Giao_Dich")
                 
                 if employees:
