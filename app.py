@@ -564,7 +564,7 @@ elif st.session_state.current_menu == "In phiếu xuất":
 
 # --- TAB MỚI: THỐNG KÊ NHẬP KHO ---
 elif st.session_state.current_menu == "Thống kê nhập kho":
-    st.header("📊 Thống kê tần suất nhập kho")
+    st.header("📊 Thống kê Bộ phận nhập kho")
     
     col1, col2 = st.columns(2)
     with col1:
