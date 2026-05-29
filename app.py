@@ -198,7 +198,7 @@ if "logged_in" not in st.session_state:
     else:
         st.session_state.logged_in = False
         st.session_state.user_name = None
-        st.session_state.current_menu = "Danh mục hàng"
+        st.session_state.current_menu = "Danh mục vật tư"
 
 # --- KHÓA MÀN HÌNH ĐĂNG NHẬP NẾU CHƯA LOGGED_IN ---
 if not st.session_state.logged_in:
