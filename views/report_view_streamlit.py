@@ -113,6 +113,21 @@ def export_to_excel(df, end_date):
 
     return buffer.getvalue()
 
+def export_history_to_excel(df):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='LichSu')
+        ws = writer.sheets['LichSu']
+        header_fill = PatternFill(start_color='0070C0', end_color='0070C0', fill_type='solid')
+        header_font = Font(bold=True, color='FFFFFF')
+        for col in range(1, ws.max_column + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+            ws.column_dimensions[get_column_letter(col)].width = 18
+    return buffer.getvalue()
+
 def show_report():
     st.subheader("Báo cáo tồn kho")
     
