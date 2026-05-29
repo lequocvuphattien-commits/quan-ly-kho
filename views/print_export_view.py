@@ -186,6 +186,11 @@ def show_print_export_view(service):
     
     # Lấy dữ liệu từ Google Sheets
     history = service.get_history()
+    # [THÊM ĐOẠN NÀY ĐỂ DỊCH CHUYỂN NGÀY VỀ MỐC 6H SÁNG]
+    if not history.empty:
+        history['date_obj'] = pd.to_datetime(history['Ngày'], dayfirst=True, errors='coerce')
+        # Dịch lùi 6 tiếng: 05:59 ngày 30/05 sẽ thành 23:59 ngày 29/05
+        history['Ngày_Kho'] = (history['date_obj'] - pd.Timedelta(hours=6)).dt.strftime('%d/%m/%Y')
     products = service.get_products()
     
     history_data = service.get_history()
