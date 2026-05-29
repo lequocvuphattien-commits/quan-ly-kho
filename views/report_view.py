@@ -28,15 +28,15 @@ class ReportView(ttk.Frame):
         
         ttk.Button(filter_frame, text="Lọc báo cáo", command=self.load_report).pack(side="left", padx=10)
         
-        # --- BẢNG DỮ LIỆU ---
+        # --- BẢNG DỮ LIỆU --- Bổ sung "Note" (Ghi chú)
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True, padx=10, pady=10)
         
-        cols = ("Code", "Name", "Unit", "Open", "In", "Out", "Close")
+        cols = ("Code", "Name", "Unit", "Open", "In", "Out", "Close", "Note")
         self.tree = ttk.Treeview(container, columns=cols, show="headings")
         self.tree.pack(side="top", fill="both", expand=True)
         
-        titles = ["Mã HH", "Tên Hàng", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
+        titles = ["Mã HH", "Tên Hàng", "Đvt", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối", "Ghi chú"]
         for i, col in enumerate(cols):
             self.tree.heading(col, text=titles[i])
             self.tree.column(col, width=100, anchor="center")
@@ -56,11 +56,16 @@ class ReportView(ttk.Frame):
             dau, nhap, xuat = self.t_controller.get_product_stats_by_date(p.id, start, end)
             cuoi = dau + nhap - xuat
             tags = ('low_stock',) if cuoi < 5 else ()
+            
+            # Lấy trường ghi chú một cách an toàn
+            ghi_chu = getattr(p, 'note', '')
+            
             self.tree.insert("", "end", values=(p.code, p.name, p.unit, 
                                                Product.format_number(dau), 
                                                Product.format_number(nhap), 
                                                Product.format_number(xuat), 
-                                               Product.format_number(cuoi)), tags=tags)
+                                               Product.format_number(cuoi),
+                                               ghi_chu), tags=tags)
 
     def export_excel(self):
         start = self.cal_start.get_date().strftime("%Y-%m-%d 00:00:00")
@@ -69,13 +74,14 @@ class ReportView(ttk.Frame):
         report_data = []
         for p in self.p_controller.get_all_products():
             dau, nhap, xuat = self.t_controller.get_product_stats_by_date(p.id, start, end)
-            report_data.append([p.code, p.name, p.unit, dau, nhap, xuat, dau + nhap - xuat])
+            ghi_chu = getattr(p, 'note', '')
+            report_data.append([p.code, p.name, p.unit, dau, nhap, xuat, dau + nhap - xuat, ghi_chu])
         
         if not report_data:
             messagebox.showwarning("Thông báo", "Không có dữ liệu!")
             return
             
-        df = pd.DataFrame(report_data, columns=["Mã HH", "Tên Hàng", "Đvt", "Tồn đầu", "Nhập", "Xuất", "Tồn cuối"])
+        df = pd.DataFrame(report_data, columns=["Mã HH", "Tên Hàng", "Đvt", "Tồn đầu", "Nhập", "Xuất", "Tồn cuối", "Ghi chú"])
         
         file_name = "BaoCao_TonKho.xlsx"
         try:

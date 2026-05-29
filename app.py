@@ -264,37 +264,26 @@ if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
     products = get_cached_products(service)
     if products:
-        # 1. THÊM CỘT "Mức tối thiểu" VÀO DATAFRAME
-        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"])
+        # 1. THÊM CỘT "Mức tối thiểu" VÀ "Ghi chú" VÀO DATAFRAME
+        df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu", "Ghi chú"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
        # ==============================================================
         # CẤU HÌNH ĐỘ RỘNG CỘT VÀ CHỨC NĂNG SỬA CHO BẢNG DANH MỤC HÀNG
         # ==============================================================
-        # Đưa toàn bộ df vào (không cắt bỏ cột ID)
         gb = GridOptionsBuilder.from_dataframe(df)
         
-        # 1. THÊM LẠI editable=True để cho phép chỉnh sửa toàn bộ các cột mặc định
         gb.configure_default_column(sortable=True, filter=True, resizable=True, editable=True)
-        
-        # 2. ẨN cột ID đi (Vẫn giữ trong data để code đối chiếu lưu, nhưng không hiện lên màn hình)
         gb.configure_column("ID", hide=True)
-        
-        # 3. Căn chỉnh kích thước riêng cho từng cột
         gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
-        
-        # Cột Tên hàng hóa được flex=1 để tự động giãn dài ra
         gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
-        
         gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
         gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold', 'color': '#28a745'})
         gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
-        
-        # Ép kiểu và thu gọn cột Mức tối thiểu
         gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, type=["numericColumn"], valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
+        gb.configure_column("Ghi chú", minWidth=150, editable=True, cellStyle={'textAlign': 'left'})
 
-        # 4. GỌI AGGRID (Truyền toàn bộ df vào)
         grid_response = AgGrid(
             df, 
             gridOptions=gb.build(), 
@@ -310,10 +299,8 @@ if st.session_state.current_menu == "Danh mục hàng":
         changes_to_save = [] # BẮT BUỘC KHỞI TẠO Ở NGOÀI CÙNG
         
         if grid_response['data'] is not None:
-            # Chuyển đổi dữ liệu trả về thành DataFrame một cách an toàn
             edited_df = pd.DataFrame(grid_response['data'])
             
-            # Hàm ép kiểu an toàn
             def to_float(val):
                 try: return float(val)
                 except: return 0.0
@@ -322,35 +309,35 @@ if st.session_state.current_menu == "Danh mục hàng":
                 for i in range(len(edited_df)):
                     ma = str(edited_df.iloc[i]["Mã"]).strip()
                     
-                    # Tìm dòng gốc dựa trên Mã
                     orig_row = df[df["Mã"].astype(str).str.strip() == ma]
                     if orig_row.empty: continue
                     orig_row = orig_row.iloc[0]
                     
-                    # Trích xuất giá trị (Dùng .get() để tránh lỗi nếu thiếu cột)
                     ten_moi = str(edited_df.iloc[i].get("Tên hàng hóa", "")).strip()
                     dvt_moi = str(edited_df.iloc[i].get("Đvt", "")).strip()
                     nhom_moi = str(edited_df.iloc[i].get("Nhóm", "")).strip()
                     muc_moi = to_float(edited_df.iloc[i].get("Mức tối thiểu", 0))
+                    ghi_chu_moi = str(edited_df.iloc[i].get("Ghi chú", "")).strip()
                     
                     ten_cu = str(orig_row.get("Tên hàng hóa", "")).strip()
                     dvt_cu = str(orig_row.get("Đvt", "")).strip()
                     nhom_cu = str(orig_row.get("Nhóm", "")).strip()
                     muc_cu = to_float(orig_row.get("Mức tối thiểu", 0))
+                    ghi_chu_cu = str(orig_row.get("Ghi chú", "")).strip()
                     
-                    # LOGIC SO SÁNH (Sử dụng abs để kiểm tra số thực)
+                    # LOGIC SO SÁNH (Thêm điều kiện kiểm tra cột Ghi chú)
                     is_changed = (
                         ten_moi != ten_cu or 
                         dvt_moi != dvt_cu or 
                         nhom_moi != nhom_cu or 
-                        abs(muc_moi - muc_cu) > 0.001
+                        abs(muc_moi - muc_cu) > 0.001 or
+                        ghi_chu_moi != ghi_chu_cu
                     )
                     
-                    # Nếu có thay đổi, mới thêm vào danh sách
                     if is_changed:
                         changes_to_save.append({
                             "Mã": ma, "Tên": ten_moi, "Đvt": dvt_moi, 
-                            "Nhóm": nhom_moi, "Mức": muc_moi
+                            "Nhóm": nhom_moi, "Mức": muc_moi, "Ghi chú": ghi_chu_moi
                         })
 
         # ==============================================================
@@ -363,7 +350,8 @@ if st.session_state.current_menu == "Danh mục hàng":
             if st.button("💾 Lưu thay đổi vào Google Sheets", type="primary"):
                 with st.spinner("Đang cập nhật..."):
                     for item in changes_to_save:
-                        service.update_product(item["Mã"], item["Tên"], item["Đvt"], item["Nhóm"], item["Mức"])
+                        # Truyền thêm cột Ghi Chú vào DataService
+                        service.update_product(item["Mã"], item["Tên"], item["Đvt"], item["Nhóm"], item["Mức"], item["Ghi chú"])
                 
                 st.cache_data.clear() # Xóa cache để tải dữ liệu mới nhất từ Sheet
                 st.success("🎉 Cập nhật thành công!")
@@ -378,9 +366,8 @@ if st.session_state.current_menu == "Danh mục hàng":
                 unit = st.text_input("Đơn vị tính")
                 danh_sach_nhom = ["Vật tư", "Dụng cụ sản xuất", "Phụ gia", "Bao bì", "PE", "Khác"]
                 group = st.selectbox("Chọn nhóm hàng", danh_sach_nhom)
-                
-                # 3. THÊM Ô NHẬP "MỨC TỐI THIỂU"
                 min_stock = st.number_input("Mức tồn tối thiểu để cảnh báo", min_value=0, value=10, step=1)
+                note = st.text_input("Ghi chú")
                 
                 if st.form_submit_button("Thêm hàng hóa"):
                     if not code or not name: 
@@ -388,8 +375,8 @@ if st.session_state.current_menu == "Danh mục hàng":
                     elif service.check_product_exists(code.upper()): 
                         st.error("Mã đã tồn tại!")
                     else:
-                        # 4. TRUYỀN THÊM min_stock VÀO HÀM
-                        service.add_product(code.upper(), name, unit, group, min_stock)
+                        # Thêm tham số note (Ghi chú) vào hàm
+                        service.add_product(code.upper(), name, unit, group, min_stock, note)
                         
                         st.cache_data.clear()
                         st.success("Đã thêm thành công!")
@@ -413,13 +400,10 @@ if st.session_state.current_menu == "Danh mục hàng":
                 if st.button("🗑️ Xóa hàng này", use_container_width=True):
                     history = get_cached_history(service)
                     
-                    # SỬA LỖI: Kiểm tra giao dịch trực tiếp trên Pandas DataFrame
                     has_transaction = False
                     if isinstance(history, pd.DataFrame) and not history.empty:
-                        # Lấy đúng tên cột chứa mã hàng
                         col_ma = "Mã HH" if "Mã HH" in history.columns else "Mã"
                         if col_ma in history.columns:
-                            # Quét xem mã hàng xóa (del_code) có nằm trong cột Mã không
                             has_transaction = str(del_code).strip() in history[col_ma].astype(str).str.strip().values
                     
                     if current_stock != 0:
@@ -489,7 +473,6 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                     st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
-                    # SỬA LỖI ĐỔI "Ghi chú" THÀNH "Diễn Giải"
                     st.session_state.cart.append({
                         "Mã HH": p_dict[selected]["Mã"], 
                         "Tên HH": p_dict[selected]["Tên"], 

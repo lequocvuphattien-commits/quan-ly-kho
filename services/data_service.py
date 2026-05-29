@@ -94,10 +94,10 @@ class DataService:
         products = self.get_products()
         return any(str(p[1]).strip().lower() == str(product_code).strip().lower() for p in products)
 
-    def add_product(self, code, name, unit, group, min_level):
+    def add_product(self, code, name, unit, group, min_level, ghi_chu=""):
         new_id = str(uuid.uuid4())[:8].upper()
-        # Đẩy dữ liệu mới vào với 7 cột
-        self.sheet_products.append_row([new_id, code, name, unit, 0.0, group, min_level])
+        # Đẩy dữ liệu mới vào với 8 cột để khớp file Google Sheets
+        self.sheet_products.append_row([new_id, code, name, unit, 0.0, group, min_level, ghi_chu])
         
         try:
             all_data = self.sheet_products.get_all_values()
@@ -105,8 +105,8 @@ class DataService:
                 product_rows = [row for row in all_data[1:] if any(str(cell).strip() for cell in row)]
                 product_rows.sort(key=lambda x: str(x[2]).strip().lower() if len(x) > 2 else "")
                 
-                # BƯỚC BẢO VỆ 3: Đổi số 6 thành số 7 để bảo toàn cột Mức tối thiểu
-                cleaned_rows = [row + [""] * (7 - len(row)) for row in product_rows]
+                # BƯỚC BẢO VỆ: Đổi thành 8 để bảo toàn cả cột Ghi chú
+                cleaned_rows = [row + [""] * (8 - len(row)) for row in product_rows]
                 
                 try:
                     self.sheet_products.update(values=cleaned_rows, range_name="A2") 
@@ -123,7 +123,6 @@ class DataService:
         for i, row in enumerate(data):
             # Thêm điều kiện len(row) > 1 để chống lỗi văng App do dòng trống
             if len(row) > 1 and str(row[1]).strip() == str(product_id).strip():
-                # SỬA LỖI ĐỔI TÊN SHEET: sheet_transactions -> sheet_products
                 self.sheet_products.delete_rows(i + 1)
                 return True
         return False
@@ -135,9 +134,9 @@ class DataService:
             if len(data) > 1:
                 results = []
                 for row in data[1:]:
-                    # Bù đủ 7 cột: ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu
-                    if len(row) < 7:
-                        row += ["0"] * (7 - len(row))
+                    # Bù đủ 8 cột: ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu, Ghi chú
+                    if len(row) < 8:
+                        row += [""] * (8 - len(row))
                     
                     # Nếu ô Mức tối thiểu trên Google Sheets bỏ trống, ép về 0 (thay vì lỗi)
                     if str(row[6]).strip() == "":
@@ -150,7 +149,7 @@ class DataService:
             print(f"Lỗi khi tải danh sách hàng hóa: {e}")
             return []
 
-    def update_product(self, product_code, new_name, new_unit, new_group, new_min_level):
+    def update_product(self, product_code, new_name, new_unit, new_group, new_min_level, new_ghi_chu):
         try:
             data = self.sheet_products.get_all_values()
             for i, row in enumerate(data):
@@ -161,6 +160,7 @@ class DataService:
                     self.sheet_products.update_cell(i + 1, 4, str(new_unit))
                     self.sheet_products.update_cell(i + 1, 6, str(new_group))
                     self.sheet_products.update_cell(i + 1, 7, val_min)
+                    self.sheet_products.update_cell(i + 1, 8, new_ghi_chu)
                     return True
             return False
         except Exception as e:

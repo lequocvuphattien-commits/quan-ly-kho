@@ -10,8 +10,8 @@ from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from openpyxl.styles import PatternFill, Font
 
 def export_to_excel(df):
-    # 1. BỎ CỘT AUTO_UNIQUE_ID (nếu có) VÀ CHỈ LẤY CÁC CỘT CẦN THIẾT
-    expected_cols = ["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
+    # 1. BỎ CỘT AUTO_UNIQUE_ID (nếu có) VÀ CHỈ LẤY CÁC CỘT CẦN THIẾT - BỔ SUNG GHI CHÚ
+    expected_cols = ["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối", "Ghi chú"]
     available_cols = [col for col in expected_cols if col in df.columns]
     df_export = df[available_cols].copy()
 
@@ -179,7 +179,7 @@ def show_report():
             # =========================================================
             product_list = []
             for p in products:
-                # p là mảng 7 phần tử: [ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu]
+                # p là mảng 8 phần tử: [ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu, Ghi chú]
                 p_id = p[0]
                 p_code = str(p[1]).strip()
                 p_name = p[2]
@@ -190,10 +190,13 @@ def show_report():
                 # Trích xuất Mức tối thiểu chính xác từ Google Sheets (Cột số 7)
                 min_stock = float(p[6]) if len(p) > 6 and str(p[6]).strip() != "" else 0.0
                 
-                product_list.append([p_id, p_code, p_name, p_unit, p_stock, p_group, min_stock])
+                # Bổ sung Ghi chú (Cột số 8)
+                p_note = str(p[7]).strip() if len(p) > 7 else ""
+                
+                product_list.append([p_id, p_code, p_name, p_unit, p_stock, p_group, min_stock, p_note])
             
-            # Đưa vào DataFrame và thêm tên cột Nhóm, Mức tối thiểu
-            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu"])
+            # Đưa vào DataFrame và thêm tên cột Nhóm, Mức tối thiểu, Ghi chú
+            df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu", "Ghi chú"])
             df_products['Tồn Hiện Tại'] = pd.to_numeric(df_products['Tồn Hiện Tại'], errors='coerce').fillna(0)
             df_products['Mức tối thiểu'] = pd.to_numeric(df_products['Mức tối thiểu'], errors='coerce').fillna(0)
             df_products['Mã HH'] = df_products['Mã HH'].astype(str).str.strip().str.upper()
@@ -209,8 +212,8 @@ def show_report():
             df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Lũy_Kế'] + df_report['Xuất_Lũy_Kế']
             df_report['Tồn Cuối'] = df_report['Tồn Đầu'] + df_report['Nhập'] - df_report['Xuất']
             
-            # Định hình lại các cột hiển thị: Kéo cột Nhóm lên đứng đầu tiên và bổ sung Mức tối thiểu
-            df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
+            # Định hình lại các cột hiển thị: Kéo cột Nhóm lên đứng đầu tiên, Ghi chú xếp cuối cùng sau Tồn Cuối
+            df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối", "Ghi chú"]]
             
             # =================================================================
             # --- [NÂNG CẤP]: HIỂN THỊ CẢNH BÁO HÀNG SẮP HẾT (DẠNG THU GỌN) ---
@@ -249,6 +252,9 @@ def show_report():
             gb.configure_column("Mã HH", minWidth=60, maxWidth=120, cellStyle={'textAlign': 'center'})
             gb.configure_column("Tên hàng hóa", minWidth=150, cellStyle={'textAlign': 'left'})
             gb.configure_column("Đvt", minWidth=60, maxWidth=100, cellStyle={'textAlign': 'center'})
+            
+            # Thiết lập hiển thị cho cột Ghi Chú
+            gb.configure_column("Ghi chú", minWidth=120, cellStyle={'textAlign': 'left'})
 
             # Cấu hình định dạng số cho tất cả các cột tính toán (Bao gồm cả Mức tối thiểu)
             for col_name in ["Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]:
