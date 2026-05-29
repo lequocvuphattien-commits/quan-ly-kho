@@ -3,7 +3,8 @@ import pandas as pd
 import io
 from openpyxl.utils import get_column_letter
 from controllers.transaction_controller import TransactionController
-from controllers.product_controller import ProductController
+# Import DataService thay cho ProductController
+from services.data_service import DataService 
 from datetime import date  
 from st_aggrid import AgGrid, GridOptionsBuilder
 
@@ -78,11 +79,12 @@ def show_report():
     if st.session_state.clicked_report_filter:
         with st.spinner('Đang kết nối và xử lý dữ liệu...'):
             
-            p_controller = ProductController()
+            # --- THAY THẾ Ở ĐÂY: GỌI DATASERVICE ---
+            service = DataService()
             t_controller = TransactionController()
             
-            # Lấy danh mục hàng hóa từ ProductController
-            products = p_controller.get_all_products()
+            # Lấy danh mục hàng hóa (trả về danh sách mảng thuần túy)
+            products = service.get_products()
             
             # Thêm .copy() để cô lập hoàn toàn bảng dữ liệu, tránh lem cột sang tab Lịch Sử
             df_h = t_controller.get_transaction_history().copy() 
@@ -124,12 +126,23 @@ def show_report():
             else:
                 pivot_period = pd.DataFrame(columns=['Nhập', 'Xuất'])
             
+            # =========================================================
             # --- KHỞI TẠO KHUNG BÁO CÁO TỪ SHEET PRODUCTS ---
+            # =========================================================
             product_list = []
             for p in products:
-                # Trích xuất Mức tối thiểu an toàn (nếu class Product chưa được cập nhật kịp thì mặc định là 10)
-                min_stock = getattr(p, 'min_level', 0) 
-                product_list.append([p.id, p.code, p.name, p.unit, p.stock, p.group, min_stock])
+                # p là mảng 7 phần tử: [ID, Mã, Tên, Đvt, Tồn, Nhóm, Mức tối thiểu]
+                p_id = p[0]
+                p_code = str(p[1]).strip()
+                p_name = p[2]
+                p_unit = p[3]
+                p_stock = p[4]
+                p_group = p[5] if len(p) > 5 else ""
+                
+                # Trích xuất Mức tối thiểu chính xác từ Google Sheets (Cột số 7)
+                min_stock = float(p[6]) if len(p) > 6 and str(p[6]).strip() != "" else 0.0
+                
+                product_list.append([p_id, p_code, p_name, p_unit, p_stock, p_group, min_stock])
             
             # Đưa vào DataFrame và thêm tên cột Nhóm, Mức tối thiểu
             df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu"])
@@ -157,8 +170,8 @@ def show_report():
             st.markdown("---")
             st.subheader("🚨 Cảnh báo mức tồn kho")
             
-            # Lọc ra các mặt hàng có Tồn Cuối <= Mức tối thiểu
-            df_canh_bao = df_report[df_report["Tồn Cuối"] <= df_report["Mức tối thiểu"]]
+            # Lọc ra các mặt hàng có Tồn Cuối <= Mức tối thiểu (loại trừ các hàng có Mức tối thiểu = 0)
+            df_canh_bao = df_report[(df_report["Tồn Cuối"] <= df_report["Mức tối thiểu"]) & (df_report["Mức tối thiểu"] > 0)]
             
             if not df_canh_bao.empty:
                 st.error(f"⚠️ Chú ý: Đang có **{len(df_canh_bao)}** mặt hàng chạm mức cảnh báo!")

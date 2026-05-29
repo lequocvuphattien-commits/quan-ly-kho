@@ -288,8 +288,7 @@ if st.session_state.current_menu == "Danh mục hàng":
             update_mode='MODEL_CHANGED', # Thay cho update_on để ổn định hơn
             data_return_mode='AS_INPUT', # Dùng 'AS_INPUT' thường ổn định hơn cho việc lấy dữ liệu đã edit
             height=400,
-            key="products_grid")
-        changes_to_save = []    
+            key="products_grid") 
 
         # 2. KHỐI LOGIC QUÉT THAY ĐỔI (Đảm bảo an toàn)
         if grid_response['data'] is not None:
@@ -339,7 +338,7 @@ if st.session_state.current_menu == "Danh mục hàng":
                     nhom_moi != nhom_cu or 
                     abs(muc_moi - muc_cu) > 0.001
                 )
-                
+                changes_to_save = []   
                 if is_changed:
                     has_changes = True
                     changes_to_save.append({
