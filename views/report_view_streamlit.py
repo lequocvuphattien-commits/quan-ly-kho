@@ -335,3 +335,41 @@ def show_report():
                 data=export_to_excel(df_report, end_date), 
                 file_name=f"BaoCaoTonKho_{end_date.strftime('%d%m%Y')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            
+def get_count_import_by_department(service, start_date, end_date):
+    """Tính số lần nhập kho theo Bộ phận (cột I trong Transactions)"""
+    history_df = service.get_history()
+    if history_df is None or history_df.empty:
+        return pd.DataFrame()
+
+    df = history_df.copy()
+    # Chuyển Ngày thành datetime
+    df['date_obj'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
+    # Áp dụng quy tắc mốc 06:00 sáng
+    df['Ngày_Kho'] = (df['date_obj'] - pd.Timedelta(hours=6)).dt.date
+    
+    # 1. Lọc chỉ lấy giao dịch NHẬP
+    df_nhap = df[df['Loại'].astype(str).str.strip().str.upper() == 'NHẬP'].copy()
+    
+    # 2. Lọc theo khoảng thời gian
+    start = pd.to_datetime(start_date).date()
+    end = pd.to_datetime(end_date).date()
+    df_nhap = df_nhap[(df_nhap['Ngày_Kho'] >= start) & (df_nhap['Ngày_Kho'] <= end)]
+    
+    # 3. Sử dụng cột 'Bộ phận' để thống kê
+    # Đảm bảo tên cột khớp với file Google Sheets của bạn (ví dụ: 'Bộ phận')
+    col_bp = 'Bộ phận' 
+    
+    if col_bp not in df_nhap.columns:
+        # Nếu cột không tồn tại, trả về thông báo lỗi
+        return pd.DataFrame(columns=[col_bp, 'Số lần nhập'])
+
+    # Điền giá trị rỗng nếu cột 'Bộ phận' có ô trống
+    df_nhap[col_bp] = df_nhap[col_bp].fillna("Chưa xác định")
+    
+    # 4. Loại bỏ trùng lặp: Cùng ngày và cùng bộ phận chỉ tính 1 lần
+    df_unique = df_nhap.drop_duplicates(subset=['Ngày_Kho', col_bp])
+    
+    # 5. Đếm số lần nhập theo bộ phận
+    report = df_unique.groupby(col_bp).size().reset_index(name='Số lần nhập')
+    return report

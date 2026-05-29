@@ -8,7 +8,7 @@ from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
-from views.report_view_streamlit import show_report, export_history_to_excel
+from views.report_view_streamlit import show_report, export_history_to_excel, get_count_import_by_department
 from datetime import date
 
 if "user_role" not in st.session_state:
@@ -240,7 +240,7 @@ if st.sidebar.button("Đăng xuất", key="logout_btn"):
     st.rerun()
 
 # --- ĐƯA MENU QUAY TRỞ LẠI MÀN HÌNH CHÍNH (ĐỂ KHÔNG BỊ MẤT) ---
-menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất"]
+menu_options = ["Danh mục hàng", "Nhập/Xuất Kho", "Báo cáo tồn kho", "Lịch sử giao dịch", "In phiếu xuất", "Thống kê nhập kho"]
 if st.session_state.get("user_role") == "Quản lý":
     menu_options.append("Quản lý nhân viên")
     menu_options.append("Sao lưu dữ liệu")
@@ -562,9 +562,36 @@ elif st.session_state.current_menu == "Báo cáo tồn kho":
 elif st.session_state.current_menu == "In phiếu xuất":
     show_print_export_view(service)
 
+# --- TAB MỚI: THỐNG KÊ NHẬP KHO ---
+elif st.session_state.current_menu == "Thống kê nhập kho":
+    st.header("📊 Thống kê tần suất nhập kho")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        s_date = st.date_input("Từ ngày", key="rep_s")
+    with col2:
+        e_date = st.date_input("Đến ngày", key="rep_e")
+        
+    if st.button("Xem thống kê", type="primary"):
+        # Gọi hàm tính toán
+        df_freq = get_count_import_by_department(service, s_date, e_date)
+        
+        if not df_freq.empty:
+            st.table(df_freq)
+            
+            # Xuất Excel cho bảng thống kê này
+            st.download_button(
+                label="📥 Xuất thống kê ra Excel",
+                data=export_history_to_excel(df_freq), # Tái sử dụng hàm xuất đã có
+                file_name=f"ThongKeNhapKho_{s_date.strftime('%d%m%Y')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.info("Không có dữ liệu nhập kho trong khoảng thời gian này.")
+
 # --- TAB 5: LỊCH SỬ GIAO DỊCH ---
 elif st.session_state.current_menu == "Lịch sử giao dịch":
-    st.header("📜 Lịch sử giao dịch")
+    st.subheader("📜 Lịch sử giao dịch")
     
     if 't_controller' not in st.session_state:
         st.session_state.t_controller = TransactionController()
