@@ -6,16 +6,64 @@ from controllers.transaction_controller import TransactionController
 # Import DataService thay cho ProductController
 from services.data_service import DataService 
 from datetime import date  
-from st_aggrid import AgGrid, GridOptionsBuilder
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from openpyxl.styles import PatternFill, Font
 
 def export_to_excel(df):
+    # 1. BỎ CỘT AUTO_UNIQUE_ID (nếu có) VÀ CHỈ LẤY CÁC CỘT CẦN THIẾT
+    expected_cols = ["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]
+    available_cols = [col for col in expected_cols if col in df.columns]
+    df_export = df[available_cols].copy()
+
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data')
+        df_export.to_excel(writer, index=False, sheet_name='Data')
         ws = writer.sheets['Data']
-        ws.freeze_panes = 'A2'
+        ws.freeze_panes = 'A2' # Đóng băng dòng tiêu đề
+        
+        # =========================================================
+        # [TÍNH NĂNG MỚI]: BẬT BỘ LỌC (FILTER) CHO TOÀN BỘ BẢNG
+        # =========================================================
+        ws.auto_filter.ref = ws.dimensions
+        
+        # Tự động điều chỉnh độ rộng cột
         for col in range(1, ws.max_column + 1):
             ws.column_dimensions[get_column_letter(col)].width = 15
+            
+        # =========================================================
+        # 2. TÔ MÀU ĐỎ CHO CÁC MẶT HÀNG CHẠM CẢNH BÁO TỒN KHO
+        # =========================================================
+        try:
+            # Tìm vị trí chính xác của cột "Mức tối thiểu" và "Tồn Cuối"
+            min_stock_col_idx = available_cols.index("Mức tối thiểu")
+            end_stock_col_idx = available_cols.index("Tồn Cuối")
+            
+            # Định nghĩa bộ màu chuẩn giống giao diện ứng dụng (Nền đỏ nhạt, Chữ đỏ đậm)
+            red_fill = PatternFill(start_color='FFE6E6', end_color='FFE6E6', fill_type='solid')
+            red_font = Font(color='D32F2F', bold=True)
+
+            # Quét qua từng dòng trong Excel (bắt đầu từ dòng 2 vì dòng 1 là tiêu đề)
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+                # Lấy giá trị của ô Tồn Cuối và Mức tối thiểu tại dòng hiện tại
+                min_val = row[min_stock_col_idx].value
+                end_val = row[end_stock_col_idx].value
+                
+                try:
+                    # Chuyển sang dạng số để so sánh an toàn
+                    v_min = float(min_val) if min_val is not None else 0.0
+                    v_end = float(end_val) if end_val is not None else 0.0
+                    
+                    # Nếu thỏa mãn điều kiện cảnh báo -> Tô màu nguyên cả dòng
+                    if v_end <= v_min and v_min > 0:
+                        for cell in row:
+                            cell.fill = red_fill
+                            cell.font = red_font
+                except (ValueError, TypeError):
+                    continue # Bỏ qua nếu dữ liệu ô bị lỗi (không phải số)
+                    
+        except ValueError:
+            pass # Nếu không tìm thấy cột thì bỏ qua bước tô màu
+
     return buffer.getvalue()
 
 def show_report():
@@ -165,7 +213,7 @@ def show_report():
             df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối"]]
             
             # =================================================================
-            # --- [NÂNG CẤP]: HIỂN THỊ CẢNH BÁO HÀNG SẮP HẾT ---
+            # --- [NÂNG CẤP]: HIỂN THỊ CẢNH BÁO HÀNG SẮP HẾT (DẠNG THU GỌN) ---
             # =================================================================
             st.markdown("---")
             st.subheader("🚨 Cảnh báo mức tồn kho")
@@ -174,12 +222,16 @@ def show_report():
             df_canh_bao = df_report[(df_report["Tồn Cuối"] <= df_report["Mức tối thiểu"]) & (df_report["Mức tối thiểu"] > 0)]
             
             if not df_canh_bao.empty:
+                # Vẫn giữ nguyên dòng báo đỏ để thu hút sự chú ý
                 st.error(f"⚠️ Chú ý: Đang có **{len(df_canh_bao)}** mặt hàng chạm mức cảnh báo!")
-                st.dataframe(
-                    df_canh_bao[["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Cuối", "Mức tối thiểu"]], 
-                    use_container_width=True, 
-                    hide_index=True
-                )
+                
+                # Bọc bảng dữ liệu vào trong một expander (khung ẩn/hiện)
+                with st.expander("👇 Bấm vào đây để xem chi tiết danh sách hàng hóa", expanded=False):
+                    st.dataframe(
+                        df_canh_bao[["Mã HH", "Tên hàng hóa", "Đvt", "Tồn Cuối", "Mức tối thiểu"]], 
+                        use_container_width=True, 
+                        hide_index=True
+                    )
             else:
                 st.success("✅ Tuyệt vời! Tất cả hàng hóa đều có số lượng tồn kho trên mức an toàn.")
                 
@@ -208,13 +260,33 @@ def show_report():
                     valueFormatter="Number(x).toLocaleString('en-US')",
                     cellStyle={'textAlign': 'right'})
             
+            # =================================================================
+            # --- THÊM TÍNH NĂNG TÔ MÀU DÒNG CẢNH BÁO BẰNG JSCODE ---
+            # =================================================================
+            row_style_jscode = JsCode("""
+            function(params) {
+                // Kiểm tra nếu có dữ liệu và Tồn Cuối <= Mức tối thiểu (Bỏ qua hàng nhóm và Hàng không có định mức)
+                if (params.data && params.data['Tồn Cuối'] <= params.data['Mức tối thiểu'] && params.data['Mức tối thiểu'] > 0) {
+                    return {
+                        'backgroundColor': '#ffe6e6', /* Màu nền đỏ nhạt */
+                        'color': '#d32f2f',           /* Chữ màu đỏ đậm */
+                        'fontWeight': 'bold'
+                    };
+                }
+                return null;
+            }
+            """)
+            gb.configure_grid_options(getRowStyle=row_style_jscode)
+            
             go = gb.build() 
+            
             # --- HIỂN THỊ AGGRID ---
             AgGrid(
                 df_report,
                 gridOptions=go,
                 fit_columns_on_grid_load=True,
                 theme='streamlit',
+                allow_unsafe_jscode=True, # Bắt buộc phải có dòng này để kích hoạt JsCode tô màu
                 height=650)
             
             # --- CÁC NÚT BẤM VÀ XUẤT EXCEL ---

@@ -270,17 +270,21 @@ if st.session_state.current_menu == "Danh mục hàng":
         df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
        # ==============================================================
-        # CẤU HÌNH ĐỘ RỘNG CỘT CHO BẢNG DANH MỤC HÀNG
+        # CẤU HÌNH ĐỘ RỘNG CỘT VÀ CHỨC NĂNG SỬA CHO BẢNG DANH MỤC HÀNG
         # ==============================================================
-        gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]])
+        # Đưa toàn bộ df vào (không cắt bỏ cột ID)
+        gb = GridOptionsBuilder.from_dataframe(df)
         
-        # 1. Bỏ flex=1 ở đây để các cột KHÔNG bị ép to bằng nhau
-        gb.configure_default_column(sortable=True, filter=True, resizable=True)
+        # 1. THÊM LẠI editable=True để cho phép chỉnh sửa toàn bộ các cột mặc định
+        gb.configure_default_column(sortable=True, filter=True, resizable=True, editable=True)
         
-        # 2. Căn chỉnh kích thước riêng cho từng cột cho ôm sát dữ liệu
+        # 2. ẨN cột ID đi (Vẫn giữ trong data để code đối chiếu lưu, nhưng không hiện lên màn hình)
+        gb.configure_column("ID", hide=True)
+        
+        # 3. Căn chỉnh kích thước riêng cho từng cột
         gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
         
-        # Cho phép riêng cột "Tên hàng hóa" dùng flex=1 để nó tự động giãn dài ra chiếm hết khoảng trống còn lại trên màn hình
+        # Cột Tên hàng hóa được flex=1 để tự động giãn dài ra
         gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
         
         gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
@@ -288,12 +292,11 @@ if st.session_state.current_menu == "Danh mục hàng":
         gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
         
         # Ép kiểu và thu gọn cột Mức tối thiểu
-        gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, editable=True, type=["numericColumn"], 
-                            valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
+        gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, type=["numericColumn"], valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
 
-        # 3. GỌI AGGRID
+        # 4. GỌI AGGRID (Truyền toàn bộ df vào)
         grid_response = AgGrid(
-            df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]], 
+            df, 
             gridOptions=gb.build(), 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
