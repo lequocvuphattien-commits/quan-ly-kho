@@ -337,55 +337,54 @@ def show_report():
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             
 def get_count_import_by_department(service, start_date, end_date):
-    """
-    Tính số lần nhập kho theo Bộ phận.
-    Thuật toán: Các dòng có cùng Bộ phận VÀ giống hệt chuỗi thời gian (Ngày giờ phút giây) 
-    thì chỉ được đếm là 1 lần nhập.
-    """
+    """Tính số lần nhập kho theo Bộ phận (cùng Giờ:Phút:Giây tính là 1 lần)"""
     history_df = service.get_history()
     if history_df is None or history_df.empty:
         return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
 
     df = history_df.copy()
     
-    # Chuẩn hóa tên cột để tránh lỗi do khoảng trắng thừa
+    # 1. Dọn dẹp tên cột tránh lỗi khoảng trắng ẩn
     df.columns = [str(col).strip() for col in df.columns]
     
-    # Kiểm tra các cột bắt buộc
-    if 'Ngày' not in df.columns or 'Loại' not in df.columns or 'Bộ phận' not in df.columns:
-        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
-
-    # 1. Lọc chỉ lấy các giao dịch NHẬP
-    df_nhap = df[df['Loại'].astype(str).str.strip().str.upper() == 'NHẬP'].copy()
-    if df_nhap.empty:
-        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
+    col_bp = 'Bộ phận'
+    col_date = 'Ngày'
+    col_type = 'Loại'
     
-    # 2. Xử lý khoảng thời gian (Chỉ dùng phần 'Ngày' để lọc start_date, end_date)
-    df_nhap['date_obj'] = pd.to_datetime(df_nhap['Ngày'], dayfirst=True, errors='coerce')
-    df_nhap['just_date'] = df_nhap['date_obj'].dt.date
+    if col_bp not in df.columns or col_date not in df.columns or col_type not in df.columns:
+        return pd.DataFrame(columns=[col_bp, 'Số lần nhập'])
+
+    # 2. Lọc chỉ lấy các giao dịch có Loại là 'NHẬP'
+    df_nhap = df[df[col_type].astype(str).str.strip().str.upper() == 'NHẬP'].copy()
+    if df_nhap.empty:
+        return pd.DataFrame(columns=[col_bp, 'Số lần nhập'])
+    
+    # 3. Chuyển cột Ngày sang định dạng datetime để lọc (Từ ngày - Đến ngày)
+    df_nhap['date_parsed'] = pd.to_datetime(df_nhap[col_date], dayfirst=True, errors='coerce')
+    df_nhap['just_date'] = df_nhap['date_parsed'].dt.date
     
     start = pd.to_datetime(start_date).date()
     end = pd.to_datetime(end_date).date()
     
-    # Lọc các dòng nằm trong khoảng ngày người dùng chọn trên giao diện
     df_nhap = df_nhap[(df_nhap['just_date'] >= start) & (df_nhap['just_date'] <= end)]
     if df_nhap.empty:
-        return pd.DataFrame(columns=['Bộ phận', 'Số lần nhập'])
+        return pd.DataFrame(columns=[col_bp, 'Số lần nhập'])
 
-    # 3. Chuẩn hóa tên Bộ phận (tránh trường hợp ô trống)
-    df_nhap['Bộ phận'] = df_nhap['Bộ phận'].astype(str).str.strip().fillna("Chưa xác định")
-    df_nhap.loc[df_nhap['Bộ phận'] == "", 'Bộ phận'] = "Chưa xác định"
+    # 4. Chuẩn hóa tên Bộ phận (Đề phòng ô trống)
+    df_nhap[col_bp] = df_nhap[col_bp].astype(str).str.strip()
+    df_nhap.loc[df_nhap[col_bp] == "", col_bp] = "Chưa xác định"
     
-    # 4. THỰC HIỆN THUẬT TOÁN ĐẾM CHÍNH XÁC (Theo yêu cầu)
-    # Lấy chính xác chuỗi thời gian từ Google Sheets (ví dụ: "29/05/2026 10:15:00")
-    df_nhap['Thời_gian_chính_xác'] = df_nhap['Ngày'].astype(str).str.strip()
+    # 5. THUẬT TOÁN CỐT LÕI: Lấy chính xác chuỗi thời gian hiển thị
+    # Các dòng sinh ra cùng lúc từ nút "Xác nhận tất cả" sẽ có chung Thời_gian_chính_xác
+    df_nhap['Thời_gian_chính_xác'] = df_nhap[col_date].astype(str).str.strip()
 
-    # Cốt lõi: Xóa các dòng trùng lặp dựa trên 2 cột (Thời gian chính xác VÀ Bộ phận)
-    # ID 1,2,3 (10:15:00) -> Giữ lại dòng đầu tiên, xóa 2 dòng sau
-    # ID 4 (10:20:11) -> Giữ lại
-    df_unique = df_nhap.drop_duplicates(subset=['Thời_gian_chính_xác', 'Bộ phận'])
+    # Giữ lại 1 dòng duy nhất cho mỗi tổ hợp (Thời gian + Bộ phận)
+    df_unique = df_nhap.drop_duplicates(subset=['Thời_gian_chính_xác', col_bp])
     
-    # 5. Đếm tổng số dòng duy nhất còn lại theo từng Bộ phận
-    report = df_unique.groupby('Bộ phận').size().reset_index(name='Số lần nhập')
+    # 6. Đếm số lần nhập kho thực tế
+    report = df_unique.groupby(col_bp).size().reset_index(name='Số lần nhập')
+    
+    # Sắp xếp giảm dần theo Số lần nhập để CN Kho hiện lên đầu
+    report = report.sort_values(by='Số lần nhập', ascending=False).reset_index(drop=True)
     
     return report
