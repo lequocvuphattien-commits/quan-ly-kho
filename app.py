@@ -32,13 +32,18 @@ def confirm_delete(product_name, del_code, service):
     with col_yes:
         if st.button("✅ Yes"):
             service.delete_product(del_code)
+            
+            # --- ĐOẠN CODE BẠN QUÊN CHÈN ---
+            if "cached_products_list" in st.session_state:
+                del st.session_state["cached_products_list"]
+            # -------------------------------
+                
             st.cache_data.clear()
             st.success("Đã xóa!")
             st.rerun() 
     with col_no:
         if st.button("❌ No"):
             st.rerun()
-
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
 @st.dialog("Xác nhận xóa lịch sử")
@@ -263,14 +268,24 @@ if menu != st.session_state.current_menu:
 # --- TAB 1: DANH MỤC HÀNG ---
 if st.session_state.current_menu == "Danh mục hàng":
     st.subheader("📋 Danh mục hàng")
-    products = get_cached_products(service)
+    
+    # ==============================================================
+    # [TỐI ƯU TỐC ĐỘ]: LƯU TRỮ DỮ LIỆU VÀO BỘ NHỚ TẠM (SESSION STATE)
+    # ==============================================================
+    if "cached_products_list" not in st.session_state:
+        with st.spinner("Đang tải danh mục hàng hóa..."):
+            st.session_state.cached_products_list = get_cached_products(service)
+            
+    # Lấy dữ liệu siêu nhanh từ bộ nhớ tạm
+    products = st.session_state.cached_products_list
+
     if products:
         # 1. THÊM CỘT "Mức tối thiểu" VÀ "Ghi chú" VÀO DATAFRAME
         df = pd.DataFrame(products, columns=["ID", "Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu", "Ghi chú"])
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
-       # ==============================================================
+        # ==============================================================
         # CẤU HÌNH ĐỘ RỘNG CỘT VÀ CHỨC NĂNG SỬA CHO BẢNG DANH MỤC HÀNG
         # ==============================================================
         gb = GridOptionsBuilder.from_dataframe(df)
@@ -294,6 +309,7 @@ if st.session_state.current_menu == "Danh mục hàng":
             data_return_mode='AS_INPUT', 
             height=400,
             key="products_grid") 
+            
         # ==============================================================
         # 2. KHỐI LOGIC QUÉT THAY ĐỔI (Đã Tối Ưu Tốc Độ Siêu Nhanh)
         # ==============================================================
@@ -368,7 +384,11 @@ if st.session_state.current_menu == "Danh mục hàng":
                     for item in changes_to_save:
                         service.update_product(item["Mã"], item["Tên"], item["Đvt"], item["Nhóm"], item["Mức"], item["Ghi chú"])
                 
+                # --- [TỐI ƯU] XÓA BỘ NHỚ TẠM ĐỂ TẢI LẠI DỮ LIỆU MỚI NHẤT ---
+                if "cached_products_list" in st.session_state:
+                    del st.session_state["cached_products_list"]
                 st.cache_data.clear()
+                
                 st.success("🎉 Cập nhật thành công!")
                 st.rerun()
     
@@ -391,7 +411,12 @@ if st.session_state.current_menu == "Danh mục hàng":
                         st.error("Mã đã tồn tại!")
                     else:
                         service.add_product(code.upper(), name, unit, group, min_stock, note)
+                        
+                        # --- [TỐI ƯU] XÓA BỘ NHỚ TẠM ĐỂ TẢI LẠI DỮ LIỆU MỚI NHẤT ---
+                        if "cached_products_list" in st.session_state:
+                            del st.session_state["cached_products_list"]
                         st.cache_data.clear()
+                        
                         st.success("Đã thêm thành công!")
                         st.rerun()
     with c2:
@@ -426,6 +451,8 @@ if st.session_state.current_menu == "Danh mục hàng":
                         st.error("🚫 Không thể xóa: Hàng hóa này đã có lịch sử giao dịch!")
                     else:
                         confirm_delete(selected_product, del_code, service)
+                        # Lưu ý: Nếu hàm confirm_delete thực hiện xóa thành công, hãy chắc chắn 
+                        # bên trong hàm đó cũng có lệnh del st.session_state["cached_products_list"]
 
 # --- TAB 2: NHẬP/XUẤT KHO ---
 elif st.session_state.current_menu == "Nhập/Xuất Kho":
