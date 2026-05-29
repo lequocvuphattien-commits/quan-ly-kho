@@ -519,35 +519,58 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             
             with col_xac_nhan:
                 if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
-    
+                    
+                    # 1. Lấy tồn kho mới nhất để kiểm tra
                     db_products = service.get_products()
                     stock_dict = {} 
                     if db_products:
                         for p in db_products:
                             p_code = str(p[1]).strip()
                             try:
-                                val = float(p[4]) if len(p) > 4 and p[4] else 0.0
+                                # p[4] là cột Tồn kho (đảm bảo index này khớp với code cũ của bạn)
+                                val = float(p[4]) if len(p) > 4 and str(p[4]).strip() else 0.0
                             except (ValueError, TypeError):
                                 val = 0.0
                             stock_dict[p_code] = val
 
+                    # 2. Kiểm tra tồn kho trước khi lưu (Chống xuất âm)
                     error_msgs = []
+                    temp_stock = stock_dict.copy() # Dùng bản sao để tính toán tạm
+                    
                     for _, row in edited_df_cart.iterrows():
-                        # 4. Gửi giá trị Bộ phận xuống hàm add_transaction
-                        service.add_transaction(
-                            row["Mã HH"], 
-                            row["Tên HH"], 
-                            row["Số lượng"], 
-                            row["Loại"], 
-                            row.get("Diễn Giải", ""), 
-                            st.session_state.user_name,
-                            row.get("Bộ phận", "")
-                        )
-                        service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                    st.session_state.cart = []
-                    st.cache_data.clear()
-                    st.success(f"🎉 Giao dịch thành công!")
-                    st.rerun()
+                        ma_hh = str(row["Mã HH"]).strip()
+                        qty_xuat = float(row["Số lượng"])
+                        loai = row["Loại"]
+                        
+                        if loai == "Xuất":
+                            ton_hien_tai = temp_stock.get(ma_hh, 0)
+                            if qty_xuat > ton_hien_tai:
+                                error_msgs.append(f"🚫 Mã **{ma_hh}**: Xuất {qty_xuat:,.0f} nhưng tồn kho chỉ còn {ton_hien_tai:,.0f}!")
+                            else:
+                                temp_stock[ma_hh] -= qty_xuat
+                    
+                    # 3. Nếu có lỗi thì hiển thị và dừng lại, không ghi vào Sheets
+                    if error_msgs:
+                        for msg in error_msgs:
+                            st.error(msg)
+                    else:
+                        # 4. Nếu hợp lệ, tiến hành ghi vào Sheets
+                        for _, row in edited_df_cart.iterrows():
+                            service.add_transaction(
+                                row["Mã HH"], 
+                                row["Tên HH"], 
+                                row["Số lượng"], 
+                                row["Loại"], 
+                                row.get("Diễn Giải", ""), 
+                                st.session_state.user_name,
+                                row.get("Bộ phận", "")
+                            )
+                            service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                        
+                        st.session_state.cart = []
+                        st.cache_data.clear()
+                        st.success(f"🎉 Giao dịch thành công!")
+                        st.rerun()
                 
             with col_huy:
                 if st.button("❌ Hủy hàng chờ", use_container_width=True, key="clear_cart_btn"):
