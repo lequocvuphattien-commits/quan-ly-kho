@@ -67,6 +67,8 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws['A2'].font = Font(name="Arial", size=10, italic=True)
     ws['A3'] = "Số điện thoại: 02778.553.388 - 02773.918.999"
     ws['A3'].font = Font(name="Arial", size=10, italic=True)
+    ws['E7'] = "Số phiếu:....................."
+    ws['E7'].font = Font(name="Arial", size=11, bold=True)
 
     # --- TIÊU ĐỀ PHIẾU (DÒNG 5) ---
     ws['C5'] = "PHIẾU XUẤT KHO"
@@ -75,6 +77,10 @@ def export_phieu_xuat_excel(export_data, selected_date, department_name):
     ws.row_dimensions[5].height = 32
     
     # --- BỘ PHẬN ĐỀ NGHỊ (Linh hoạt theo Selectbox) ---
+    ws['A7'] = f"Bộ phận đề nghị: {department_name}"
+    ws['A7'].font = font_bold
+    ws.row_dimensions[7].height = 20
+
     ws['A7'] = f"Bộ phận đề nghị: {department_name}"
     ws['A7'].font = font_bold
     ws.row_dimensions[7].height = 20
