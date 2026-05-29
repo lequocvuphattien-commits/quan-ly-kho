@@ -269,26 +269,39 @@ if st.session_state.current_menu == "Danh mục hàng":
         df["Tồn"] = pd.to_numeric(df["Tồn"], errors="coerce").fillna(0)
         df["Mức tối thiểu"] = pd.to_numeric(df["Mức tối thiểu"], errors="coerce").fillna(0)
 
-        # Cấu hình lại GridOptions
+       # ==============================================================
+        # CẤU HÌNH ĐỘ RỘNG CỘT CHO BẢNG DANH MỤC HÀNG
+        # ==============================================================
         gb = GridOptionsBuilder.from_dataframe(df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]])
-        gb.configure_default_column(sortable=True, filter=True, resizable=True, flex=1)
-        gb.configure_column("Mã", editable=False)
-        gb.configure_column("Tồn", editable=False)
         
-        # Ép kiểu cho Mức tối thiểu là số
-        gb.configure_column("Mức tối thiểu", editable=True, type=["numericColumn"], 
-                            valueFormatter="data['Mức tối thiểu'].toFixed(0)")
+        # 1. Bỏ flex=1 ở đây để các cột KHÔNG bị ép to bằng nhau
+        gb.configure_default_column(sortable=True, filter=True, resizable=True)
+        
+        # 2. Căn chỉnh kích thước riêng cho từng cột cho ôm sát dữ liệu
+        gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
+        
+        # Cho phép riêng cột "Tên hàng hóa" dùng flex=1 để nó tự động giãn dài ra chiếm hết khoảng trống còn lại trên màn hình
+        gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
+        
+        gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
+        gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold', 'color': '#28a745'})
+        gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
+        
+        # Ép kiểu và thu gọn cột Mức tối thiểu
+        gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, editable=True, type=["numericColumn"], 
+                            valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
 
-        # 1. CẬP NHẬT LỆNH GỌI AGGRID
+        # 3. GỌI AGGRID
         grid_response = AgGrid(
             df[["Mã", "Tên hàng hóa", "Đvt", "Tồn", "Nhóm", "Mức tối thiểu"]], 
             gridOptions=gb.build(), 
             fit_columns_on_grid_load=True, 
             theme='streamlit', 
-            update_mode='MODEL_CHANGED', # Thay cho update_on để ổn định hơn
-            data_return_mode='AS_INPUT', # Dùng 'AS_INPUT' thường ổn định hơn cho việc lấy dữ liệu đã edit
+            update_mode='MODEL_CHANGED', 
+            data_return_mode='AS_INPUT', 
             height=400,
             key="products_grid") 
+        # ==============================================================
 
         # 2. KHỐI LOGIC QUÉT THAY ĐỔI (Đảm bảo an toàn)
         if grid_response['data'] is not None:
@@ -598,8 +611,7 @@ elif st.session_state.current_menu == "Quản lý nhân viên":
             update_on=[{'event': 'cellValueChanged'}], 
             data_return_mode=DataReturnMode.FILTERED_AND_SORTED, 
             height=400, 
-            key="employees_grid"
-        )
+            key="employees_grid")
         edited_df_emp = pd.DataFrame(grid_response['data'])
 
         has_changes = False
