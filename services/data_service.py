@@ -44,10 +44,10 @@ class DataService:
             return df
         return pd.DataFrame()
     
-    # Đã đồng bộ tên biến dvt (viết thường)
-    def add_transaction(self, p_code, p_name, qty, t_type, note, user_name):
+    # Đã đồng bộ tên biến dvt (viết thường) và BỔ SUNG tham số bo_phan
+    def add_transaction(self, p_code, p_name, qty, t_type, note, user_name, bo_phan=""):
         """
-        Thêm giao dịch vào Google Sheets với 8 cột đầy đủ
+        Thêm giao dịch vào Google Sheets với 9 cột đầy đủ (Cột I là Bộ phận)
         """
         import datetime # Khai báo để lấy giờ hệ thống
         try:
@@ -68,13 +68,13 @@ class DataService:
                     dvt = str(p[3]).strip() if len(p) > 3 else ""
                     break
 
-            # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 8 cột)
+            # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 9 cột, thêm bo_phan vào cuối)
             # SỬA LỖI MÚI GIỜ: Lấy đúng giờ Việt Nam (UTC+7)
             tz_vn = datetime.timezone(datetime.timedelta(hours=7))
             now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
-            new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name]
+            new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name, bo_phan]
             
-            # 4. THỰC THI GHI VÀO GOOGLE SHEETS (Đã mở khóa)
+            # 4. THỰC THI GHI VÀO GOOGLE SHEETS
             self.sheet_transactions.append_row(new_row)
             
             return True
@@ -177,9 +177,14 @@ class DataService:
                 return True
         return False
 
+    # CẬP NHẬT: Đọc thêm Cột C (Bộ phận) từ tab Config
     def get_config_options(self):
         data = self.sheet_config.get_all_values()
-        return ([str(r[0]) for r in data[1:] if r[0]], [str(r[1]) for r in data[1:] if len(r)>1 and r[1]])
+        kho_nhap = [str(r[0]).strip() for r in data[1:] if len(r) > 0 and str(r[0]).strip()]
+        kho_xuat = [str(r[1]).strip() for r in data[1:] if len(r) > 1 and str(r[1]).strip()]
+        bo_phan = [str(r[2]).strip() for r in data[1:] if len(r) > 2 and str(r[2]).strip()]
+        
+        return kho_nhap, kho_xuat, bo_phan
 
     def get_employees(self):
         """Lấy danh sách nhân viên từ sheet NhanVien, đảm bảo luôn trả về 5 cột"""

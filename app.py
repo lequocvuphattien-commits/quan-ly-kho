@@ -419,7 +419,8 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
     
     trans_type = st.radio("Loại:", ["Nhập", "Xuất"], horizontal=True, key="trans_type")
     
-    kho_nhap_list, kho_xuat_list = get_cached_config(service)
+    # 1. Bổ sung nhận 3 danh sách từ hàm get_cached_config
+    kho_nhap_list, kho_xuat_list, bo_phan_list = get_cached_config(service)
     products = get_cached_products(service)
     
     if "qty_key" not in st.session_state:
@@ -443,7 +444,8 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
         display_data.sort()
         selected = st.selectbox("Chọn hàng hóa", options=display_data, index=None, key="product_select_field")
         
-        c1, c2, c3, c4 = st.columns([0.8, 1, 1.5, 0.5])
+        # 2. Chia lại thành 5 cột để có chỗ hiển thị chọn "Bộ phận"
+        c1, c2, c3, c4, c5 = st.columns([0.8, 1, 1.2, 1.2, 0.8])
         
         with c1: 
             qty = st.number_input("Số lượng", min_value=1.0, value=None, step=1.0, 
@@ -465,11 +467,20 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
             note = st.selectbox("Diễn giải / Kho", options=(kho_nhap_list if trans_type == "Nhập" else kho_xuat_list), index=None, key="note_select_field")
             
         with c4:
+            # 3. Chỉ hiển thị chọn Bộ phận nếu là loại "Nhập"
+            if trans_type == "Nhập":
+                bo_phan = st.selectbox("Bộ phận", options=bo_phan_list, index=None, key="bophan_select_field")
+            else:
+                bo_phan = ""
+                st.write("") 
+                
+        with c5:
             st.write("") 
             st.write("") 
             
-            if st.button("➕ Thêm hàng chờ", key="add_to_cart_btn"):
-                if not selected or not qty or not note: 
+            if st.button("➕ Thêm", key="add_to_cart_btn"):
+                # Ràng buộc: Nhập kho thì bắt buộc phải có Bộ phận
+                if not selected or not qty or not note or (trans_type == "Nhập" and not bo_phan): 
                     st.warning("⚠️ Nhập đủ thông tin!")
                 else:
                     if 'cart' not in st.session_state: st.session_state.cart = []
@@ -479,51 +490,55 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         "Đvt": p_dict[selected]["Đvt"], 
                         "Số lượng": float(qty), 
                         "Diễn Giải": note, 
+                        "Bộ phận": bo_phan, # Lưu giá trị bộ phận vào giỏ hàng
                         "Loại": trans_type
                     })
                     
                     st.session_state.qty_key += 1
                     st.rerun()
 
-            if 'cart' not in st.session_state: st.session_state.cart = []
-            if st.session_state.cart:
-                edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
-                
-                col_xac_nhan, col_huy = st.columns(2)
-                
-                with col_xac_nhan:
-                    if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
+        if 'cart' not in st.session_state: st.session_state.cart = []
+        if st.session_state.cart:
+            edited_df_cart = st.data_editor(pd.DataFrame(st.session_state.cart), use_container_width=True, hide_index=True, key="cart_editor")
+            
+            col_xac_nhan, col_huy = st.columns(2)
+            
+            with col_xac_nhan:
+                if st.button("✅ Xác nhận tất cả", type="primary", use_container_width=True, key="confirm_cart_btn"): 
     
-                        db_products = service.get_products()
-                        stock_dict = {} 
-                        if db_products:
-                            for p in db_products:
-                                p_code = str(p[1]).strip()
-                                try:
-                                    val = float(p[4]) if len(p) > 4 and p[4] else 0.0
-                                except (ValueError, TypeError):
-                                    val = 0.0
-                                stock_dict[p_code] = val
+                    db_products = service.get_products()
+                    stock_dict = {} 
+                    if db_products:
+                        for p in db_products:
+                            p_code = str(p[1]).strip()
+                            try:
+                                val = float(p[4]) if len(p) > 4 and p[4] else 0.0
+                            except (ValueError, TypeError):
+                                val = 0.0
+                            stock_dict[p_code] = val
 
-                        error_msgs = []
-                        for _, row in edited_df_cart.iterrows():
-                            service.add_transaction(
-                                row["Mã HH"], 
-                                row["Tên HH"], 
-                                row["Số lượng"], 
-                                row["Loại"], 
-                                row.get("Diễn Giải", ""), 
-                                st.session_state.user_name)
-                            service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
-                        st.session_state.cart = []
-                        st.cache_data.clear()
-                        st.success(f"🎉 Giao dịch thành công!")
-                        st.rerun()
+                    error_msgs = []
+                    for _, row in edited_df_cart.iterrows():
+                        # 4. Gửi giá trị Bộ phận xuống hàm add_transaction
+                        service.add_transaction(
+                            row["Mã HH"], 
+                            row["Tên HH"], 
+                            row["Số lượng"], 
+                            row["Loại"], 
+                            row.get("Diễn Giải", ""), 
+                            st.session_state.user_name,
+                            row.get("Bộ phận", "")
+                        )
+                        service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
+                    st.session_state.cart = []
+                    st.cache_data.clear()
+                    st.success(f"🎉 Giao dịch thành công!")
+                    st.rerun()
                 
-                with col_huy:
-                    if st.button("❌ Hủy hàng chờ", use_container_width=True, key="clear_cart_btn"):
-                        st.session_state.cart = []
-                        st.rerun()
+            with col_huy:
+                if st.button("❌ Hủy hàng chờ", use_container_width=True, key="clear_cart_btn"):
+                    st.session_state.cart = []
+                    st.rerun()
 
 # --- TAB 3: BÁO CÁO TỒN KHO ---
 elif st.session_state.current_menu == "Báo cáo tồn kho":
