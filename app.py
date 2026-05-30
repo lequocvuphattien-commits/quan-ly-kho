@@ -12,6 +12,8 @@ from views.report_view_streamlit import show_report, export_history_to_excel, ge
 from datetime import date
 import plotly.express as px
 
+st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
+
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
 
@@ -898,5 +900,4 @@ elif st.session_state.current_menu == "Sao lưu dữ liệu":
                 label="⬇️ Tải file Excel sao lưu",
                 data=output.getvalue(),
                 file_name=f"Backup_Kho_{today_str}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
