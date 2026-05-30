@@ -581,6 +581,11 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                         for msg in error_msgs:
                             st.error(msg)
                     else:
+                        # --- THÊM: TẠO MỐC THỜI GIAN CHUNG DUY NHẤT Ở ĐÂY ---
+                        tz_vn = datetime.timezone(datetime.timedelta(hours=7))
+                        common_time = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
+                        # -----------------------------------------------------
+
                         for _, row in edited_df_cart.iterrows():
                             service.add_transaction(
                                 row["Mã HH"], 
@@ -589,7 +594,8 @@ elif st.session_state.current_menu == "Nhập/Xuất Kho":
                                 row["Loại"], 
                                 row.get("Diễn Giải", ""), 
                                 st.session_state.user_name,
-                                row.get("Bộ phận", "")
+                                row.get("Bộ phận", ""),
+                                fixed_time=common_time  # TRUYỀN VÀO HÀM
                             )
                             service.update_stock(row["Mã HH"], row["Số lượng"], row["Loại"])
                         

@@ -45,7 +45,8 @@ class DataService:
             return df
         return pd.DataFrame()
     
-    def add_transaction(self, p_code, p_name, qty, t_type, note, user_name, bo_phan=""):
+    # --- THAY ĐỔI: BỔ SUNG THAM SỐ fixed_time=None ---
+    def add_transaction(self, p_code, p_name, qty, t_type, note, user_name, bo_phan="", fixed_time=None):
         """
         Thêm giao dịch vào Google Sheets với 9 cột đầy đủ (Cột I là Bộ phận)
         """
@@ -68,8 +69,14 @@ class DataService:
                     break
 
             # 3. Tạo dòng dữ liệu mới (Đúng chuẩn 9 cột, thêm bo_phan vào cuối)
-            tz_vn = datetime.timezone(datetime.timedelta(hours=7))
-            now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
+            # --- XỬ LÝ THỜI GIAN ĐỒNG BỘ NẾU CÓ ---
+            if fixed_time:
+                now_str = fixed_time
+            else:
+                tz_vn = datetime.timezone(datetime.timedelta(hours=7))
+                now_str = datetime.datetime.now(tz_vn).strftime("%d/%m/%Y %H:%M:%S")
+            # --------------------------------------
+            
             new_row = [now_str, p_code, p_name, dvt, t_type, safe_qty, note, user_name, bo_phan]
             
             # 4. THỰC THI GHI VÀO GOOGLE SHEETS
