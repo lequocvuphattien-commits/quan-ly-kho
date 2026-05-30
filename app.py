@@ -12,7 +12,7 @@ from views.report_view_streamlit import show_report, export_history_to_excel, ge
 from datetime import date
 import plotly.express as px
 
-st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="KHO-1", page_icon="📝")
 
 if "user_role" not in st.session_state:
     st.session_state.user_role = None
