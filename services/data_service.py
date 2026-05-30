@@ -224,17 +224,27 @@ class DataService:
                     }
         return {"status": False, "name": None, "role": None}
 
-    # ĐÃ GỘP 2 HÀM BỊ TRÙNG LẶP THÀNH 1 HÀM CHUẨN (Có hỗ trợ Cache Data)
     def get_product_stats_by_date(self, product_id, start_date, end_date, history_data=None):
-        """Tính toán tồn kho chuẩn xác và siêu tốc (hỗ trợ đọc từ Cache)"""
+        """Tính toán tồn kho chuẩn xác bằng cách lùi thời gian từ Tồn Hiện Tại"""
         df = history_data if history_data is not None else self.get_history()
         
+        # Lấy Tồn Kho Hiện Tại trực tiếp từ Danh mục hàng làm cột mốc
+        current_stock = 0.0
+        try:
+            for p in self.get_products():
+                if str(p[1]).strip().lower() == str(product_id).strip().lower():
+                    current_stock = float(p[4]) if len(p) > 4 and str(p[4]).strip() else 0.0
+                    break
+        except Exception:
+            pass
+
         if df is None or df.empty: 
-            return 0.0, 0.0, 0.0
+            return current_stock, 0.0, 0.0
         
         try:
             df['Ngày'] = pd.to_datetime(df['Ngày'], dayfirst=True, errors='coerce')
             df['Mã HH'] = df['Mã HH'].astype(str).str.strip()
+            df['Loại_Clean'] = df['Loại'].astype(str).str.strip().str.capitalize()
             
             qty_col = 'Số Lượng' if 'Số Lượng' in df.columns else 'Số lượng'
             df['Số lượng'] = pd.to_numeric(df[qty_col], errors='coerce').fillna(0)
@@ -243,23 +253,28 @@ class DataService:
             df_prod = df[df['Mã HH'] == target_id].copy()
             
             if df_prod.empty:
-                return 0.0, 0.0, 0.0
+                return current_stock, 0.0, 0.0
                 
             start = pd.to_datetime(start_date)
             end = pd.to_datetime(end_date)
             
-            past_data = df_prod[df_prod['Ngày'] < start]
-            ton_dau = (past_data[past_data['Loại'] == 'Nhập']['Số lượng'].sum() - 
-                       past_data[past_data['Loại'] == 'Xuất']['Số lượng'].sum())
+            # --- [FIX BUG LOGIC KẾ TOÁN] ---
+            # Tính ngược Tồn Đầu = Tồn Hiện Tại - Nhập (từ ngày báo cáo đến nay) + Xuất (từ ngày báo cáo đến nay)
+            after_start_data = df_prod[df_prod['Ngày'] >= start]
+            nhap_nguoc = after_start_data[after_start_data['Loại_Clean'] == 'Nhập']['Số lượng'].sum()
+            xuat_nguoc = after_start_data[after_start_data['Loại_Clean'] == 'Xuất']['Số lượng'].sum()
             
+            ton_dau = current_stock - nhap_nguoc + xuat_nguoc
+            
+            # Nhập / Xuất trong kỳ
             period_data = df_prod[(df_prod['Ngày'] >= start) & (df_prod['Ngày'] <= end)]
-            nhap = period_data[period_data['Loại'] == 'Nhập']['Số lượng'].sum()
-            xuat = period_data[period_data['Loại'] == 'Xuất']['Số lượng'].sum()
+            nhap = period_data[period_data['Loại_Clean'] == 'Nhập']['Số lượng'].sum()
+            xuat = period_data[period_data['Loại_Clean'] == 'Xuất']['Số lượng'].sum()
             
             return float(ton_dau), float(nhap), float(xuat)
         except Exception as e:
             print(f"Lỗi tính toán báo cáo tồn: {e}")
-            return 0.0, 0.0, 0.0
+            return current_stock, 0.0, 0.0
 
     def delete_transaction(self, row_index, product_code, quantity, trans_type):
         self.sheet_transactions.delete_rows(row_index + 2) 

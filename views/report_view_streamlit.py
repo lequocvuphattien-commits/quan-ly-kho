@@ -180,7 +180,8 @@ def show_report():
                     df_h['date'] = pd.to_datetime(df_h['Ngày'], dayfirst=True, format='mixed', errors='coerce')
                     df_h['Ngày_Kho'] = (df_h['date'] - pd.Timedelta(hours=6)).dt.normalize()
                     df_h['product_id'] = df_h['Mã HH'].astype(str).str.strip().str.upper()
-                    df_h['type'] = df_h['Loại'].astype(str).str.strip()
+                    # CẬP NHẬT CHUẨN HÓA VIẾT HOA ĐỂ TÍNH TOÁN KHÔNG BỊ LỆCH
+                    df_h['type'] = df_h['Loại'].astype(str).str.strip().str.capitalize() 
                     df_h['qty'] = pd.to_numeric(df_h['Số Lượng'], errors='coerce').fillna(0)
                 except KeyError as e:
                     st.error(f"Lỗi cấu trúc cột trong Google Sheets: Thiếu cột {e}")
@@ -189,14 +190,16 @@ def show_report():
                 start = pd.to_datetime(start_date).normalize()
                 end = pd.to_datetime(end_date).normalize()
                 
-                df_from_start = df_h[df_h['Ngày_Kho'] < start]
-                if not df_from_start.empty:
-                    pivot_from_start = df_from_start.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
-                    if 'Nhập' not in pivot_from_start.columns: pivot_from_start['Nhập'] = 0
-                    if 'Xuất' not in pivot_from_start.columns: pivot_from_start['Xuất'] = 0
+                # --- [FIX BUG KẾ TOÁN]: LỌC TỪ NGÀY BẮT ĐẦU ĐẾN HÔM NAY ĐỂ TÍNH NGƯỢC ---
+                df_after_start = df_h[df_h['Ngày_Kho'] >= start]
+                if not df_after_start.empty:
+                    pivot_after_start = df_after_start.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
+                    if 'Nhập' not in pivot_after_start.columns: pivot_after_start['Nhập'] = 0
+                    if 'Xuất' not in pivot_after_start.columns: pivot_after_start['Xuất'] = 0
                 else:
-                    pivot_from_start = pd.DataFrame(columns=['Nhập', 'Xuất'])
+                    pivot_after_start = pd.DataFrame(columns=['Nhập', 'Xuất'])
                     
+                # Lọc giao dịch phát sinh TRONG KỲ (start -> end)
                 df_period = df_h[(df_h['Ngày_Kho'] >= start) & (df_h['Ngày_Kho'] <= end)]
                 if not df_period.empty:
                     pivot_period = df_period.pivot_table(index='product_id', columns='type', values='qty', aggfunc='sum', fill_value=0)
@@ -217,12 +220,17 @@ def show_report():
                 
                 df_products = pd.DataFrame(product_list, columns=["ID", "Mã HH", "Tên hàng hóa", "Đvt", "Tồn Hiện Tại", "Nhóm", "Mức tối thiểu", "Ghi chú"])
                 
-                df_report = df_products.merge(pivot_from_start[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
-                df_report.rename(columns={'Nhập': 'Nhập_Lũy_Kế', 'Xuất': 'Xuất_Lũy_Kế'}, inplace=True)
+                # 1. Ghép Tồn Hiện Tại với Giao dịch TỪ NGÀY START ĐẾN NAY (Để tính ngược Tồn Đầu)
+                df_report = df_products.merge(pivot_after_start[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
+                df_report.rename(columns={'Nhập': 'Nhập_Ngược', 'Xuất': 'Xuất_Ngược'}, inplace=True)
                 
+                # 2. Ghép Tồn Hiện Tại với Giao dịch TRONG KỲ
                 df_report = df_report.merge(pivot_period[['Nhập', 'Xuất']], left_on='Mã HH', right_index=True, how='left').fillna(0)
                 
-                df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Lũy_Kế'] + df_report['Xuất_Lũy_Kế']
+                # 3. THỰC THI CÔNG THỨC CHUẨN XÁC
+                # Tồn Đầu = Tồn Hôm Nay - Nhập (từ Start Date đến nay) + Xuất (từ Start Date đến nay)
+                df_report['Tồn Đầu'] = df_report['Tồn Hiện Tại'] - df_report['Nhập_Ngược'] + df_report['Xuất_Ngược']
+                # Tồn Cuối = Tồn Đầu + Nhập trong kỳ - Xuất trong kỳ
                 df_report['Tồn Cuối'] = df_report['Tồn Đầu'] + df_report['Nhập'] - df_report['Xuất']
                 
                 df_report = df_report[["Nhóm", "Mã HH", "Tên hàng hóa", "Đvt", "Mức tối thiểu", "Tồn Đầu", "Nhập", "Xuất", "Tồn Cuối", "Ghi chú"]]

@@ -7,7 +7,7 @@ from controllers.transaction_controller import TransactionController
 from openpyxl.utils import get_column_letter
 from services.data_service import DataService
 from views.print_export_view import show_print_export_view
-from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode
+from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode, JsCode
 from views.report_view_streamlit import show_report, export_history_to_excel, get_count_import_by_department
 from datetime import date
 import plotly.express as px
@@ -46,6 +46,7 @@ def confirm_delete(product_name, del_code, service):
     with col_no:
         if st.button("❌ No"):
             st.rerun()
+            
 st.set_page_config(page_title="Quản Lý Kho", layout="wide", initial_sidebar_state="collapsed")
 
 @st.dialog("Xác nhận xóa lịch sử")
@@ -298,10 +299,23 @@ if st.session_state.current_menu == "Danh mục hàng":
             gb.configure_column("Mã", minWidth=80, maxWidth=100, editable=False, cellStyle={'textAlign': 'center'})
             gb.configure_column("Tên hàng hóa", minWidth=200, flex=1, cellStyle={'textAlign': 'left'}) 
             gb.configure_column("Đvt", minWidth=60, maxWidth=90, cellStyle={'textAlign': 'center'})
-            gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold', 'color': '#28a745'})
+            
+            # --- ĐÃ XÓA MÀU XANH CỨNG ---
+            gb.configure_column("Tồn", minWidth=80, maxWidth=120, editable=False, cellStyle={'textAlign': 'right', 'fontWeight': 'bold'})
             gb.configure_column("Nhóm", minWidth=120, maxWidth=150)
             gb.configure_column("Mức tối thiểu", minWidth=120, maxWidth=150, type=["numericColumn"], valueFormatter="data['Mức tối thiểu'].toFixed(0)", cellStyle={'textAlign': 'right'})
             gb.configure_column("Ghi chú", minWidth=150, editable=True, cellStyle={'textAlign': 'left'})
+            
+            # --- THÊM LOGIC ĐỔI MÀU CẢNH BÁO ---
+            row_style_jscode = JsCode("""
+            function(params) {
+                if (params.data && params.data['Tồn'] <= params.data['Mức tối thiểu'] && params.data['Mức tối thiểu'] > 0) {
+                    return { 'backgroundColor': '#ffe6e6', 'color': '#d32f2f', 'fontWeight': 'bold' };
+                }
+                return null;
+            }
+            """)
+            gb.configure_grid_options(getRowStyle=row_style_jscode)
             
             st.session_state.products_df = df
             st.session_state.grid_options = gb.build()
@@ -313,6 +327,7 @@ if st.session_state.current_menu == "Danh mục hàng":
             theme='streamlit', 
             update_mode='MODEL_CHANGED', 
             data_return_mode='AS_INPUT', 
+            allow_unsafe_jscode=True,  # --- BẮT BUỘC ĐỂ CHẠY ĐƯỢC MÀU ---
             height=400,
             key="products_grid") 
             
