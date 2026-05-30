@@ -258,15 +258,15 @@ def show_print_export_view(service):
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         type="primary", use_container_width=True)
     
+# ĐẢM BẢO HÀM NÀY NẰM NGOÀI CÙNG (DÁN ĐÈ ĐOẠN NÀY VÀO CUỐI FILE)
 def export_history_to_excel(df):
     """Xuất lịch sử giao dịch ra file Excel"""
     buffer = io.BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        # Ghi dữ liệu ra sheet 'LichSu'
         df.to_excel(writer, index=False, sheet_name='LichSu')
         ws = writer.sheets['LichSu']
         
-        # Định dạng tiêu đề (dòng 1)
+        # Định dạng tiêu đề
         header_fill = PatternFill(start_color='0070C0', end_color='0070C0', fill_type='solid')
         header_font = Font(bold=True, color='FFFFFF')
         for col in range(1, ws.max_column + 1):
@@ -274,7 +274,6 @@ def export_history_to_excel(df):
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center")
-            # Tự động chỉnh độ rộng cột
             ws.column_dimensions[get_column_letter(col)].width = 18
             
     return buffer.getvalue()
